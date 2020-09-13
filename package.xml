@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>kimera_distributed</name>
+  <version>1.0.0</version>
+  <description>Kimera Distributed</description>
+
+  <maintainer email="yulun@mit.edu">Yulun Tian</maintainer>
+  <maintainer email="yunchang@mit.edu">Yun Chang</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+
+  <depend>kimera_rpgo</depend>
+  <depend>DBoW2</depend>
+  <depend>gtsam</depend>
+  <depend>Eigen</depend>
+  <depend>OpenCV</depend>
+  <depend>opengv</depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>message_filters</depend>
+  <depend>image_transport</depend>
+  <depend>pcl_ros</depend>
+  <depend>rosbag</depend>
+  <depend>cv_bridge</depend>
+  <depend>tf</depend>
+  <depend>pose_graph_tools</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
+  <depend>rosunit</depend>
+  <depend>rostest</depend>
+
+</package>

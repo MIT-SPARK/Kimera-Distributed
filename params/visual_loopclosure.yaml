@@ -1,0 +1,15 @@
+# Yaml configuration for visual loop closure parameters 
+
+# Matcher parameters (DBoW2)
+alpha: 0.5
+# min_temporal_matches: 3
+dist_local: 10
+max_db_results: 50
+base_nss_factor: 0.5
+# min_matches_per_group: 1
+# max_intragroup_gap: 3
+# max_distance_between_groups: 3
+# max_distance_between_queries: 2
+# lowe_ratio:  0.8
+# max_ransac_iterations: 1000
+# ransac_threshold: 0.00001

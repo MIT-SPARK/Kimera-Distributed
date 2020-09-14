@@ -1,0 +1,16 @@
+<launch>
+  <!-- Total number of robots -->
+  <arg name="num_robots" default="1"/>
+  <!-- Unique integer id of this robot. -->
+  <arg name="robot_id" default="0"/>
+
+
+  <!-- Launch Kimera Distributed Node -->
+  <node name="kimera_distributed_node" pkg="kimera_distributed" type="kimera_distributed_node" output="screen">
+    <param name="robot_id"   value="$(arg robot_id)"/>
+    <param name="num_robots" value="$(arg num_robots)" />
+    <rosparam file="$(find kimera_distributed)/params/visual_loopclosure.yaml"/>
+    <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
+  </node>    
+
+</launch>

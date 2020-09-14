@@ -1,0 +1,52 @@
+<launch>
+  <arg name="dataset_name" value="Euroc"/>
+  <arg name="verbosity"    default="0" />  
+  <arg name="robot_id"     default="0" /> 
+  <arg name="num_robots"   default="1" />
+
+  <!-- Set online to true if you use rosbag play or sensor stream -->
+  <arg name="online" default="true" />
+  
+  <!-- Set log_output to true and SparkVio will log output of all modules to
+       the log_output_path location. -->
+  <arg name="log_output" default="false"/>
+  <arg name="log_output_path"
+       default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
+       if="$(arg log_output)"/>
+  <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
+  <arg name="log_gt_data" default="false"/>
+  <arg name="gt_topic" default="/vicon/firefly_sbx/firefly_sbx"/>
+
+  <arg name="use_lcd"   default="true"/>
+  <arg name="visualize" default="true"/>
+
+  <arg name="use_online_cam_params" value="false"/>
+
+  <!-- Change rosbag path if online argument is false -->
+  <arg name="rosbag_path" default="/home/tonirv/datasets/EuRoC/V1_01_easy/V1_01_easy_retimestamped.bag"
+    unless="$(arg online)"/>
+
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic"                    default="/kimera$(arg robot_id)/cam0/image_raw"/>
+  <arg name="right_cam_topic"                   default="/kimera$(arg robot_id)/cam1/image_raw"/>
+  <arg name="imu_topic"                         default="/kimera$(arg robot_id)/imu0"/>
+
+  <!-- Launch robot in its unique namespace -->
+  <group ns="kimera$(arg robot_id)" >
+    <!-- Frame IDs -->
+    <arg name="base_link_frame_id" value="base_link"/>
+    <arg name="left_cam_frame_id"  value="cam0"/>
+    <arg name="right_cam_frame_id" value="cam1"/>
+
+    <!-- Launch Kimera-VIO -->
+    <include file="$(find kimera_distributed)/launch/kimera_vio_ros.launch"
+      pass_all_args="true"/>
+
+    <!-- Launch Kimera-Distributed -->
+    <include file="$(find kimera_distributed)/launch/kimera_distributed_ros.launch">
+      <arg name="robot_id"   value="$(arg robot_id)" />
+      <arg name="num_robots" value="$(arg num_robots)" />
+    </include>
+  </group>
+
+</launch>

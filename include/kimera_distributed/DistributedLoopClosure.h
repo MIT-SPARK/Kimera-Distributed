@@ -32,12 +32,20 @@ class DistributedLoopClosure {
 
  private:
   ros::NodeHandle nh_;
-  uint32_t my_id_;
+  RobotID my_id_;
   uint32_t num_robots_;
+  uint32_t next_pose_id_; // next pose id in my local trajectory
 
   std::unique_ptr<OrbDatabase> db_BoW_;
-  std::vector<ros::Subscriber> bow_subscribers;
+  DBoW2::BowVector latest_bowvec_;
 
+  // Parameters for visual loop closure detection
+  float alpha_;
+  int dist_local_;
+  int max_db_results_;
+  float base_nss_factor_;
+
+  std::vector<ros::Subscriber> bow_subscribers;
   void bowCallback(const kimera_distributed::BowQueryConstPtr& msg);
   
 };

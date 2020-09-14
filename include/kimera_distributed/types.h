@@ -18,14 +18,15 @@
 
 namespace kimera_distributed {
 	typedef uint32_t RobotID;
-	typedef uint32_t FrameID;
-	typedef std::pair<RobotID, FrameID> PoseID;
+	typedef uint32_t PoseID;
+	typedef std::pair<RobotID, PoseID> VertexID;
 
 	typedef cv::Mat OrbDescriptor;
 	typedef std::vector<OrbDescriptor> OrbDescriptorVec;
+
 	struct VLCFrame {
 	  VLCFrame() {}
-	  VLCFrame(const PoseID& pose_id,
+	  VLCFrame(const VertexID& pose_id,
 	           const std::vector<gtsam::Vector3>& keypoints_3d,
 	           const OrbDescriptorVec& descriptors_vec,
 	           const OrbDescriptor& descriptors_mat)
@@ -34,13 +35,13 @@ namespace kimera_distributed {
 	        descriptors_vec_(descriptors_vec),
 	        descriptors_mat_(descriptors_mat) {}
 
-	  PoseID pose_id_;
+	  VertexID pose_id_;
 	  std::vector<gtsam::Vector3> keypoints_;
 	  OrbDescriptorVec descriptors_vec_;
 	  OrbDescriptor descriptors_mat_;
 	};  // struct VLCFrame
 
-	typedef std::map<PoseID, VLCFrame, std::less<PoseID>> VLCFrameDict;
+	typedef std::map<VertexID, VLCFrame, std::less<VertexID>> VLCFrameDict;
 
 
 } // end namespace

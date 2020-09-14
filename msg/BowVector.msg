@@ -1,2 +1,2 @@
-uint64[] word_ids
-float64[] word_values
+uint32[] word_ids
+float32[] word_values

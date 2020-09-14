@@ -81,13 +81,13 @@ namespace kimera_distributed {
   			DBoW2::Result best_result = query_result[0]; 
   			if (best_result.Score >= alpha_ * nss_factor){
 				VertexID my_vertex_id = std::make_pair(my_id_, best_result.Id);
-				if (robot_id != my_id_){
-	  				ROS_WARN_STREAM("Detected potential inter-robot loop closure between " 
-	  								<< "(" << robot_id << ", " << pose_id << ")" 
-	  								<< " and " 
-	  								<< "(" << my_id_ << ", " << best_result.Id << ")" 
-	  								);
-  				}
+				
+  				ROS_WARN_STREAM("Detected potential loop closure between " 
+  								<< "(" << robot_id << ", " << pose_id << ")" 
+  								<< " and " 
+  								<< "(" << my_id_ << ", " << best_result.Id << ")" 
+  								);
+  				
   			}
   		}
 

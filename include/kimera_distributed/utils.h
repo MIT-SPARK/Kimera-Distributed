@@ -9,6 +9,7 @@
 #include <ros/console.h>
 #include <map>
 #include <string>
+#include <kimera_distributed/BowQuery.h>
 #include <kimera_distributed/BowVector.h>
 #include <DBoW2/DBoW2.h>
 

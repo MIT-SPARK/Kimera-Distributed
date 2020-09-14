@@ -42,6 +42,11 @@ target_link_libraries(${PROJECT_NAME}
   DBoW2::DBoW2
 )
 
+cs_add_executable(kimera_distributed_node 
+  src/KimeraDistributedNode.cpp
+  src/DistributedLoopClosure.cpp)
+target_link_libraries(kimera_distributed_node ${PROJECT_NAME})
+
 catkin_add_gtest(test_utils test/test_utils.cpp)
 target_link_libraries(test_utils ${PROJECT_NAME} -ltbb)
 

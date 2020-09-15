@@ -29,7 +29,9 @@ catkin_simple()
 
 
 cs_add_library(${PROJECT_NAME} 
-  src/utils.cpp 
+  src/DistributedLoopClosure.cpp
+  src/types.cpp
+  src/utils.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -43,8 +45,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 cs_add_executable(kimera_distributed_node 
-  src/KimeraDistributedNode.cpp
-  src/DistributedLoopClosure.cpp)
+  src/KimeraDistributedNode.cpp)
 target_link_libraries(kimera_distributed_node ${PROJECT_NAME})
 
 catkin_add_gtest(test_utils test/test_utils.cpp)

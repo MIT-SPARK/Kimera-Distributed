@@ -38,6 +38,7 @@ class DistributedLoopClosure {
 
   std::unique_ptr<OrbDatabase> db_BoW_;
   DBoW2::BowVector latest_bowvec_;
+  VLCFrameDict vlc_frames_;
 
   // Parameters for visual loop closure detection
   float alpha_;
@@ -46,7 +47,10 @@ class DistributedLoopClosure {
   float base_nss_factor_;
 
   std::vector<ros::Subscriber> bow_subscribers;
+  
   void bowCallback(const kimera_distributed::BowQueryConstPtr& msg);
+
+  void requestVLCFrame(const VertexID vertex_id);
   
 };
 

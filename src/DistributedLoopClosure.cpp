@@ -88,6 +88,8 @@ namespace kimera_distributed {
   								<< "(" << my_id_ << ", " << best_result.Id << ")" 
   								);
   				
+  				VertexID first_vertex = std::make_pair(robot_id, pose_id);
+  				requestVLCFrame(first_vertex);
   			}
   		}
 
@@ -99,6 +101,28 @@ namespace kimera_distributed {
 			next_pose_id_++;
 		}
   		
+	}
+
+	void DistributedLoopClosure::requestVLCFrame(const VertexID vertex_id){
+		if(vlc_frames_.find(vertex_id) != vlc_frames_.end()){
+			// Return if this frame already exists locally
+			return;
+		}
+		RobotID robot_id = vertex_id.first;
+		PoseID  pose_id  = vertex_id.second;
+		std::string service_name = "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_query";
+
+		VLCFrameQuery query;
+		query.request.robot_id = robot_id;
+		query.request.pose_id  = pose_id;
+		assert(ros::service::call(service_name, query));
+
+		VLCFrame frame;
+		VLCFrameFromMsg(query.response.frame, &frame);
+		assert(frame.robot_id_ == robot_id);
+		assert(frame.pose_id_  == pose_id);
+
+		vlc_frames_[vertex_id] = frame;
 	}
 
 }

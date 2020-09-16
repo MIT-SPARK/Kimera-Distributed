@@ -13,6 +13,7 @@
 #include <kimera_distributed/BowQuery.h>
 #include <kimera_distributed/BowVector.h>
 #include <kimera_distributed/VLCFrameMsg.h>
+#include <kimera_distributed/VLCFrameQuery.h>
 #include <DBoW2/DBoW2.h>
 
 namespace kimera_distributed {

@@ -17,6 +17,7 @@ namespace kimera_distributed {
         keypoints_(keypoints_3d),
         descriptors_mat_(descriptors_mat) 
     {
+    	assert(keypoints_.size() == descriptors_mat_.size().height);
     	initializeDescriptorsVector();
     } 
 

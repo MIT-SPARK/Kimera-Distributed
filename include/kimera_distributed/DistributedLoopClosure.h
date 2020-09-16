@@ -67,6 +67,9 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_match) const;
 
   bool verifyLoopClosure(const VertexID& vertex_query, const VertexID& vertex_match);
+
+  // For debugging purpose
+  void saveLoopClosuresToFile(const std::string filename);
   
 };
 

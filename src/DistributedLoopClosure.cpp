@@ -6,6 +6,8 @@
 
 #include <cassert>
 #include <string>
+#include <iostream>
+#include <fstream>
 #include <kimera_distributed/DistributedLoopClosure.h>
 
 
@@ -216,12 +218,43 @@ namespace kimera_distributed {
 			VLCEdge edge(vertex_query, vertex_match, T_query_match);
 			loop_closures_.push_back(edge);
 
+			saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures.csv");
+
 			return true;
 		}
 
-
-
 		return false;
+	}
+
+
+	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename){
+		ROS_INFO_STREAM("Saving loop closures to " << filename);
+		std::ofstream file;
+		file.open(filename);
+
+		// file format
+		file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+		
+		for (size_t i = 0; i < loop_closures_.size(); ++i)
+		{
+			VLCEdge edge = loop_closures_[i];
+			file << edge.vertex_src_.first << ",";
+			file << edge.vertex_src_.second << ",";
+			file << edge.vertex_dst_.first << ",";
+			file << edge.vertex_dst_.second << ",";
+			gtsam::Pose3 pose = edge.T_src_dst_;
+			gtsam::Quaternion quat = pose.rotation().toQuaternion();
+			gtsam::Point3 point = pose.translation();
+			file << quat.x() << ",";
+			file << quat.y() << ",";
+			file << quat.z() << ",";
+			file << quat.w() << ",";
+			file << point.x() << ",";
+			file << point.y() << ",";
+			file << point.z() << "\n";
+		}
+
+		file.close();
 	}
 
 }

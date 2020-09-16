@@ -6,9 +6,21 @@
 
 #include <cassert>
 #include <string>
+#include <kimera_distributed/DistributedLoopClosure.h>
+
+
 #include <ros/ros.h>
 #include <ros/console.h>
-#include <kimera_distributed/DistributedLoopClosure.h>
+#include <opengv/point_cloud/PointCloudAdapter.hpp>
+#include <opengv/relative_pose/CentralRelativeAdapter.hpp>
+#include <opengv/sac/Ransac.hpp>
+#include <opengv/sac_problems/point_cloud/PointCloudSacProblem.hpp>
+#include <opengv/sac_problems/relative_pose/CentralRelativePoseSacProblem.hpp>
+
+using RansacProblem = opengv::sac_problems::relative_pose::CentralRelativePoseSacProblem;
+using Adapter = opengv::relative_pose::CentralRelativeAdapter;
+using AdapterStereo = opengv::point_cloud::PointCloudAdapter;
+using RansacProblemStereo = opengv::sac_problems::point_cloud::PointCloudSacProblem;
 
 namespace kimera_distributed {
 
@@ -25,11 +37,19 @@ namespace kimera_distributed {
 		num_robots_ = num_robots_int;
 		next_pose_id_ = 0;
 
+		// Initiate orb matcher
+  		orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
+
 		// Visual place recognition params
 		assert(ros::param::get("~alpha", alpha_));
 		assert(ros::param::get("~dist_local", dist_local_));
 		assert(ros::param::get("~max_db_results", max_db_results_));
 		assert(ros::param::get("~base_nss_factor", base_nss_factor_));
+
+		// Geometric verification params
+		assert(ros::param::get("~lowe_ratio", lowe_ratio_));
+		assert(ros::param::get("~max_ransac_iterations", max_ransac_iterations_));
+		assert(ros::param::get("~ransac_threshold", ransac_threshold_));
 
 		// Initialize bag-of-word database
 		std::string orb_vocab_path;
@@ -49,7 +69,10 @@ namespace kimera_distributed {
 						<< "alpha = " << alpha_ << "\n"
 						<< "dist_local = " << dist_local_ << "\n"
 						<< "max_db_results = " << max_db_results_ << "\n"
-						<< "base_nss_factor = " << base_nss_factor_);
+						<< "base_nss_factor = " << base_nss_factor_ << "\n"
+						<< "lowe_ratio = " << lowe_ratio_ << "\n"
+						<< "max_ransac_iterations = " << max_ransac_iterations_ << "\n"
+						<< "ransac_threshold = " << ransac_threshold_);
 	}
 	
 
@@ -73,23 +96,16 @@ namespace kimera_distributed {
   		}
   		if (max_possible_match_id < 0) max_possible_match_id = 0;
 
-  		ROS_WARN_STREAM(nss_factor);
   		DBoW2::QueryResults query_result;
   		db_BoW_->query(bow_vec, query_result, max_db_results_, max_possible_match_id);
 
   		if (!query_result.empty()){
   			DBoW2::Result best_result = query_result[0]; 
   			if (best_result.Score >= alpha_ * nss_factor){
-				VertexID my_vertex_id = std::make_pair(my_id_, best_result.Id);
-				
-  				ROS_WARN_STREAM("Detected potential loop closure between " 
-  								<< "(" << robot_id << ", " << pose_id << ")" 
-  								<< " and " 
-  								<< "(" << my_id_ << ", " << best_result.Id << ")" 
-  								);
   				
-  				VertexID first_vertex = std::make_pair(robot_id, pose_id);
-  				requestVLCFrame(first_vertex);
+  				VertexID vertex_query = std::make_pair(robot_id, pose_id);
+  				VertexID vertex_match = std::make_pair(my_id_  , best_result.Id);
+  				verifyLoopClosure(vertex_query, vertex_match);
   			}
   		}
 
@@ -103,7 +119,7 @@ namespace kimera_distributed {
   		
 	}
 
-	void DistributedLoopClosure::requestVLCFrame(const VertexID vertex_id){
+	void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id){
 		if(vlc_frames_.find(vertex_id) != vlc_frames_.end()){
 			// Return if this frame already exists locally
 			return;
@@ -123,6 +139,89 @@ namespace kimera_distributed {
 		assert(frame.pose_id_  == pose_id);
 
 		vlc_frames_[vertex_id] = frame;
+	}
+
+
+	void DistributedLoopClosure::ComputeMatchedIndices(const VertexID& vertex_query,
+                             					       const VertexID& vertex_match,
+                             					       std::vector<unsigned int>* i_query,
+                            					       std::vector<unsigned int>* i_match) const 
+	{
+
+		// Get two best matches between frame descriptors.
+		std::vector<std::vector<cv::DMatch>> matches;
+
+		VLCFrame frame_query = vlc_frames_.find(vertex_query)->second;
+		VLCFrame frame_match = vlc_frames_.find(vertex_match)->second;
+
+		orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
+		                               frame_match.descriptors_mat_,
+		                               matches,
+		                               2u);
+
+		for (const std::vector<cv::DMatch>& match : matches) {
+			if (match.at(0).distance < lowe_ratio_ * match.at(1).distance) {
+				i_query->push_back(match[0].queryIdx);
+				i_match->push_back(match[0].trainIdx);
+			}
+		}
+	}
+
+
+	bool DistributedLoopClosure::verifyLoopClosure(const VertexID& vertex_query, const VertexID& vertex_match){
+		requestVLCFrame(vertex_query);
+		requestVLCFrame(vertex_match);
+
+		// Find correspondences between frames.
+		std::vector<unsigned int> i_query, i_match;
+		ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+		assert(i_query.size() == i_match.size());
+
+		opengv::points_t f_ref, f_cur;
+		f_ref.resize(i_match.size());
+		f_cur.resize(i_query.size());
+		for (size_t i = 0; i < i_match.size(); i++) {
+			f_cur[i] = (vlc_frames_[vertex_query].keypoints_.at(i_query[i]));
+			f_ref[i] = (vlc_frames_[vertex_match].keypoints_.at(i_match[i]));
+		}
+
+		AdapterStereo adapter(f_ref, f_cur);
+
+		// Compute transform using RANSAC 3-point method (Arun).
+		std::shared_ptr<RansacProblemStereo> ptcloudproblem_ptr(
+		  new RansacProblemStereo(adapter, true));
+		opengv::sac::Ransac<RansacProblemStereo> ransac;
+		ransac.sac_model_ = ptcloudproblem_ptr;
+		ransac.max_iterations_ = max_ransac_iterations_;
+		ransac.threshold_ = ransac_threshold_;
+
+		// Compute transformation via RANSAC.
+		bool ransac_success = ransac.computeModel();
+
+		if (ransac_success) 
+		{
+			
+			opengv::transformation_t T = ransac.model_coefficients_;
+			// Yulun: this is the relative pose from the query frame to the match frame?
+			gtsam::Pose3 T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
+								                      gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
+			
+
+			ROS_INFO_STREAM("Find loop closure between " 
+							<< "(" << vertex_query.first << ", " << vertex_query.second << ")"
+							<< " and "
+							<< "(" << vertex_match.first << ", " << vertex_match.second << ")"
+							);
+
+			VLCEdge edge(vertex_query, vertex_match, T_query_match);
+			loop_closures_.push_back(edge);
+
+			return true;
+		}
+
+
+
+		return false;
 	}
 
 }

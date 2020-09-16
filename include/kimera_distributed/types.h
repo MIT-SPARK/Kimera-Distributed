@@ -37,7 +37,20 @@ namespace kimera_distributed {
 	  	OrbDescriptorVec descriptors_vec_;
 	  	OrbDescriptor descriptors_mat_;
 		void initializeDescriptorsVector();
-	};  // struct VLCFrame
+	};  // class VLCFrame
+
+	struct VLCEdge {
+	public:
+		VLCEdge(){}
+		VLCEdge(const VertexID& vertex_src, const VertexID& vertex_dst, const gtsam::Pose3 T_src_dst):
+		vertex_src_(vertex_src),
+		vertex_dst_(vertex_dst),
+		T_src_dst_(T_src_dst) {}
+
+		VertexID vertex_src_;
+		VertexID vertex_dst_;
+		gtsam::Pose3 T_src_dst_;
+	}; // struct VLCEdge
 
 	typedef std::map<VertexID, VLCFrame, std::less<VertexID>> VLCFrameDict;
 	typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;

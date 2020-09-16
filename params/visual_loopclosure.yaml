@@ -10,6 +10,6 @@ base_nss_factor: 0.5
 # max_intragroup_gap: 3
 # max_distance_between_groups: 3
 # max_distance_between_queries: 2
-# lowe_ratio:  0.8
-# max_ransac_iterations: 1000
-# ransac_threshold: 0.00001
+lowe_ratio:  0.8
+max_ransac_iterations: 1000
+ransac_threshold: 0.00001

@@ -36,9 +36,13 @@ class DistributedLoopClosure {
   uint32_t num_robots_;
   uint32_t next_pose_id_; // next pose id in my local trajectory
 
+  // ORB extraction and matching members
+  cv::Ptr<cv::DescriptorMatcher> orb_feature_matcher_;
+
   std::unique_ptr<OrbDatabase> db_BoW_;
   DBoW2::BowVector latest_bowvec_;
   VLCFrameDict vlc_frames_;
+  std::vector<VLCEdge> loop_closures_;
 
   // Parameters for visual loop closure detection
   float alpha_;
@@ -46,11 +50,23 @@ class DistributedLoopClosure {
   int max_db_results_;
   float base_nss_factor_;
 
+  // Parameters for geometric verification
+  int max_ransac_iterations_;
+  double lowe_ratio_;
+  double ransac_threshold_;
+
   std::vector<ros::Subscriber> bow_subscribers;
-  
+
   void bowCallback(const kimera_distributed::BowQueryConstPtr& msg);
 
-  void requestVLCFrame(const VertexID vertex_id);
+  void requestVLCFrame(const VertexID& vertex_id);
+
+  void ComputeMatchedIndices(const VertexID& vertex_query,
+                             const VertexID& vertex_match,
+                             std::vector<unsigned int>* i_query,
+                             std::vector<unsigned int>* i_match) const;
+
+  bool verifyLoopClosure(const VertexID& vertex_query, const VertexID& vertex_match);
   
 };
 

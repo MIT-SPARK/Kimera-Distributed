@@ -6,7 +6,7 @@
 
 
   <!-- Launch Kimera Distributed Node -->
-  <node name="kimera_distributed_node" pkg="kimera_distributed" type="kimera_distributed_node" output="screen">
+  <node name="kimera_distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure.yaml"/>

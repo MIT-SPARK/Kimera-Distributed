@@ -43,7 +43,7 @@
       pass_all_args="true"/>
 
     <!-- Launch Kimera-Distributed -->
-    <include file="$(find kimera_distributed)/launch/kimera_distributed_ros.launch">
+    <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch">
       <arg name="robot_id"   value="$(arg robot_id)" />
       <arg name="num_robots" value="$(arg num_robots)" />
     </include>

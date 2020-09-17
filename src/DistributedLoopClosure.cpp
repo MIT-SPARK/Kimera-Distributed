@@ -47,11 +47,13 @@ namespace kimera_distributed {
 		assert(ros::param::get("~dist_local", dist_local_));
 		assert(ros::param::get("~max_db_results", max_db_results_));
 		assert(ros::param::get("~base_nss_factor", base_nss_factor_));
+		assert(ros::param::get("~min_nss_factor", min_nss_factor_));
 
 		// Geometric verification params
 		assert(ros::param::get("~lowe_ratio", lowe_ratio_));
 		assert(ros::param::get("~max_ransac_iterations", max_ransac_iterations_));
 		assert(ros::param::get("~ransac_threshold", ransac_threshold_));
+		assert(ros::param::get("~ransac_inlier_threshold_stereo", ransac_inlier_threshold_stereo_));
 
 		// Initialize bag-of-word database
 		std::string orb_vocab_path;
@@ -72,9 +74,11 @@ namespace kimera_distributed {
 						<< "dist_local = " << dist_local_ << "\n"
 						<< "max_db_results = " << max_db_results_ << "\n"
 						<< "base_nss_factor = " << base_nss_factor_ << "\n"
+						<< "min_nss_factor = " << min_nss_factor_ << "\n"
 						<< "lowe_ratio = " << lowe_ratio_ << "\n"
 						<< "max_ransac_iterations = " << max_ransac_iterations_ << "\n"
-						<< "ransac_threshold = " << ransac_threshold_);
+						<< "ransac_threshold = " << ransac_threshold_ << "\n"
+						<< "ransac_inlier_threshold_stereo = " << ransac_inlier_threshold_stereo_);
 	}
 	
 
@@ -86,30 +90,28 @@ namespace kimera_distributed {
 		RobotID robot_id = msg->robot_id;
 		assert(robot_id >= my_id_);
 		PoseID pose_id = msg->pose_id;
-		VertexID query_vertex_id = std::make_pair(robot_id, pose_id);
+		VertexID vertex_query = std::make_pair(robot_id, pose_id);
 		DBoW2::BowVector bow_vec;
 		BowVectorFromMsg(msg->bow_vector, &bow_vec);
 
-		double nss_factor = base_nss_factor_;
-		int max_possible_match_id = static_cast<int>(next_pose_id_) - 1;
-  		if (robot_id == my_id_){
-  			max_possible_match_id -= dist_local_;
-  			nss_factor = db_BoW_->getVocabulary()->score(bow_vec, latest_bowvec_);
-  		}
-  		if (max_possible_match_id < 0) max_possible_match_id = 0;
+		VertexID vertex_match;
+		if (detectLoop(vertex_query, bow_vec, &vertex_match))
+		{
+			gtsam::Pose3 T_query_match;
+			if (recoverPose(vertex_query, vertex_match, &T_query_match)){
+				
+				ROS_INFO_STREAM("Find loop closure between " 
+					<< "(" << vertex_query.first << ", " << vertex_query.second << ")"
+					<< " and "
+					<< "(" << vertex_match.first << ", " << vertex_match.second << ")"
+					);
 
-  		DBoW2::QueryResults query_result;
-  		db_BoW_->query(bow_vec, query_result, max_db_results_, max_possible_match_id);
+				VLCEdge edge(vertex_query, vertex_match, T_query_match);
+				loop_closures_.push_back(edge);
 
-  		if (!query_result.empty()){
-  			DBoW2::Result best_result = query_result[0]; 
-  			if (best_result.Score >= alpha_ * nss_factor){
-  				
-  				VertexID vertex_query = std::make_pair(robot_id, pose_id);
-  				VertexID vertex_match = std::make_pair(my_id_  , best_result.Id);
-  				verifyLoopClosure(vertex_query, vertex_match);
-  			}
-  		}
+				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures.csv");
+			}
+		}
 
   		// Add Bag-of-word vector to database
 		if (robot_id == my_id_){
@@ -120,6 +122,35 @@ namespace kimera_distributed {
 		}
   		
 	}
+
+
+	bool DistributedLoopClosure::detectLoop(const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query, VertexID* vertex_match)
+	{
+		double nss_factor = base_nss_factor_;
+		int max_possible_match_id = static_cast<int>(next_pose_id_) - 1;
+  		if (vertex_query.first == my_id_){
+  			max_possible_match_id -= dist_local_;
+  			nss_factor = db_BoW_->getVocabulary()->score(bow_vector_query, latest_bowvec_);
+  			if (nss_factor < min_nss_factor_) 
+			{
+  				return false;
+  			}
+  		}
+  		if (max_possible_match_id < 0) max_possible_match_id = 0;
+
+  		DBoW2::QueryResults query_result;
+  		db_BoW_->query(bow_vector_query, query_result, max_db_results_, max_possible_match_id);
+
+  		if (!query_result.empty()){
+  			DBoW2::Result best_result = query_result[0]; 
+  			if (best_result.Score >= alpha_ * nss_factor){
+  				*vertex_match = std::make_pair(my_id_, best_result.Id);
+  				return true;
+  			}
+  		}
+  		return false;
+	}
+
 
 	void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id){
 		if(vlc_frames_.find(vertex_id) != vlc_frames_.end()){
@@ -170,7 +201,7 @@ namespace kimera_distributed {
 	}
 
 
-	bool DistributedLoopClosure::verifyLoopClosure(const VertexID& vertex_query, const VertexID& vertex_match){
+	bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query, const VertexID& vertex_match, gtsam::Pose3* T_query_match){
 		requestVLCFrame(vertex_query);
 		requestVLCFrame(vertex_match);
 
@@ -201,26 +232,22 @@ namespace kimera_distributed {
 		bool ransac_success = ransac.computeModel();
 
 		if (ransac_success) 
-		{
-			
-			opengv::transformation_t T = ransac.model_coefficients_;
-			// Yulun: this is the relative pose from the query frame to the match frame?
-			gtsam::Pose3 T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
-								                      gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
-			
+		{	
+			double inlier_percentage = static_cast<double>(ransac.inliers_.size()) / f_ref.size();
 
-			ROS_INFO_STREAM("Find loop closure between " 
-							<< "(" << vertex_query.first << ", " << vertex_query.second << ")"
-							<< " and "
-							<< "(" << vertex_match.first << ", " << vertex_match.second << ")"
-							);
+			if (inlier_percentage > ransac_inlier_threshold_stereo_ &&
+				ransac.iterations_ < max_ransac_iterations_)
+			{
+				
 
-			VLCEdge edge(vertex_query, vertex_match, T_query_match);
-			loop_closures_.push_back(edge);
+				opengv::transformation_t T = ransac.model_coefficients_;
+				
+				// Yulun: this is the relative pose from the query frame to the match frame?
+				*T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
+									          gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
 
-			saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures.csv");
-
-			return true;
+				return true;
+			}
 		}
 
 		return false;
@@ -234,7 +261,7 @@ namespace kimera_distributed {
 
 		// file format
 		file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
-		
+
 		for (size_t i = 0; i < loop_closures_.size(); ++i)
 		{
 			VLCEdge edge = loop_closures_[i];

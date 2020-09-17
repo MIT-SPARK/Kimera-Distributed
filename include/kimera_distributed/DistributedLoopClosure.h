@@ -49,15 +49,19 @@ class DistributedLoopClosure {
   int dist_local_;
   int max_db_results_;
   float base_nss_factor_;
+  float min_nss_factor_;
 
   // Parameters for geometric verification
   int max_ransac_iterations_;
   double lowe_ratio_;
   double ransac_threshold_;
+  double ransac_inlier_threshold_stereo_;
 
   std::vector<ros::Subscriber> bow_subscribers;
 
   void bowCallback(const kimera_distributed::BowQueryConstPtr& msg);
+
+  bool detectLoop(const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query, VertexID* vertex_match);
 
   void requestVLCFrame(const VertexID& vertex_id);
 
@@ -66,7 +70,7 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_query,
                              std::vector<unsigned int>* i_match) const;
 
-  bool verifyLoopClosure(const VertexID& vertex_query, const VertexID& vertex_match);
+  bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match, gtsam::Pose3* T_query_match);
 
   // For debugging purpose
   void saveLoopClosuresToFile(const std::string filename);

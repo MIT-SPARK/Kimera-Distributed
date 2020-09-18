@@ -4,12 +4,13 @@
  * Authors: Yulun Tian (yulun@mit.edu)
  */
 
-#include <cassert>
-#include <kimera_distributed/utils.h>
-#include <ros/console.h>
-#include <pcl_conversions/pcl_conversions.h>
 #include <cv_bridge/cv_bridge.h>
+#include <kimera_distributed/prefix.h>
+#include <kimera_distributed/utils.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <ros/console.h>
 #include <sensor_msgs/image_encodings.h>
+#include <cassert>
 
 namespace kimera_distributed {
 
@@ -74,6 +75,39 @@ void VLCFrameFromMsg(const kimera_distributed::VLCFrameMsg& msg, VLCFrame* frame
   sensor_msgs::ImageConstPtr ros_image_ptr(new sensor_msgs::Image( msg.descriptors_mat ));
   frame->descriptors_mat_ = cv_bridge::toCvCopy(ros_image_ptr, sensor_msgs::image_encodings::TYPE_8UC1)->image;
   frame->initializeDescriptorsVector(); 
+}
+
+gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(const VLCEdge& vlc_edge) {
+  // TODO: Currently covariance is hard coded
+  uint32_t robot_src = vlc_edge.vertex_src_.first;
+  uint32_t frame_src = vlc_edge.vertex_src_.second;
+
+  uint32_t robot_dst = vlc_edge.vertex_dst_.first;
+  uint32_t frame_dst = vlc_edge.vertex_dst_.second;
+
+  // Convert to gtsam key
+  gtsam::Symbol src_key(robot_id_to_prefix.at(robot_src), frame_src);
+  gtsam::Symbol dst_key(robot_id_to_prefix.at(robot_dst), frame_dst);
+
+  // Create hard coded covariance
+  static const gtsam::SharedNoiseModel& noise =
+      gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+
+  // Create and return between factor
+  return gtsam::BetweenFactor<gtsam::Pose3>(
+      src_key, dst_key, vlc_edge.T_src_dst_, noise);
+}
+
+gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform) {
+  gtsam::Pose3 pose;
+  pose = gtsam::Pose3(
+      gtsam::Rot3(transform.orientation.w,
+                  transform.orientation.x,
+                  transform.orientation.y,
+                  transform.orientation.z),
+      gtsam::Point3(
+          transform.position.x, transform.position.y, transform.position.z));
+  return pose;
 }
 
 }  // namespace kimera_distributed

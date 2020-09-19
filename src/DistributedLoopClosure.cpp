@@ -109,7 +109,7 @@ namespace kimera_distributed {
 				VLCEdge edge(vertex_query, vertex_match, T_query_match);
 				loop_closures_.push_back(edge);
 
-				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures.csv");
+				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
 			}
 		}
 
@@ -254,17 +254,26 @@ namespace kimera_distributed {
 	}
 
 
+	void DistributedLoopClosure::getLoopClosures(std::vector<VLCEdge>* loop_closures)
+	{
+		*loop_closures = loop_closures_;
+	}
+
+
 	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename){
 		ROS_INFO_STREAM("Saving loop closures to " << filename);
 		std::ofstream file;
 		file.open(filename);
 
+		std::vector<VLCEdge> loop_closures;
+		getLoopClosures(&loop_closures);
+
 		// file format
 		file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
 
-		for (size_t i = 0; i < loop_closures_.size(); ++i)
+		for (size_t i = 0; i < loop_closures.size(); ++i)
 		{
-			VLCEdge edge = loop_closures_[i];
+			VLCEdge edge = loop_closures[i];
 			file << edge.vertex_src_.first << ",";
 			file << edge.vertex_src_.second << ",";
 			file << edge.vertex_dst_.first << ",";

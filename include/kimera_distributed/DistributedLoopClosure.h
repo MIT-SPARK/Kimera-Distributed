@@ -72,6 +72,9 @@ class DistributedLoopClosure {
 
   bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match, gtsam::Pose3* T_query_match);
 
+  
+  void getLoopClosures(std::vector<VLCEdge>* loop_closures);
+
   // For debugging purpose
   void saveLoopClosuresToFile(const std::string filename);
   

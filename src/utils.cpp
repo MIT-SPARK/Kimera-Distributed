@@ -76,4 +76,44 @@ void VLCFrameFromMsg(const kimera_distributed::VLCFrameMsg& msg, VLCFrame* frame
   frame->initializeDescriptorsVector(); 
 }
 
+void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg){
+  // Yulun: this function currently does not assign covariance! 
+
+  msg->robot_from = edge.vertex_src_.first;
+  msg->key_from   = edge.vertex_src_.second;
+  msg->robot_to   = edge.vertex_dst_.first;
+  msg->key_to     = edge.vertex_dst_.second;
+  msg->type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+  
+  gtsam::Pose3 pose = edge.T_src_dst_;
+  gtsam::Quaternion quat = pose.rotation().toQuaternion();
+  gtsam::Point3 position = pose.translation();
+
+  msg->pose.orientation.x = quat.x();
+  msg->pose.orientation.y = quat.y();
+  msg->pose.orientation.z = quat.z();
+  msg->pose.orientation.w = quat.w();
+
+  msg->pose.position.x = position.x();
+  msg->pose.position.y = position.y();
+  msg->pose.position.z = position.z();
+}
+
+void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge){
+  edge->vertex_src_ = std::make_pair(msg.robot_from, msg.key_from);
+  edge->vertex_dst_ = std::make_pair(msg.robot_to  , msg.key_to);
+
+  gtsam::Rot3   rotation(msg.pose.orientation.w, 
+                         msg.pose.orientation.x,
+                         msg.pose.orientation.y,
+                         msg.pose.orientation.z);
+
+  gtsam::Point3 position(msg.pose.position.x,
+                         msg.pose.position.y,
+                         msg.pose.position.z);
+
+  gtsam::Pose3 T_src_dst(rotation, position);
+  edge->T_src_dst_ = T_src_dst;
+}
+
 }  // namespace kimera_distributed

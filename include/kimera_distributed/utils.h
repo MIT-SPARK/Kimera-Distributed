@@ -15,6 +15,7 @@
 #include <kimera_distributed/VLCFrameMsg.h>
 #include <kimera_distributed/VLCFrameQuery.h>
 #include <DBoW2/DBoW2.h>
+#include <pose_graph_tools/PoseGraphEdge.h>
 
 namespace kimera_distributed {
     void BowVectorToMsg(const DBoW2::BowVector& bow_vec, kimera_distributed::BowVector* msg);
@@ -23,4 +24,6 @@ namespace kimera_distributed {
     void VLCFrameToMsg(const VLCFrame& frame, kimera_distributed::VLCFrameMsg* msg);
     void VLCFrameFromMsg(const kimera_distributed::VLCFrameMsg& msg, VLCFrame* frame);
 
+    void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg);
+	void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge);
 }  // namespace kimera_distributed

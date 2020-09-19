@@ -30,6 +30,8 @@ class DistributedLoopClosure {
   DistributedLoopClosure(const ros::NodeHandle& n);
   ~DistributedLoopClosure();
 
+  void getLoopClosures(std::vector<VLCEdge>* loop_closures);
+
  private:
   ros::NodeHandle nh_;
   RobotID my_id_;
@@ -71,9 +73,6 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_match) const;
 
   bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match, gtsam::Pose3* T_query_match);
-
-  
-  void getLoopClosures(std::vector<VLCEdge>* loop_closures);
 
   // For debugging purpose
   void saveLoopClosuresToFile(const std::string filename);

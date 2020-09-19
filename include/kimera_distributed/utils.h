@@ -14,6 +14,7 @@
 #include <kimera_distributed/BowVector.h>
 #include <kimera_distributed/VLCFrameMsg.h>
 #include <kimera_distributed/VLCFrameQuery.h>
+#include <kimera_distributed/addLoopClosure.h>
 #include <DBoW2/DBoW2.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
 

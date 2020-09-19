@@ -9,9 +9,9 @@
       <arg name="num_robots" value="$(arg num_robots)" />
   </include>
 
-  <!-- <include file="$(find kimera_distributed)/launch/kimera_full_stack_euroc.launch">
+  <include file="$(find kimera_distributed)/launch/kimera_full_stack_euroc.launch">
       <arg name="robot_id" value="1" />
       <arg name="num_robots" value="$(arg num_robots)" />
-  </include> -->
+  </include>
 
 </launch>

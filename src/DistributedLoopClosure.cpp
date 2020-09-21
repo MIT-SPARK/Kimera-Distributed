@@ -62,11 +62,15 @@ namespace kimera_distributed {
 		vocab.load(orb_vocab_path);
 		db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
 
+		// Subscriber
 		for (size_t id = my_id_; id < num_robots_; ++id){
 			std::string topic = "/kimera" + std::to_string(id) + "/kimera_vio_ros/bow_query";
 			ros::Subscriber sub = nh_.subscribe(topic, 10, &DistributedLoopClosure::bowCallback, this);
 			bow_subscribers.push_back(sub);
 		}
+
+		// Service
+  		add_loop_closure_server_ = nh_.advertiseService("add_loop_closure", &DistributedLoopClosure::addLoopClosureCallback, this);
 
 		ROS_INFO_STREAM("Distributed Kimera node initialized (ID = " << my_id_ << "). \n" 
 						<< "Parameters: \n" 
@@ -109,7 +113,17 @@ namespace kimera_distributed {
 				VLCEdge edge(vertex_query, vertex_match, T_query_match);
 				loop_closures_.push_back(edge);
 
-				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures.csv");
+				if (robot_id != my_id_){
+					// Inform the other robot about this loop closure
+					std::string service_name = "/kimera" + std::to_string(robot_id) + "/distributed_loop_closure/add_loop_closure";
+
+					addLoopClosure srv;
+					VLCEdgeToMsg(edge, &srv.request.loop_closure);
+					assert(ros::service::call(service_name, srv));
+
+				}
+
+				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
 			}
 		}
 
@@ -121,6 +135,27 @@ namespace kimera_distributed {
 			next_pose_id_++;
 		}
   		
+	}
+
+
+	bool DistributedLoopClosure::addLoopClosureCallback(kimera_distributed::addLoopClosure::Request& request, 
+                                						kimera_distributed::addLoopClosure::Response& response)
+	{
+
+		VLCEdge edge;
+		VLCEdgeFromMsg(request.loop_closure, &edge);
+
+		// Assert that this is an inter-robot loop closure
+		assert(edge.vertex_src_.first != edge.vertex_dst_.first);
+		// Assert that the receiving robot is involved in the loop closure
+		assert(edge.vertex_src_.first == my_id_ ||
+			   edge.vertex_dst_.first == my_id_);
+
+		loop_closures_.push_back(edge);
+
+		saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
+
+		return true;
 	}
 
 
@@ -254,17 +289,26 @@ namespace kimera_distributed {
 	}
 
 
+	void DistributedLoopClosure::getLoopClosures(std::vector<VLCEdge>* loop_closures)
+	{
+		*loop_closures = loop_closures_;
+	}
+
+
 	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename){
 		ROS_INFO_STREAM("Saving loop closures to " << filename);
 		std::ofstream file;
 		file.open(filename);
 
+		std::vector<VLCEdge> loop_closures;
+		getLoopClosures(&loop_closures);
+
 		// file format
 		file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
 
-		for (size_t i = 0; i < loop_closures_.size(); ++i)
+		for (size_t i = 0; i < loop_closures.size(); ++i)
 		{
-			VLCEdge edge = loop_closures_[i];
+			VLCEdge edge = loop_closures[i];
 			file << edge.vertex_src_.first << ",";
 			file << edge.vertex_src_.second << ",";
 			file << edge.vertex_dst_.first << ",";

@@ -14,7 +14,9 @@
 #include <kimera_distributed/BowVector.h>
 #include <kimera_distributed/VLCFrameMsg.h>
 #include <kimera_distributed/VLCFrameQuery.h>
+#include <kimera_distributed/addLoopClosure.h>
 #include <kimera_distributed/types.h>
+#include <pose_graph_tools/PoseGraphEdge.h>
 #include <ros/console.h>
 #include <map>
 #include <string>
@@ -25,8 +27,10 @@ namespace kimera_distributed {
 
     void VLCFrameToMsg(const VLCFrame& frame, kimera_distributed::VLCFrameMsg* msg);
     void VLCFrameFromMsg(const kimera_distributed::VLCFrameMsg& msg, VLCFrame* frame);
+    
+    void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg);
+	void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge);
 
     gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(const VLCEdge& vlc_edge);
     gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform);
-
 }  // namespace kimera_distributed

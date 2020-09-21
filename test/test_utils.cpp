@@ -35,7 +35,7 @@ TEST(UtilsTest, VLCFrameConstruction) {
   keypoints.push_back(p0);
   keypoints.push_back(p1);
   
-  OrbDescriptor descriptors_mat(7,7,CV_8UC1,1);
+  OrbDescriptor descriptors_mat(2,7,CV_8UC1,1);
 
   VLCFrame frame(robot_id, pose_id, keypoints, descriptors_mat);
 
@@ -59,7 +59,7 @@ TEST(UtilsTest, VLCFrameMessage) {
   keypoints.push_back(p0);
   keypoints.push_back(p1);
 
-  OrbDescriptor descriptors_mat(7,7,CV_8UC1,1);
+  OrbDescriptor descriptors_mat(2,7,CV_8UC1,1);
 
   VLCFrame frame_in(robot_id, pose_id, keypoints, descriptors_mat);
   VLCFrame frame;
@@ -75,6 +75,25 @@ TEST(UtilsTest, VLCFrameMessage) {
   for (size_t i = 0 ; i < descriptors_mat.size().height; ++i){
     ASSERT_LE(cv::norm(frame.descriptors_vec_[i] - descriptors_mat.row(i)) , 1e-4);
   }
+}
+
+
+TEST(UtilsTest, VLCEdgeMsg) {
+  VertexID vertex_src = std::make_pair(0,0);
+  VertexID vertex_dst = std::make_pair(1,1);
+  gtsam::Point3 position(1.0,2.0,3.0);
+  gtsam::Rot3   rotation(-0.33968, 0.11263, 0.089, 0.92952);
+  gtsam::Pose3  T_src_dst(rotation, position);
+  VLCEdge edge(vertex_src, vertex_dst, T_src_dst);
+
+  VLCEdge edge_out;
+  pose_graph_tools::PoseGraphEdge msg;
+  VLCEdgeToMsg(edge, &msg);
+  VLCEdgeFromMsg(msg, &edge_out);
+
+  ASSERT_EQ(edge.vertex_src_, edge_out.vertex_src_);
+  ASSERT_EQ(edge.vertex_dst_, edge_out.vertex_dst_);
+  ASSERT_TRUE(edge.T_src_dst_.equals(edge_out.T_src_dst_));
 }
 
 int main(int argc, char** argv) {

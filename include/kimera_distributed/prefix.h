@@ -10,7 +10,7 @@
 #include <string>
 
 namespace kimera_distributed {
-const std::map<size_t, char> robot_id_to_prefix = {
+const std::map<uint32_t, char> robot_id_to_prefix = {
     {0, 'a'},
     {1, 'b'},
     {2, 'c'},
@@ -21,7 +21,7 @@ const std::map<size_t, char> robot_id_to_prefix = {
     {7, 'h'},
 };
 
-const std::map<size_t, char> robot_prefix_to_id = {
+const std::map<char, uint32_t> robot_prefix_to_id = {
     {'a', 0},
     {'b', 1},
     {'c', 2},

@@ -6,6 +6,8 @@
 
 #include <gtsam/slam/BetweenFactor.h>
 #include <kimera_distributed/DistributedPcm.h>
+#include <kimera_distributed/prefix.h>
+#include <kimera_distributed/types.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -37,24 +39,56 @@ bool DistributedPcm::initialize(const RobotID& id, const uint32_t& num_robots) {
   for (size_t id = my_id_; id < num_robots_; ++id) {
     std::string topic = "/kimera" + std::to_string(id) +
                         "/kimera_vio_ros/pose_graph_incremental";
-    ros::Subscriber sub = nh_.subscribe(
-        topic, 10, &DistributedLoopClosure::odometryEdgeCallback, this);
+    ros::Subscriber sub =
+        nh_.subscribe(topic, 10, &DistributedPcm::odometryEdgeCallback, this);
     odom_edge_subscribers_.push_back(sub);
   }
+
+  pose_graph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
 }
 
-void DistributedPcm::addLoop(const VLCEdge& loop_closure_edge) {
+void DistributedPcm::addLoopClosures(
+    const std::vector<VLCEdge>& loop_closure_edges) {
   gtsam::NonlinearFactorGraph new_factors;
   gtsam::Values new_values;
 
-  new_factors.add(VLCEdgeToGtsam(loop_closure_edge));
+  for (auto edge : loop_closure_edges) {
+    new_factors.add(VLCEdgeToGtsam(edge));
+  }
 
   pgo_->update(new_factors);
+  // TODO: Add option to not optimize
+  // TODO: Detect if the set of inliers changed
+
+  nfg_ = pgo_->getFactorsUnsafe();
+  values_ = pgo_->calculateBestEstimate();
+
   return;
 }
 
 std::vector<VLCEdge> DistributedPcm::getInlierLoopclosures() const {
+  std::vector<VLCEdge> loop_closures;
   // Extract loop closures from the last filtered pose graph
+  for (auto factor : nfg_) {
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
+            factor)) {
+      // Check not odometry factor
+      if (factor->front() + 1 != factor->back()) {
+        gtsam::BetweenFactor<gtsam::Pose3> lc_edge =
+            *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
+                factor);
+
+        gtsam::Symbol src_key(lc_edge.front());
+        gtsam::Symbol dst_key(lc_edge.back());
+        VertexID src(robot_prefix_to_id.at(src_key.chr()), src_key.index());
+        VertexID dst(robot_prefix_to_id.at(dst_key.chr()), dst_key.index());
+        VLCEdge vlc_edge(src, dst, lc_edge.measured());
+        loop_closures.push_back(vlc_edge);
+      }
+    }
+  }
+
+  return loop_closures;
 }
 
 void DistributedPcm::odometryEdgeCallback(
@@ -68,7 +102,7 @@ void DistributedPcm::odometryEdgeCallback(
     const gtsam::Pose3 estimate = RosPoseToGtsam(pg_node.pose);
     const uint32_t robot_id = pg_node.robot_id;
     const uint32_t frame_id = pg_node.key;
-    gtsam::Symbol key(robot_id_to_prefix(robot_id), frame_id);
+    gtsam::Symbol key(robot_id_to_prefix.at(robot_id), frame_id);
 
     if (!values_.exists(key)) new_values.insert(key, estimate);
   }
@@ -81,8 +115,8 @@ void DistributedPcm::odometryEdgeCallback(
     const uint32_t current_node = pg_edge.key_to;
     const uint32_t robot_from = pg_edge.robot_from;
     const uint32_t robot_to = pg_edge.robot_to;
-    gtsam::Symbol from_key(robot_id_to_prefix(robot_from), prev_node);
-    gtsam::Symbol to_key(robot_id_to_prefix(robot_to), current_node);
+    gtsam::Symbol from_key(robot_id_to_prefix.at(robot_from), prev_node);
+    gtsam::Symbol to_key(robot_id_to_prefix.at(robot_to), current_node);
 
     // Check if odometry edge
     if (pg_edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
@@ -105,6 +139,39 @@ void DistributedPcm::odometryEdgeCallback(
   }
 }
 
-void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {}
+void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {
+  std::vector<VLCEdge> loop_closures = getInlierLoopclosures();
+  ROS_INFO_STREAM("Saving pcm processed loop closures to " << filename);
+  std::ofstream file;
+  file.open(filename);
+
+  // file format
+  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+
+  for (size_t i = 0; i < loop_closures.size(); ++i) {
+    VLCEdge edge = loop_closures[i];
+    file << edge.vertex_src_.first << ",";
+    file << edge.vertex_src_.second << ",";
+    file << edge.vertex_dst_.first << ",";
+    file << edge.vertex_dst_.second << ",";
+    gtsam::Pose3 pose = edge.T_src_dst_;
+    gtsam::Quaternion quat = pose.rotation().toQuaternion();
+    gtsam::Point3 point = pose.translation();
+    file << quat.x() << ",";
+    file << quat.y() << ",";
+    file << quat.z() << ",";
+    file << quat.w() << ",";
+    file << point.x() << ",";
+    file << point.y() << ",";
+    file << point.z() << "\n";
+  }
+
+  file.close();
+}
+
+void DistributedPcm::publishPoseGraph() const {
+  pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
+  pose_graph_pub_.publish(pose_graph_msg);
+}
 
 }  // namespace kimera_distributed

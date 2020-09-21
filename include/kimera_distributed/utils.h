@@ -10,12 +10,16 @@
 #include <geometry_msgs/Pose.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/nonlinear/NonlinearFactor.h>
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam/nonlinear/Values.h>
 #include <kimera_distributed/BowQuery.h>
 #include <kimera_distributed/BowVector.h>
 #include <kimera_distributed/VLCFrameMsg.h>
 #include <kimera_distributed/VLCFrameQuery.h>
 #include <kimera_distributed/addLoopClosure.h>
 #include <kimera_distributed/types.h>
+#include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <ros/console.h>
 #include <map>
@@ -33,4 +37,9 @@ namespace kimera_distributed {
 
     gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(const VLCEdge& vlc_edge);
     gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform);
+
+    // Convert gtsam posegaph to PoseGraph msg
+    pose_graph_tools::PoseGraph GtsamGraphToRos(
+        const gtsam::NonlinearFactorGraph& factors,
+        const gtsam::Values& values);
 }  // namespace kimera_distributed

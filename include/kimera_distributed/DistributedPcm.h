@@ -32,9 +32,14 @@ class DistributedPcm {
 
   bool initialize(const RobotID& id, const uint32_t& num_robots);
 
-  void addLoop(const VLCEdge& loop_closure_edge);
+  void addLoopClosures(const std::vector<VLCEdge>& loop_closure_edges);
 
   std::vector<VLCEdge> getInlierLoopclosures() const;
+
+  void publishPoseGraph() const;
+
+  // For debugging purpose
+  void saveLoopClosuresToFile(const std::string& filename);
 
  private:
   ros::NodeHandle nh_;
@@ -42,6 +47,7 @@ class DistributedPcm {
   uint32_t num_robots_;
 
   std::vector<ros::Subscriber> odom_edge_subscribers_;
+  ros::Publisher pose_graph_pub_;
 
   // Latest pcm processed pose graph
   gtsam::Values values_;
@@ -50,9 +56,6 @@ class DistributedPcm {
   std::unique_ptr<KimeraRPGO::RobustSolver> pgo_;
 
   void odometryEdgeCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
-
-  // For debugging purpose
-  void saveLoopClosuresToFile(const std::string& filename);
 };
 
 }  // namespace kimera_distributed

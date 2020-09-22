@@ -31,8 +31,8 @@ namespace kimera_distributed {
 	{
 		int my_id_int = -1;
 		int num_robots_int = -1;
-		assert(ros::param::get("~robot_id", my_id_int));
-		assert(ros::param::get("~num_robots", num_robots_int));
+		ros::param::get("~robot_id", my_id_int);
+		ros::param::get("~num_robots", num_robots_int);
 		assert(my_id_int >= 0);
 		assert(num_robots_int > 0);
 		my_id_ = my_id_int;
@@ -43,21 +43,21 @@ namespace kimera_distributed {
   		orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
 
 		// Visual place recognition params
-		assert(ros::param::get("~alpha", alpha_));
-		assert(ros::param::get("~dist_local", dist_local_));
-		assert(ros::param::get("~max_db_results", max_db_results_));
-		assert(ros::param::get("~base_nss_factor", base_nss_factor_));
-		assert(ros::param::get("~min_nss_factor", min_nss_factor_));
+		ros::param::get("~alpha", alpha_);
+		ros::param::get("~dist_local", dist_local_);
+		ros::param::get("~max_db_results", max_db_results_);
+		ros::param::get("~base_nss_factor", base_nss_factor_);
+		ros::param::get("~min_nss_factor", min_nss_factor_);
 
 		// Geometric verification params
-		assert(ros::param::get("~lowe_ratio", lowe_ratio_));
-		assert(ros::param::get("~max_ransac_iterations", max_ransac_iterations_));
-		assert(ros::param::get("~ransac_threshold", ransac_threshold_));
-		assert(ros::param::get("~ransac_inlier_threshold_stereo", ransac_inlier_threshold_stereo_));
+		ros::param::get("~lowe_ratio", lowe_ratio_);
+		ros::param::get("~max_ransac_iterations", max_ransac_iterations_);
+		ros::param::get("~ransac_threshold", ransac_threshold_);
+		ros::param::get("~ransac_inlier_threshold_stereo", ransac_inlier_threshold_stereo_);
 
 		// Initialize bag-of-word database
 		std::string orb_vocab_path;
-		assert(ros::param::get("~vocabulary_path", orb_vocab_path));
+		ros::param::get("~vocabulary_path", orb_vocab_path);
 		OrbVocabulary vocab;
 		vocab.load(orb_vocab_path);
 		db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
@@ -94,7 +94,7 @@ namespace kimera_distributed {
 		RobotID robot_id = msg->robot_id;
 		assert(robot_id >= my_id_);
 		PoseID pose_id = msg->pose_id;
-		VertexID vertex_query = std::make_pair(robot_id, pose_id);
+		VertexID vertex_query(robot_id, pose_id);
 		DBoW2::BowVector bow_vec;
 		BowVectorFromMsg(msg->bow_vector, &bow_vec);
 
@@ -119,7 +119,9 @@ namespace kimera_distributed {
 
 					addLoopClosure srv;
 					VLCEdgeToMsg(edge, &srv.request.loop_closure);
-					assert(ros::service::call(service_name, srv));
+					if (!ros::service::call(service_name, srv)){
+						ROS_ERROR_STREAM("Could not inform the other robot of newly added loop closure!");
+					}
 
 				}
 
@@ -199,7 +201,9 @@ namespace kimera_distributed {
 		VLCFrameQuery query;
 		query.request.robot_id = robot_id;
 		query.request.pose_id  = pose_id;
-		assert(ros::service::call(service_name, query));
+		if(!ros::service::call(service_name, query)){
+			ROS_ERROR_STREAM("Could not query VLC frame!");
+		}
 
 		VLCFrame frame;
 		VLCFrameFromMsg(query.response.frame, &frame);

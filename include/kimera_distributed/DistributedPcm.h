@@ -30,8 +30,6 @@ class DistributedPcm {
   DistributedPcm(const ros::NodeHandle& n);
   ~DistributedPcm();
 
-  bool initialize(const RobotID& id, const uint32_t& num_robots);
-
   void addLoopClosures(const std::vector<VLCEdge>& loop_closure_edges);
 
   std::vector<VLCEdge> getInlierLoopclosures() const;
@@ -44,7 +42,7 @@ class DistributedPcm {
  private:
   ros::NodeHandle nh_;
   RobotID my_id_;
-  uint32_t num_robots_;
+  int num_robots_;
 
   std::vector<ros::Subscriber> odom_edge_subscribers_;
   ros::Publisher pose_graph_pub_;

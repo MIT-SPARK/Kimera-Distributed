@@ -14,15 +14,16 @@
 
 namespace kimera_distributed {
 
-DistributedPcm::DistributedPcm(const ros::NodeHandle& n) : nh_(n) {}
-
-DistributedPcm::~DistributedPcm() {}
-
-bool DistributedPcm::initialize(const RobotID& id, const uint32_t& num_robots) {
-  my_id_ = id;
-  num_robots_ = num_robots;
-  assert(my_id_ >= 0);
-  assert(num_robots_ > 0);
+DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
+    : nh_(n), my_id_(-1), num_robots_(-1) {
+  int my_id_int = -1;
+  int num_robots_int = -1;
+  assert(ros::param::get("~robot_id", my_id_int));
+  assert(ros::param::get("~num_robots", num_robots_int));
+  assert(my_id_int >= 0);
+  assert(num_robots_int > 0);
+  my_id_ = my_id_int;
+  num_robots_ = num_robots_int;
 
   // Pcm parameters
   double pcm_trans_threshold, pcm_rot_threshold;
@@ -44,8 +45,11 @@ bool DistributedPcm::initialize(const RobotID& id, const uint32_t& num_robots) {
     odom_edge_subscribers_.push_back(sub);
   }
 
-  pose_graph_pub_ = nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1);
+  pose_graph_pub_ =
+      nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1, false);
 }
+
+DistributedPcm::~DistributedPcm() {}
 
 void DistributedPcm::addLoopClosures(
     const std::vector<VLCEdge>& loop_closure_edges) {
@@ -137,6 +141,11 @@ void DistributedPcm::odometryEdgeCallback(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
     }
   }
+
+  pgo_->update(new_factors, new_values);
+  nfg_ = pgo_->getFactorsUnsafe();
+  values_ = pgo_->calculateBestEstimate();
+  
 }
 
 void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {

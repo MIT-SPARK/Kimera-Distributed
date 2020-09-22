@@ -9,6 +9,8 @@
   <node name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
+    <param name="pcm_threshold_translation" value="0.005" />
+    <param name="pcm_threshold_rotation" value="0.005" />
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure.yaml"/>
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
   </node>    

@@ -36,7 +36,10 @@ class DistributedRobustLoopDetector {
 
   void timerLoop(const ros::TimerEvent& t) {
     ros::Time dlc_last_callback = dlc_.getLastCallbackTime();
-    if (ros::Time::now() - dlc_last_callback > ros::Duration(1.0)) {
+    std::vector<VLCEdge> loop_closures;
+    dlc_.getLoopClosures(&loop_closures);
+    if (loop_closures.size() > 0 && ros::Time::now() - dlc_last_callback > ros::Duration(1.0)) {
+      ROS_INFO("No new messages: run PCM and publish pose graph. ");
       std::vector<VLCEdge> loop_closures;
       dlc_.getLoopClosures(&loop_closures);
       // Save the dlc loop closures for debugging purposes
@@ -51,6 +54,12 @@ class DistributedRobustLoopDetector {
 
       // Publish pose graph
       dpcm_.publishPoseGraph();
+
+      // Shut down since at the end
+      ros::shutdown();
+    } else {
+      ROS_INFO("Number of detected loop closures (prior to PCM): %d", loop_closures.size());
+      ROS_INFO("Time since last callback: %lf", (ros::Time::now() - dlc_last_callback).toSec());
     }
   }
 };

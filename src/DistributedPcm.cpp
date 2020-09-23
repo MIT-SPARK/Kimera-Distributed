@@ -37,7 +37,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
       new KimeraRPGO::RobustSolver(pgo_params));
 
   // Start odometry edge subscribers
-  for (size_t id = my_id_; id < num_robots_; ++id) {
+  for (size_t id = 0; id < num_robots_; ++id) {
     std::string topic = "/kimera" + std::to_string(id) +
                         "/kimera_vio_ros/pose_graph_incremental";
     ros::Subscriber sub =

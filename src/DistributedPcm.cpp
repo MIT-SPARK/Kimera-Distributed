@@ -60,7 +60,7 @@ void DistributedPcm::addLoopClosures(
     new_factors.add(VLCEdgeToGtsam(edge));
   }
 
-  pgo_->update(new_factors);
+  pgo_->update(new_factors, new_values, false);
   // TODO: Add option to not optimize
   // TODO: Detect if the set of inliers changed
 
@@ -142,7 +142,7 @@ void DistributedPcm::odometryEdgeCallback(
     }
   }
 
-  pgo_->update(new_factors, new_values);
+  pgo_->update(new_factors, new_values, false);
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();
   

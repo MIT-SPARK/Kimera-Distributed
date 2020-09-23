@@ -97,6 +97,7 @@ namespace kimera_distributed {
 		VertexID vertex_query(robot_id, pose_id);
 		DBoW2::BowVector bow_vec;
 		BowVectorFromMsg(msg->bow_vector, &bow_vec);
+		last_callback_time_ = ros::Time::now();
 
 		VertexID vertex_match;
 		if (detectLoop(vertex_query, bow_vec, &vertex_match))

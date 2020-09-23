@@ -32,6 +32,13 @@ class DistributedLoopClosure {
 
   void getLoopClosures(std::vector<VLCEdge>* loop_closures);
 
+  inline ros::Time getLastCallbackTime() const { return last_callback_time_; }
+
+  inline RobotID getRobotId() const { return my_id_; }
+
+  // For debugging purpose
+  void saveLoopClosuresToFile(const std::string filename);
+
  private:
   ros::NodeHandle nh_;
   RobotID my_id_;
@@ -59,6 +66,9 @@ class DistributedLoopClosure {
   double ransac_threshold_;
   double ransac_inlier_threshold_stereo_;
 
+  // Last msg time 
+  ros::Time last_callback_time_;
+
   // ROS subscriber
   std::vector<ros::Subscriber> bow_subscribers;
 
@@ -80,9 +90,6 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_match) const;
 
   bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match, gtsam::Pose3* T_query_match);
-
-  // For debugging purpose
-  void saveLoopClosuresToFile(const std::string filename);
   
 };
 

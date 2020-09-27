@@ -72,6 +72,9 @@ class DistributedLoopClosure {
   // ROS subscriber
   std::vector<ros::Subscriber> bow_subscribers;
 
+  // ROS publisher 
+  ros::Publisher loop_closure_publisher_;
+
   // ROS service
   ros::ServiceServer add_loop_closure_server_;
 
@@ -90,6 +93,8 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_match) const;
 
   bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match, gtsam::Pose3* T_query_match);
+
+  void publishLoopClosure(const VLCEdge& loop_closure_edge);
   
 };
 

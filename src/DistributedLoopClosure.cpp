@@ -10,9 +10,9 @@
 #include <fstream>
 #include <kimera_distributed/DistributedLoopClosure.h>
 
-
-#include <ros/ros.h>
+#include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
+#include <ros/ros.h>
 #include <opengv/point_cloud/PointCloudAdapter.hpp>
 #include <opengv/relative_pose/CentralRelativeAdapter.hpp>
 #include <opengv/sac/Ransac.hpp>
@@ -68,6 +68,10 @@ namespace kimera_distributed {
 			ros::Subscriber sub = nh_.subscribe(topic, 10, &DistributedLoopClosure::bowCallback, this);
 			bow_subscribers.push_back(sub);
 		}
+
+		// Publisher 
+		std::string loop_closure_topic = "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+		loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(topic, 10, false);
 
 		// Service
   		add_loop_closure_server_ = nh_.advertiseService("add_loop_closure", &DistributedLoopClosure::addLoopClosureCallback, this);
@@ -300,7 +304,8 @@ namespace kimera_distributed {
 	}
 
 
-	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename){
+	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename)
+	{
 		ROS_INFO_STREAM("Saving loop closures to " << filename);
 		std::ofstream file;
 		file.open(filename);
@@ -331,6 +336,13 @@ namespace kimera_distributed {
 		}
 
 		file.close();
+	}
+
+	void DistributedLoopClosure::publishLoopClosure(const VLCEdge& loop_closure_edge)
+	{
+		pose_graph_tools::PoseGraphEdge msg_edge; 
+		VLCEdgeToMsg(loop_closure_edge, &msg_edge);
+		loop_closure_publisher_.publish(msg_edge);
 	}
 
 }

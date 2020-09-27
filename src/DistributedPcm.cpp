@@ -54,6 +54,12 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   // Initialize pose graph publisher
   pose_graph_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1, false);
+
+  ROS_INFO_STREAM("Distributed Kimera PCM node initialized (ID = "
+                  << my_id_ << "). \n"
+                  << "Parameters: \n"
+                  << "pcm_threshold_translation = " << pcm_trans_threshold << "\n"
+                  << "pcm_threshold_rotation = " << pcm_rot_threshold);
 }
 
 DistributedPcm::~DistributedPcm() {}
@@ -177,7 +183,7 @@ void DistributedPcm::loopclosureCallback(
 
   // For debugging
   saveLoopClosuresToFile(
-      "/home/yunchang/catkin_ws/src/Kimera-Distributed/loop_closures_" +
+      "/home/yunchang/catkin_ws/src/Kimera-Distributed/pcm_loop_closures_" +
       std::to_string(my_id_) + ".csv");
 }
 

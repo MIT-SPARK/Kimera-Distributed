@@ -73,9 +73,6 @@ namespace kimera_distributed {
 		std::string loop_closure_topic = "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
 		loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(loop_closure_topic, 10, false);
 
-		// Service
-  		add_loop_closure_server_ = nh_.advertiseService("add_loop_closure", &DistributedLoopClosure::addLoopClosureCallback, this);
-
 		ROS_INFO_STREAM("Distributed Kimera node initialized (ID = " << my_id_ << "). \n" 
 						<< "Parameters: \n" 
 						<< "alpha = " << alpha_ << "\n"
@@ -119,18 +116,6 @@ namespace kimera_distributed {
 				loop_closures_.push_back(edge);
 				publishLoopClosure(edge); // Publish to pcm node
 
-				if (robot_id != my_id_){
-					// Inform the other robot about this loop closure
-					std::string service_name = "/kimera" + std::to_string(robot_id) + "/distributed_loop_closure/add_loop_closure";
-
-					addLoopClosure srv;
-					VLCEdgeToMsg(edge, &srv.request.loop_closure);
-					if (!ros::service::call(service_name, srv)){
-						ROS_ERROR_STREAM("Could not inform the other robot of newly added loop closure!");
-					}
-
-				}
-
 				// For debugging 
 				saveLoopClosuresToFile("/home/yunchang/catkin_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
 			}
@@ -144,27 +129,6 @@ namespace kimera_distributed {
 			next_pose_id_++;
 		}
   		
-	}
-
-
-	bool DistributedLoopClosure::addLoopClosureCallback(kimera_distributed::addLoopClosure::Request& request, 
-                                						kimera_distributed::addLoopClosure::Response& response)
-	{
-
-		VLCEdge edge;
-		VLCEdgeFromMsg(request.loop_closure, &edge);
-
-		// Assert that this is an inter-robot loop closure
-		assert(edge.vertex_src_.first != edge.vertex_dst_.first);
-		// Assert that the receiving robot is involved in the loop closure
-		assert(edge.vertex_src_.first == my_id_ ||
-			   edge.vertex_dst_.first == my_id_);
-
-		loop_closures_.push_back(edge);
-
-		saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
-
-		return true;
 	}
 
 

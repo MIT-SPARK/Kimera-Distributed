@@ -75,13 +75,7 @@ class DistributedLoopClosure {
   // ROS publisher 
   ros::Publisher loop_closure_publisher_;
 
-  // ROS service
-  ros::ServiceServer add_loop_closure_server_;
-
   void bowCallback(const kimera_distributed::BowQueryConstPtr& msg);
-
-  bool addLoopClosureCallback(kimera_distributed::addLoopClosure::Request& request, 
-                              kimera_distributed::addLoopClosure::Response& response);
 
   bool detectLoop(const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query, VertexID* vertex_match);
 

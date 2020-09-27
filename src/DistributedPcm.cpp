@@ -48,8 +48,8 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   // Start loop closure edge subscribers
   std::string loop_closure_topic =
       "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
-  loop_closure_edge_subscriber_ =
-      nh_.subscribe(topic, 30, &DistributedPcm::loopclosureCallback, this);
+  loop_closure_edge_subscriber_ = nh_.subscribe(
+      loop_closure_topic, 30, &DistributedPcm::loopclosureCallback, this);
 
   // Initialize pose graph publisher
   pose_graph_pub_ =
@@ -171,7 +171,7 @@ void DistributedPcm::odometryEdgeCallback(
 void DistributedPcm::loopclosureCallback(
     const pose_graph_tools::PoseGraphEdge::ConstPtr& msg) {
   VLCEdge new_loop_closure;
-  VLCEdgeFromMsg(msg, &new_loop_closure);
+  VLCEdgeFromMsg(*msg, &new_loop_closure);
 
   addLoopClosure(new_loop_closure);
 

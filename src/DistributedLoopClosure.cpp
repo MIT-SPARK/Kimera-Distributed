@@ -71,7 +71,7 @@ namespace kimera_distributed {
 
 		// Publisher 
 		std::string loop_closure_topic = "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
-		loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(topic, 10, false);
+		loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(loop_closure_topic, 10, false);
 
 		// Service
   		add_loop_closure_server_ = nh_.advertiseService("add_loop_closure", &DistributedLoopClosure::addLoopClosureCallback, this);

@@ -117,6 +117,7 @@ namespace kimera_distributed {
 
 				VLCEdge edge(vertex_query, vertex_match, T_query_match);
 				loop_closures_.push_back(edge);
+				publishLoopClosure(edge); // Publish to pcm node
 
 				if (robot_id != my_id_){
 					// Inform the other robot about this loop closure
@@ -130,7 +131,8 @@ namespace kimera_distributed {
 
 				}
 
-				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
+				// For debugging 
+				saveLoopClosuresToFile("/home/yunchang/catkin_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
 			}
 		}
 

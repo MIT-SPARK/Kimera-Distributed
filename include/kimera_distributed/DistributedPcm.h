@@ -15,6 +15,7 @@
 
 #include <KimeraRPGO/RobustSolver.h>
 #include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/PoseGraphEdge.h>
 
 #include <gtsam/geometry/Point3.h>
 #include <gtsam/geometry/Pose3.h>
@@ -32,6 +33,8 @@ class DistributedPcm {
 
   void addLoopClosures(const std::vector<VLCEdge>& loop_closure_edges);
 
+  void addLoopClosure(const VLCEdge& loop_closure);
+
   std::vector<VLCEdge> getInlierLoopclosures() const;
 
   void publishPoseGraph() const;
@@ -44,7 +47,11 @@ class DistributedPcm {
   RobotID my_id_;
   int num_robots_;
 
+  // ROS subscriber
   std::vector<ros::Subscriber> odom_edge_subscribers_;
+  ros::Subscriber loop_closure_edge_subscriber_;
+
+  // ROS publisher
   ros::Publisher pose_graph_pub_;
 
   // Latest pcm processed pose graph
@@ -54,6 +61,9 @@ class DistributedPcm {
   std::unique_ptr<KimeraRPGO::RobustSolver> pgo_;
 
   void odometryEdgeCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+
+  void loopclosureCallback(
+      const pose_graph_tools::PoseGraphEdge::ConstPtr& msg);
 };
 
 }  // namespace kimera_distributed

@@ -45,6 +45,13 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     odom_edge_subscribers_.push_back(sub);
   }
 
+  // Start loop closure edge subscribers
+  std::string loop_closure_topic =
+      "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+  loop_closure_edge_subscriber_ =
+      nh_.subscribe(topic, 30, &DistributedPcm::loopclosureCallback, this);
+
+  // Initialize pose graph publisher
   pose_graph_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1, false);
 }
@@ -61,7 +68,21 @@ void DistributedPcm::addLoopClosures(
   }
 
   pgo_->update(new_factors, new_values, false);
-  // TODO: Add option to not optimize
+  // TODO: Detect if the set of inliers changed
+
+  nfg_ = pgo_->getFactorsUnsafe();
+  values_ = pgo_->calculateBestEstimate();
+
+  return;
+}
+
+void DistributedPcm::addLoopClosure(const VLCEdge& loop_closure) {
+  gtsam::NonlinearFactorGraph new_factors;
+  gtsam::Values new_values;
+
+  new_factors.add(VLCEdgeToGtsam(loop_closure));
+
+  pgo_->update(new_factors, new_values, false);
   // TODO: Detect if the set of inliers changed
 
   nfg_ = pgo_->getFactorsUnsafe();
@@ -145,7 +166,19 @@ void DistributedPcm::odometryEdgeCallback(
   pgo_->update(new_factors, new_values, false);
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();
-  
+}
+
+void DistributedPcm::loopclosureCallback(
+    const pose_graph_tools::PoseGraphEdge::ConstPtr& msg) {
+  VLCEdge new_loop_closure;
+  VLCEdgeFromMsg(msg, &new_loop_closure);
+
+  addLoopClosure(new_loop_closure);
+
+  // For debugging
+  saveLoopClosuresToFile(
+      "/home/yunchang/catkin_ws/src/Kimera-Distributed/loop_closures_" +
+      std::to_string(my_id_) + ".csv");
 }
 
 void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {

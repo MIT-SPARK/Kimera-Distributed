@@ -55,10 +55,15 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   pose_graph_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1, false);
 
+  // Initialize serivce
+  shared_lc_server_ = nh_.advertiseService(
+      "shared_lc_query", &DistributedPcm::shareLoopClosuresCallback, this);
+
   ROS_INFO_STREAM("Distributed Kimera PCM node initialized (ID = "
                   << my_id_ << "). \n"
                   << "Parameters: \n"
-                  << "pcm_threshold_translation = " << pcm_trans_threshold << "\n"
+                  << "pcm_threshold_translation = " << pcm_trans_threshold
+                  << "\n"
                   << "pcm_threshold_rotation = " << pcm_rot_threshold);
 }
 
@@ -220,6 +225,37 @@ void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {
 void DistributedPcm::publishPoseGraph() const {
   pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
   pose_graph_pub_.publish(pose_graph_msg);
+}
+
+void DistributedPcm::querySharedLoopClosures() {
+  for (size_t id = 0; id < my_id_; id++) {
+    std::string service_name =
+        "/kimera" + std::to_string(id) + "/distributed_pcm/shared_lc_query";
+    requestSharedLoopClosures query;
+    query.request.robot_id = my_id_;
+    if (!ros::service::call(service_name, query)) {
+      ROS_ERROR("Could not query shared loop closures. ");
+    }
+    std::vector<pose_graph_tools::PoseGraphEdge> shared_lc =
+        query.response.loop_closures;
+  }
+}
+
+bool DistributedPcm::shareLoopClosuresCallback(
+    kimera_distributed::requestSharedLoopClosures::Request& request,
+    kimera_distributed::requestSharedLoopClosures::Response& response) {
+  auto request_robot_id = request.robot_id;
+  const std::vector<VLCEdge> loop_closures = getInlierLoopclosures();
+
+  for (auto lc_edge : loop_closures) {
+    if (lc_edge.vertex_src_.first == request_robot_id ||
+        lc_edge.vertex_dst_.first == request_robot_id) {
+      pose_graph_tools::PoseGraphEdge shared_lc_edge;
+      VLCEdgeToMsg(lc_edge, &shared_lc_edge);
+      response.loop_closures.push_back(shared_lc_edge);
+    }
+  }
+  return true;
 }
 
 }  // namespace kimera_distributed

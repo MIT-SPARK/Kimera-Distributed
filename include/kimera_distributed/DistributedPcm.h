@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <kimera_distributed/requestSharedLoopClosures.h>
 #include <kimera_distributed/types.h>
 #include <kimera_distributed/utils.h>
 #include <ros/ros.h>
@@ -54,6 +55,8 @@ class DistributedPcm {
   // ROS publisher
   ros::Publisher pose_graph_pub_;
 
+  ros::ServiceServer shared_lc_server_;
+
   // Latest pcm processed pose graph
   gtsam::Values values_;
   gtsam::NonlinearFactorGraph nfg_;
@@ -64,6 +67,12 @@ class DistributedPcm {
 
   void loopclosureCallback(
       const pose_graph_tools::PoseGraphEdge::ConstPtr& msg);
+
+  void querySharedLoopClosures();
+
+  bool shareLoopClosuresCallback(
+      kimera_distributed::requestSharedLoopClosures::Request& request,
+      kimera_distributed::requestSharedLoopClosures::Response& response);
 };
 
 }  // namespace kimera_distributed

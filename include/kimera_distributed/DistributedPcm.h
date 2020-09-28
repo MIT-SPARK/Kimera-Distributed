@@ -17,6 +17,7 @@
 #include <KimeraRPGO/RobustSolver.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
+#include <pose_graph_tools/PoseGraphQuery.h>
 
 #include <gtsam/geometry/Point3.h>
 #include <gtsam/geometry/Pose3.h>
@@ -55,7 +56,9 @@ class DistributedPcm {
   // ROS publisher
   ros::Publisher pose_graph_pub_;
 
+  // ROS service
   ros::ServiceServer shared_lc_server_;
+  ros::ServiceServer pose_graph_request_server_;
 
   // Latest pcm processed pose graph
   gtsam::Values values_;
@@ -68,11 +71,18 @@ class DistributedPcm {
   void loopclosureCallback(
       const pose_graph_tools::PoseGraphEdge::ConstPtr& msg);
 
-  void querySharedLoopClosures();
+  void querySharedLoopClosures(
+      std::vector<pose_graph_tools::PoseGraphEdge>* shared_lc);
 
   bool shareLoopClosuresCallback(
       kimera_distributed::requestSharedLoopClosures::Request& request,
       kimera_distributed::requestSharedLoopClosures::Response& response);
+
+  bool requestPoseGraphCallback(
+      pose_graph_tools::PoseGraphQuery::Request& request,
+      pose_graph_tools::PoseGraphQuery::Response& response);
+
+  std::vector<VLCEdge> loop_closures_frozen_;
 };
 
 }  // namespace kimera_distributed

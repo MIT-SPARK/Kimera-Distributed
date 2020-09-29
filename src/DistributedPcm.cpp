@@ -45,8 +45,28 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     odom_edge_subscribers_.push_back(sub);
   }
 
+  // Start loop closure edge subscribers
+  std::string loop_closure_topic =
+      "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+  loop_closure_edge_subscriber_ = nh_.subscribe(
+      loop_closure_topic, 30, &DistributedPcm::loopclosureCallback, this);
+
+  // Initialize pose graph publisher
   pose_graph_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1, false);
+
+  // Initialize serivce
+  shared_lc_server_ = nh_.advertiseService(
+      "shared_lc_query", &DistributedPcm::shareLoopClosuresCallback, this);
+  pose_graph_request_server_ = nh_.advertiseService(
+      "request_pose_graph", &DistributedPcm::requestPoseGraphCallback, this);
+
+  ROS_INFO_STREAM("Distributed Kimera PCM node initialized (ID = "
+                  << my_id_ << "). \n"
+                  << "Parameters: \n"
+                  << "pcm_threshold_translation = " << pcm_trans_threshold
+                  << "\n"
+                  << "pcm_threshold_rotation = " << pcm_rot_threshold);
 }
 
 DistributedPcm::~DistributedPcm() {}
@@ -61,7 +81,21 @@ void DistributedPcm::addLoopClosures(
   }
 
   pgo_->update(new_factors, new_values, false);
-  // TODO: Add option to not optimize
+  // TODO: Detect if the set of inliers changed
+
+  nfg_ = pgo_->getFactorsUnsafe();
+  values_ = pgo_->calculateBestEstimate();
+
+  return;
+}
+
+void DistributedPcm::addLoopClosure(const VLCEdge& loop_closure) {
+  gtsam::NonlinearFactorGraph new_factors;
+  gtsam::Values new_values;
+
+  new_factors.add(VLCEdgeToGtsam(loop_closure));
+
+  pgo_->update(new_factors, new_values, false);
   // TODO: Detect if the set of inliers changed
 
   nfg_ = pgo_->getFactorsUnsafe();
@@ -145,7 +179,19 @@ void DistributedPcm::odometryEdgeCallback(
   pgo_->update(new_factors, new_values, false);
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();
-  
+}
+
+void DistributedPcm::loopclosureCallback(
+    const pose_graph_tools::PoseGraphEdge::ConstPtr& msg) {
+  VLCEdge new_loop_closure;
+  VLCEdgeFromMsg(*msg, &new_loop_closure);
+
+  addLoopClosure(new_loop_closure);
+
+  // For debugging
+  saveLoopClosuresToFile(
+      "/home/yunchang/catkin_ws/src/Kimera-Distributed/pcm_loop_closures_" +
+      std::to_string(my_id_) + ".csv");
 }
 
 void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {
@@ -181,6 +227,73 @@ void DistributedPcm::saveLoopClosuresToFile(const std::string& filename) {
 void DistributedPcm::publishPoseGraph() const {
   pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
   pose_graph_pub_.publish(pose_graph_msg);
+}
+
+void DistributedPcm::querySharedLoopClosures(
+    std::vector<pose_graph_tools::PoseGraphEdge>* shared_lc) {
+  for (size_t id = 0; id < my_id_; id++) {
+    std::string service_name =
+        "/kimera" + std::to_string(id) + "/distributed_pcm/shared_lc_query";
+    requestSharedLoopClosures query;
+    query.request.robot_id = my_id_;
+    if (!ros::service::call(service_name, query)) {
+      ROS_ERROR("Could not query shared loop closures. ");
+    }
+    *shared_lc = query.response.loop_closures;
+  }
+}
+
+bool DistributedPcm::shareLoopClosuresCallback(
+    kimera_distributed::requestSharedLoopClosures::Request& request,
+    kimera_distributed::requestSharedLoopClosures::Response& response) {
+  auto request_robot_id = request.robot_id;
+
+  for (auto lc_edge : loop_closures_frozen_) {
+    if (lc_edge.vertex_src_.first == request_robot_id ||
+        lc_edge.vertex_dst_.first == request_robot_id) {
+      pose_graph_tools::PoseGraphEdge shared_lc_edge;
+      VLCEdgeToMsg(lc_edge, &shared_lc_edge);
+      response.loop_closures.push_back(shared_lc_edge);
+    }
+  }
+  return true;
+}
+
+bool DistributedPcm::requestPoseGraphCallback(
+    pose_graph_tools::PoseGraphQuery::Request& request,
+    pose_graph_tools::PoseGraphQuery::Response& response) {
+  // freeze set of loop closures
+  loop_closures_frozen_ = getInlierLoopclosures();
+  // Check that id is from robot
+  assert(request.robot_id == my_id_);
+
+  std::vector<pose_graph_tools::PoseGraphEdge> interrobot_lc;
+  querySharedLoopClosures(&interrobot_lc);
+
+  const pose_graph_tools::PoseGraph pose_graph_msg =
+      GtsamGraphToRos(nfg_, values_);
+
+  // Filter out odometry set not from this robot
+  // and add interrobot loop closures
+  pose_graph_tools::PoseGraph out_graph;
+  out_graph.nodes = pose_graph_msg.nodes;
+
+  for (auto e : pose_graph_msg.edges) {
+    if (e.type == pose_graph_tools::PoseGraphEdge::ODOM &&
+        e.robot_from != my_id_) {
+      // pass odometry edges without requested robot id
+    } else {
+      out_graph.edges.push_back(e);
+    }
+  }
+
+  // Push the interrobot loop closures
+  for (auto e : interrobot_lc) {
+    out_graph.edges.push_back(e);
+  }
+
+  response.pose_graph = out_graph;
+  return true;
 }
 
 }  // namespace kimera_distributed

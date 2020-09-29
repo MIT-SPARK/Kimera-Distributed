@@ -10,9 +10,9 @@
 #include <fstream>
 #include <kimera_distributed/DistributedLoopClosure.h>
 
-
-#include <ros/ros.h>
+#include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
+#include <ros/ros.h>
 #include <opengv/point_cloud/PointCloudAdapter.hpp>
 #include <opengv/relative_pose/CentralRelativeAdapter.hpp>
 #include <opengv/sac/Ransac.hpp>
@@ -69,8 +69,9 @@ namespace kimera_distributed {
 			bow_subscribers.push_back(sub);
 		}
 
-		// Service
-  		add_loop_closure_server_ = nh_.advertiseService("add_loop_closure", &DistributedLoopClosure::addLoopClosureCallback, this);
+		// Publisher 
+		std::string loop_closure_topic = "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+		loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(loop_closure_topic, 10, false);
 
 		ROS_INFO_STREAM("Distributed Kimera node initialized (ID = " << my_id_ << "). \n" 
 						<< "Parameters: \n" 
@@ -113,20 +114,10 @@ namespace kimera_distributed {
 
 				VLCEdge edge(vertex_query, vertex_match, T_query_match);
 				loop_closures_.push_back(edge);
+				publishLoopClosure(edge); // Publish to pcm node
 
-				if (robot_id != my_id_){
-					// Inform the other robot about this loop closure
-					std::string service_name = "/kimera" + std::to_string(robot_id) + "/distributed_loop_closure/add_loop_closure";
-
-					addLoopClosure srv;
-					VLCEdgeToMsg(edge, &srv.request.loop_closure);
-					if (!ros::service::call(service_name, srv)){
-						ROS_ERROR_STREAM("Could not inform the other robot of newly added loop closure!");
-					}
-
-				}
-
-				saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
+				// For debugging 
+				saveLoopClosuresToFile("/home/yunchang/catkin_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
 			}
 		}
 
@@ -138,27 +129,6 @@ namespace kimera_distributed {
 			next_pose_id_++;
 		}
   		
-	}
-
-
-	bool DistributedLoopClosure::addLoopClosureCallback(kimera_distributed::addLoopClosure::Request& request, 
-                                						kimera_distributed::addLoopClosure::Response& response)
-	{
-
-		VLCEdge edge;
-		VLCEdgeFromMsg(request.loop_closure, &edge);
-
-		// Assert that this is an inter-robot loop closure
-		assert(edge.vertex_src_.first != edge.vertex_dst_.first);
-		// Assert that the receiving robot is involved in the loop closure
-		assert(edge.vertex_src_.first == my_id_ ||
-			   edge.vertex_dst_.first == my_id_);
-
-		loop_closures_.push_back(edge);
-
-		saveLoopClosuresToFile("/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" + std::to_string(my_id_) +".csv");
-
-		return true;
 	}
 
 
@@ -300,7 +270,8 @@ namespace kimera_distributed {
 	}
 
 
-	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename){
+	void DistributedLoopClosure::saveLoopClosuresToFile(const std::string filename)
+	{
 		ROS_INFO_STREAM("Saving loop closures to " << filename);
 		std::ofstream file;
 		file.open(filename);
@@ -331,6 +302,13 @@ namespace kimera_distributed {
 		}
 
 		file.close();
+	}
+
+	void DistributedLoopClosure::publishLoopClosure(const VLCEdge& loop_closure_edge)
+	{
+		pose_graph_tools::PoseGraphEdge msg_edge; 
+		VLCEdgeToMsg(loop_closure_edge, &msg_edge);
+		loop_closure_publisher_.publish(msg_edge);
 	}
 
 }

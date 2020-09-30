@@ -1,8 +1,16 @@
 <launch>
+
+  <arg name="num_robots" default="2"/>
+
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <!-- Yulun: safe to use system wall-clock time for multi-robot experiment? -->
   <param name="use_sim_time" value="false"/>
-  <arg name="num_robots" default="2"/>
+
+  <!-- DPGO params -->
+  <param name="/num_robots" type="int" value="$(arg num_robots)" />
+  <param name="/dimension" type="int" value="3" />
+  <param name="/relaxation_rank" type="int" value="3" />
+  <param name="/relative_change_tolerance" type="double" value="1e-4" />
 
   <include file="$(find kimera_distributed)/launch/kimera_full_stack_euroc.launch">
       <arg name="robot_id" value="0" />
@@ -13,5 +21,8 @@
       <arg name="robot_id" value="1" />
       <arg name="num_robots" value="$(arg num_robots)" />
   </include>
+
+  <!-- DPGO visualization in rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find kimera_distributed)/rviz/kimera_two_robot_euroc.rviz"></node>
 
 </launch>

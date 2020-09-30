@@ -47,6 +47,11 @@
       <arg name="robot_id"   value="$(arg robot_id)" />
       <arg name="num_robots" value="$(arg num_robots)" />
     </include>
+
+    <!-- Launch dpgo_ros -->
+    <node ns="dpgo_ros_node" name="agent" pkg="dpgo_ros" type="dpgo_ros_node" output="screen">
+      <param name="~agent_id" type="int" value="$(arg robot_id)" />
+    </node>
   </group>
 
 </launch>

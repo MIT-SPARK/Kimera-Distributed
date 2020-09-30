@@ -17,7 +17,7 @@
   <node name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
-    <param name="pcm_threshold_translation" value="0.005" />
-    <param name="pcm_threshold_rotation" value="0.005" />
+    <param name="pcm_threshold_translation" value="0.001" />
+    <param name="pcm_threshold_rotation" value="0.001" />
   </node>    
 </launch>

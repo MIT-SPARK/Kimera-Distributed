@@ -80,6 +80,7 @@
       <arg name="robot_id"                    default="$(arg robot_id)" />
       <arg name="run_mode"                    default="1" />
       <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
+      <arg name="use_msg_time"                default="false" />
     </include>
 
   </group>

@@ -213,9 +213,9 @@ Visualization Manager:
         Normals Alpha: 1
         Normals Color: 255; 0; 255
         Normals Scaling Factor: 0.10000000149011612
-        Value: true
+        Value: false
       Show Wireframe:
-        Value: true
+        Value: false
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera0/kimera_pgmo_node/optimized_mesh
@@ -232,9 +232,9 @@ Visualization Manager:
         Normals Alpha: 1
         Normals Color: 255; 0; 255
         Normals Scaling Factor: 0.10000000149011612
-        Value: true
+        Value: false
       Show Wireframe:
-        Value: true
+        Value: false
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera1/kimera_pgmo_node/optimized_mesh

@@ -34,9 +34,9 @@
   <!-- Launch robot in its unique namespace -->
   <group ns="kimera$(arg robot_id)" >
     <!-- Frame IDs -->
-    <arg name="base_link_frame_id" value="base_link"/>
-    <arg name="left_cam_frame_id"  value="cam0"/>
-    <arg name="right_cam_frame_id" value="cam1"/>
+    <arg name="base_link_frame_id" value="kimera$(arg robot_id)_base_link"/>
+    <arg name="left_cam_frame_id"  value="kimera$(arg robot_id)_left_cam"/>
+    <arg name="right_cam_frame_id" value="kimera$(arg robot_id)_right_cam"/>
 
     <!-- Launch Kimera-VIO -->
     <include file="$(find kimera_distributed)/launch/kimera_vio_ros.launch"
@@ -48,10 +48,40 @@
       <arg name="num_robots" value="$(arg num_robots)" />
     </include>
 
+    <!-- Launch Kimera-Semantics -->
+    <include file="$(find kimera_semantics_ros)/launch/kimera_semantics_euroc.launch">
+      <arg name="voxel_size"     default="0.05"/>
+      <arg name="max_ray_length_m" default="5"/>
+      <param name="use_sim_time" value="true" />
+      <arg name="sensor_frame" default="$(arg left_cam_frame_id)"/>
+
+      <arg name="semantic_pointcloud"         default="stereo_gray/dense_stereo/pointcloud"/>
+      <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
+      <arg name="left_cam_info_topic"         default="cam0/camera_info"/>
+      <arg name="right_cam_info_topic"        default="cam1/camera_info"/>
+      <arg name="left_cam_topic"              default="cam0/image_raw"/>
+      <arg name="right_cam_topic"             default="cam1/image_raw"/>
+      <!-- We don't have semantics in Euroc -->
+      <arg name="left_cam_segmentation_topic" default="/dev/null"/>
+      <!-- We don't use a depth topic, but a pointcloud directly -->
+      <arg name="left_cam_depth_topic"        default="/dev/null"/>
+      <arg name="use_freespace_pointcloud"    default="true" />
+      <arg name="freespace_pointcloud"        default="stereo_gray/dense_stereo/freespace_pointcloud"/>
+    </include>
+
     <!-- Launch dpgo_ros -->
     <node ns="dpgo_ros_node" name="agent" pkg="dpgo_ros" type="dpgo_ros_node" output="screen">
       <param name="~agent_id" type="int" value="$(arg robot_id)" />
     </node>
+
+    <!-- Launch kimera pgmo -->
+    <include file="$(find kimera_pgmo)/launch/kimera_pgmo.launch">
+      <arg name="dataset"                     default="euroc" />
+      <arg name="robot_id"                    default="$(arg robot_id)" />
+      <arg name="run_mode"                    default="1" />
+      <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
+    </include>
+
   </group>
 
 </launch>

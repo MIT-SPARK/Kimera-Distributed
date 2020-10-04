@@ -63,9 +63,6 @@
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
   <arg name="viz_type"     default="0" />
 
-  <!-- Only here for convenience -->
-  <arg name="run_stereo_dense"     default="false"/>
-
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
         output="screen" ns="kimera_vio_ros"
@@ -157,5 +154,31 @@
     <param name="gt_topic"   value="$(arg gt_topic)"/>
     <param name="output_dir" value="$(arg log_output_path)"/>
   </node>
+
+  <!-- Perform stereo dense reconstruction? -->
+  <arg name="run_stereo_dense"     default="true"/>
+  <group ns="stereo_gray" if="$(arg run_stereo_dense)">
+    <!-- StereoSGBM -->
+    <node name="dense_stereo" pkg="image_undistort" type="dense_stereo_node" >
+      <param name="input_camera_info_from_ros_params" value="true"/>
+      <param name="first_camera_namespace"  value="cam0"/>
+      <param name="second_camera_namespace" value="cam1"/>
+      <param name="first_output_frame"      value="cam0"/>
+      <param name="second_output_frame"     value="cam1"/>
+
+      <param name="depth/use_sgbm"          value="true"/>
+      <param name="depth/do_median_blur"    value="false"/>
+      <param name="depth/use_mode_HH"       value="true"/>
+
+      <param name="scale"                   value="1.0"/>
+      <param name="process_every_nth_frame" value="1"/>
+      <param name="publish_tf"              value="false"/>
+
+      <rosparam file="$(find kimera_vio_ros)/cfg/calib/euroc_camchain.yaml"/>
+
+      <remap from="raw/first/image"         to="$(arg left_cam_topic)"/>
+      <remap from="raw/second/image"        to="$(arg right_cam_topic)"/>
+    </node>
+  </group>
 
 </launch>

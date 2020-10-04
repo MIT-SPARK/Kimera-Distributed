@@ -25,7 +25,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Image
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -121,6 +121,124 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: true
+    - Class: voxblox_rviz_plugin/VoxbloxMesh
+      Enabled: false
+      Name: VoxbloxMesh
+      Topic: /kimera0/kimera_semantics_node/mesh
+      Unreliable: false
+      Value: false
+    - Class: voxblox_rviz_plugin/VoxbloxMesh
+      Enabled: false
+      Name: VoxbloxMesh
+      Topic: /kimera1/kimera_semantics_node/mesh
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 0
+      Name: Odometry
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Axes
+      Topic: /kimera0/kimera_vio_ros/odometry
+      Unreliable: false
+      Value: false
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: false
+      Keep: 0
+      Name: Odometry
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Axes
+      Topic: /kimera1/kimera_vio_ros/odometry
+      Unreliable: false
+      Value: false
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: OptimizedMesh
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: true
+      Show Wireframe:
+        Value: true
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /kimera0/kimera_pgmo_node/optimized_mesh
+      Value: true
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: OptimizedMesh
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: true
+      Show Wireframe:
+        Value: true
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /kimera1/kimera_pgmo_node/optimized_mesh
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -149,7 +267,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.024031162261963
+      Distance: 13.835356712341309
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -164,10 +282,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.24479757249355316
+      Pitch: 0.7997975945472717
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 1.504998803138733
+      Yaw: 6.098188877105713
     Saved: ~
 Window Geometry:
   Displays:

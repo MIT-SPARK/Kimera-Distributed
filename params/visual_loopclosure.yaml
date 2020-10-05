@@ -14,4 +14,5 @@ min_nss_factor: 0.1
 lowe_ratio:  0.8
 max_ransac_iterations: 1000
 ransac_threshold: 0.1
-ransac_inlier_threshold_stereo: 0.3
+geometric_verification_min_inlier_count: 50
+geometric_verification_min_inlier_percentage: 0.20

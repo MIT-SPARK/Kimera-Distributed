@@ -18,11 +18,11 @@
       <arg name="dataset_name" value="$(arg dataset_name)" />
   </include>
 
-  <!-- <include file="$(find kimera_distributed)/launch/kimera_full_stack_euroc.launch">
+  <include file="$(find kimera_distributed)/launch/kimera_full_stack_euroc.launch">
       <arg name="robot_id" value="1" />
       <arg name="num_robots" value="$(arg num_robots)" />
       <arg name="dataset_name" value="$(arg dataset_name)" />
-  </include> -->
+  </include>
 
   <!-- DPGO visualization in rviz -->
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find kimera_distributed)/rviz/kimera_two_robot_euroc.rviz"></node>

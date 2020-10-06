@@ -17,6 +17,8 @@ roslaunch kimera_distributed kimera_two_robot_euroc_rosbag.launch
 ```
 
 ### DCIST simulator datasets
+Recorded datasets can be downloaded from this [dropbox folder](https://www.dropbox.com/sh/nmwray6w82c0g3n/AABgssaFPIiDW6AyD3CC7gCya?dl=0).
+
 Launch two robots: 
 ```
 roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=warty

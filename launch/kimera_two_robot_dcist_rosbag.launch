@@ -1,16 +1,17 @@
 <launch>
 
-	<node pkg="rosbag" type="play" name="player0" output="screen" args="/hdd/Datasets/DCIST_simulator/camp/warty_tiny_loop.bag">
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.5 /hdd/Datasets/DCIST_simulator/camp/warty_tiny_loop2_metric_only.bag">
 		<remap from="/warty/camera/image" to="/kimera0/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera0/cam1/image_raw"/>
 		<remap from="/warty/imu/data" to="/kimera0/imu0"/>
 		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera0/pose"/>
 	</node>  
 
-	<!-- <node pkg="rosbag" type="play" name="player1" output="screen" args="/hdd/Datasets/DCIST_simulator/camp/warty_seq_0.bag">
+	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.5 /hdd/Datasets/DCIST_simulator/camp/warty_tiny_loop_metric_only.bag">
 		<remap from="/warty/camera/image" to="/kimera1/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera1/cam1/image_raw"/>
 		<remap from="/warty/imu/data" to="/kimera1/imu0"/>
-	</node> -->  
+		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera1/pose"/>
+	</node>
 
 </launch>

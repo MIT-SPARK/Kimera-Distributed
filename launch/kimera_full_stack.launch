@@ -22,6 +22,9 @@
 
   <arg name="use_online_cam_params" value="false"/>
 
+  <arg name="run_stereo_dense"     default="true" if="$(eval dataset_name == 'Euroc')"/>
+  <arg name="run_stereo_dense"     default="false" if="$(eval dataset_name == 'warty')"/>
+
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path" default="/home/tonirv/datasets/EuRoC/V1_01_easy/V1_01_easy_retimestamped.bag"
     unless="$(arg online)"/>
@@ -30,6 +33,9 @@
   <arg name="left_cam_topic"                    default="/kimera$(arg robot_id)/cam0/image_raw"/>
   <arg name="right_cam_topic"                   default="/kimera$(arg robot_id)/cam1/image_raw"/>
   <arg name="imu_topic"                         default="/kimera$(arg robot_id)/imu0"/>
+  <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/stereo_gray/dense_stereo/pointcloud" if="$(arg run_stereo_dense)"/>
+  <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/lidar_points" unless="$(arg run_stereo_dense)"/>
+  <arg name="freespace_ptcld_topic"             default="/kimera$(arg robot_id)/stereo_gray/dense_stereo/freespace_pointcloud"/>
 
   <!-- Launch robot in its unique namespace -->
   <group ns="kimera$(arg robot_id)" >
@@ -49,24 +55,24 @@
     </include>
 
     <!-- Launch Kimera-Semantics -->
-    <include file="$(find kimera_semantics_ros)/launch/kimera_semantics_euroc.launch">
-      <arg name="voxel_size"     default="0.05"/>
-      <arg name="max_ray_length_m" default="5"/>
+    <include file="$(find kimera_semantics_ros)/launch/kimera_semantics.launch">
       <param name="use_sim_time" value="true" />
-      <arg name="sensor_frame" default="$(arg left_cam_frame_id)"/>
-
-      <arg name="semantic_pointcloud"         default="stereo_gray/dense_stereo/pointcloud"/>
+      <arg name="voxel_size"                     default="0.05"/>
+      <arg name="max_ray_length_m"               default="5"/>
+      <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
+      <arg name="metric_semantic_reconstruction" default="false"/>
+      <arg name="semantic_pointcloud"            default="$(arg ptcld_topic)"/>
       <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
-      <arg name="left_cam_info_topic"         default="cam0/camera_info"/>
-      <arg name="right_cam_info_topic"        default="cam1/camera_info"/>
-      <arg name="left_cam_topic"              default="cam0/image_raw"/>
-      <arg name="right_cam_topic"             default="cam1/image_raw"/>
+      <arg name="left_cam_info_topic"            default="cam0/camera_info"/>
+      <arg name="right_cam_info_topic"           default="cam1/camera_info"/>
+      <arg name="left_cam_topic"                 default="cam0/image_raw"/>
+      <arg name="right_cam_topic"                default="cam1/image_raw"/>
       <!-- We don't have semantics in Euroc -->
-      <arg name="left_cam_segmentation_topic" default="/dev/null"/>
+      <arg name="left_cam_segmentation_topic"    default="/dev/null"/>
       <!-- We don't use a depth topic, but a pointcloud directly -->
-      <arg name="left_cam_depth_topic"        default="/dev/null"/>
-      <arg name="use_freespace_pointcloud"    default="true" />
-      <arg name="freespace_pointcloud"        default="stereo_gray/dense_stereo/freespace_pointcloud"/>
+      <arg name="left_cam_depth_topic"           default="/dev/null"/>
+      <arg name="use_freespace_pointcloud"       default="true"/>
+      <arg name="freespace_pointcloud"           default="$(arg freespace_ptcld_topic)"/>
     </include>
 
     <!-- Launch dpgo_ros -->

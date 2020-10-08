@@ -4,6 +4,11 @@ This is the work-in-progress repository for distributed multirobot [Kimera](http
 
 To use this package, use the `feature/dcist_dataset` branch in `Kimera-VIO`, `feature/distributed_frontend` in `Kimera-VIO-ROS`, `feature/distributed_frontend` in `Kimera-RPGO`, `feature/multirobot` branch in `Kimera-PGMO`, and `feature/kimera_rpgo` branch in `Kimera-Semantics`. 
 
+Note: doing a full `catkin build` might cause problems with some of the dependencies of Kimera-Semantics, so it is recommended to build the modules one by one. 
+```bash
+catkin build kimera_vio_ros image_undistort kimera_semantics_ros kimera_pgmo dpgo_ros
+```
+
 ### Euroc datasets
 
 Launch two robots: 

@@ -65,6 +65,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   OrbVocabulary vocab;
   vocab.load(orb_vocab_path);
   db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
+  shared_db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
@@ -112,26 +113,32 @@ void DistributedLoopClosure::bowCallback(
   last_callback_time_ = ros::Time::now();
 
   VertexID vertex_match;
-  if (detectLoop(vertex_query, bow_vec, &vertex_match)) {
+  // Detect loop closures with my trajectory
+  if (detectLoopInMyDB(vertex_query, bow_vec, &vertex_match)) {
     gtsam::Pose3 T_query_match;
     if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
-      ROS_WARN_STREAM(
-          "Find loop closure between "
-          << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-          << " and "
-          << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-
-      ROS_WARN_STREAM("Estimated transformation: " << T_query_match);
-
       VLCEdge edge(vertex_query, vertex_match, T_query_match);
       loop_closures_.push_back(edge);
       publishLoopClosure(edge);  // Publish to pcm node
-
-      // For debugging
-      saveLoopClosuresToFile("/home/yunchang/catkin_ws/src/Kimera-Distributed/loop_closures_"
-      + std::to_string(my_id_) +".csv");
     }
   }
+
+  // Detect loop closures with other robots' trajectories
+  if (robot_id == my_id_) {
+    if (detectLoopInSharedDB(vertex_query, bow_vec, &vertex_match)) {
+      gtsam::Pose3 T_query_match;
+      if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
+        VLCEdge edge(vertex_query, vertex_match, T_query_match);
+        loop_closures_.push_back(edge);
+        publishLoopClosure(edge);  // Publish to pcm node
+      }
+    }
+  }
+
+  // For debugging
+  saveLoopClosuresToFile(
+      "/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" +
+      std::to_string(my_id_) + ".csv");
 
   // Add Bag-of-word vector to database
   if (robot_id == my_id_) {
@@ -139,12 +146,15 @@ void DistributedLoopClosure::bowCallback(
     assert(db_BoW_->add(bow_vec) == next_pose_id_);
     latest_bowvec_ = bow_vec;
     next_pose_id_++;
+  } else {
+    uint32_t db_index = shared_db_BoW_->add(bow_vec);
+    shared_db_to_vertex_[db_index] = vertex_query;
   }
 }
 
-bool DistributedLoopClosure::detectLoop(const VertexID& vertex_query,
-                                        const DBoW2::BowVector bow_vector_query,
-                                        VertexID* vertex_match) {
+bool DistributedLoopClosure::detectLoopInMyDB(
+    const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query,
+    VertexID* vertex_match) {
   double nss_factor = base_nss_factor_;
   int max_possible_match_id = static_cast<int>(next_pose_id_) - 1;
   if (vertex_query.first == my_id_) {
@@ -165,6 +175,22 @@ bool DistributedLoopClosure::detectLoop(const VertexID& vertex_query,
     DBoW2::Result best_result = query_result[0];
     if (best_result.Score >= alpha_ * nss_factor) {
       *vertex_match = std::make_pair(my_id_, best_result.Id);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DistributedLoopClosure::detectLoopInSharedDB(
+    const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query,
+    VertexID* vertex_match) {
+  DBoW2::QueryResults query_result;
+  shared_db_BoW_->query(bow_vector_query, query_result, max_db_results_);
+
+  if (!query_result.empty()) {
+    DBoW2::Result best_result = query_result[0];
+    if (best_result.Score >= alpha_ * base_nss_factor_) {
+      *vertex_match = shared_db_to_vertex_[best_result.Id];
       return true;
     }
   }
@@ -220,6 +246,11 @@ void DistributedLoopClosure::ComputeMatchedIndices(
 bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
                                          const VertexID& vertex_match,
                                          gtsam::Pose3* T_query_match) {
+  ROS_INFO_STREAM(
+      "Checking loop closure between "
+      << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+      << " and "
+      << "(" << vertex_match.first << ", " << vertex_match.second << ")");
 
   requestVLCFrame(vertex_query);
   requestVLCFrame(vertex_match);
@@ -251,15 +282,9 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
   bool ransac_success = ransac.computeModel();
 
   if (ransac_success) {
-    // if (ransac.iterations_ > max_ransac_iterations_) {
-    //   ROS_INFO_STREAM("RANSAC iterations " << ransac.iterations_
-    //                                         << " exceeds limit.");
-    //   return false;
-    // }
-
     if (ransac.inliers_.size() < geometric_verification_min_inlier_count_) {
       ROS_INFO_STREAM("Number of inlier correspondences after RANSAC "
-                       << ransac.inliers_.size() << " is too low.");
+                      << ransac.inliers_.size() << " is too low.");
       return false;
     }
 
@@ -267,7 +292,7 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
         static_cast<double>(ransac.inliers_.size()) / f_ref.size();
     if (inlier_percentage < geometric_verification_min_inlier_percentage_) {
       ROS_INFO_STREAM("Percentage of inlier correspondences after RANSAC "
-                       << inlier_percentage << " is too low.");
+                      << inlier_percentage << " is too low.");
       return false;
     }
 
@@ -277,8 +302,9 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
     *T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
                                   gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
 
+    ROS_INFO_STREAM("Verified loop closure!");
+
     return true;
-    
   }
 
   return false;
@@ -291,7 +317,6 @@ void DistributedLoopClosure::getLoopClosures(
 
 void DistributedLoopClosure::saveLoopClosuresToFile(
     const std::string filename) {
-  ROS_INFO_STREAM("Saving loop closures to " << filename);
   std::ofstream file;
   file.open(filename);
 

@@ -4,12 +4,27 @@ This is the work-in-progress repository for distributed multirobot [Kimera](http
 
 To use this package, use the `feature/dcist_dataset` branch in `Kimera-VIO` and the `feature/distributed_frontend` in `Kimera-VIO-ROS`.
 
+### Euroc datasets
+
 Launch two robots: 
 ```
-roslaunch kimera_distributed kimera_two_robot_euroc.launch
+roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc
 ```
 
 Play the rosbags for Euroc sequences:
 ```
 roslaunch kimera_distributed kimera_two_robot_euroc_rosbag.launch
+```
+
+### DCIST simulator datasets
+Recorded datasets can be downloaded from this [dropbox folder](https://www.dropbox.com/sh/nmwray6w82c0g3n/AABgssaFPIiDW6AyD3CC7gCya?dl=0).
+
+Launch two robots: 
+```
+roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=warty
+```
+
+Play the rosbags:
+```
+roslaunch kimera_distributed kimera_two_robot_dcist_rosbag.launch
 ```

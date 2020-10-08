@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" value="Euroc"/>
+  <arg name="dataset_name" default="Euroc"/>
   <arg name="verbosity"    default="0" />  
   <arg name="robot_id"     default="0" /> 
   <arg name="num_robots"   default="1" />

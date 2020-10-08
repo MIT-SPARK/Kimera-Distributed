@@ -64,7 +64,8 @@ class DistributedLoopClosure {
   int max_ransac_iterations_;
   double lowe_ratio_;
   double ransac_threshold_;
-  double ransac_inlier_threshold_stereo_;
+  double geometric_verification_min_inlier_count_;
+  double geometric_verification_min_inlier_percentage_;
 
   // Last msg time 
   ros::Time last_callback_time_;

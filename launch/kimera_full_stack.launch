@@ -11,7 +11,7 @@
        the log_output_path location. -->
   <arg name="log_output" default="false"/>
   <arg name="log_output_path"
-       default="$(find kimera_vio_ros)/output_logs/$(arg dataset_name)"
+       default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"
        if="$(arg log_output)"/>
   <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
   <arg name="log_gt_data" default="false"/>

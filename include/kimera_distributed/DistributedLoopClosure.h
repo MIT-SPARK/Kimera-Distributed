@@ -44,6 +44,8 @@ class DistributedLoopClosure {
   RobotID my_id_;
   uint32_t num_robots_;
 
+  std::string log_output_path_;
+
   // Database of BOW vectors from my trajectory
   std::unique_ptr<OrbDatabase> db_BoW_;
   uint32_t next_pose_id_;

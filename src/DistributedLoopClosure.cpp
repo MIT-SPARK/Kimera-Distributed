@@ -43,6 +43,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Initiate orb matcher
   orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
 
+  // Path to log outputs
+  ros::param::get("~log_output_path", log_output_path_);
+
   // Visual place recognition params
   ros::param::get("~alpha", alpha_);
   ros::param::get("~dist_local", dist_local_);
@@ -136,9 +139,7 @@ void DistributedLoopClosure::bowCallback(
   }
 
   // For debugging
-  saveLoopClosuresToFile(
-      "/home/yulun/git/kimera_ws/src/Kimera-Distributed/loop_closures_" +
-      std::to_string(my_id_) + ".csv");
+  saveLoopClosuresToFile(log_output_path_ + "loop_closures.csv");
 
   // Add Bag-of-word vector to database
   if (robot_id == my_id_) {

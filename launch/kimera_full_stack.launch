@@ -13,7 +13,7 @@
   <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
   <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
   <arg name="log_gt_data" default="false" />
-  <arg name="gt_topic" default="/vicon/firefly_sbx/firefly_sbx" />
+  <arg name="gt_topic" default="/ground_truth/kimera$(arg robot_id)/pose" />
 
   <arg name="use_lcd" default="true" />
   <arg name="visualize" default="true" />

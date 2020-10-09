@@ -45,6 +45,7 @@
     </include>
 
     <!-- Launch dpgo_ros -->
+    <!-- To use GDB: launch-prefix="gnome-terminal -x gdb -ex run \-\-args" -->
     <node ns="dpgo_ros_node" name="agent" pkg="dpgo_ros" type="dpgo_ros_node" output="screen">
       <param name="~agent_id" type="int" value="$(arg robot_id)" />
       <param name="~log_output_path" type="str" value="$(arg log_output_path)" />

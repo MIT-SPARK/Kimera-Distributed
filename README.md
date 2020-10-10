@@ -38,6 +38,16 @@ Play the rosbags:
 roslaunch kimera_distributed kimera_two_robot_dcist_rosbag.launch
 ```
 
+### Logging and Debugging 
+Loop closure and trajectory information will be saved in the `logs` folder. You might have to create folders with the robot names (ex. `kimera0`, `kimera1`) before 
+running. 
+
+To save the optimized mesh: 
+```
+rosservice call /kimera0/kimera_pgmo_node/save_mesh
+```
+And substitue `kimera0` for your robot name. 
+
 ## Notes
 1. When running stereo dense reconstruction (see `kimera_vio_ros.launch`), you might get an error like `[ERROR] [1538875392.391423846]: Image P matrices must match (excluding x offset)`. A fix for this is to [downgrade to gcc 6](https://tuxamito.com/wiki/index.php/Installing_newer_GCC_versions_in_Ubuntu). 
 2. If you get weird segmentation faults like 

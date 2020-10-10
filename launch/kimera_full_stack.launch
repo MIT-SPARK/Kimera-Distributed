@@ -86,6 +86,7 @@
       <arg name="run_mode"                    default="1" />
       <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
       <arg name="use_msg_time"                default="false" />
+       <arg name="output_path"                default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
     </include>
 
   </group>

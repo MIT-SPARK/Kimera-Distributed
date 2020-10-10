@@ -195,7 +195,9 @@ void DistributedPcm::loopclosureCallback(
   addLoopClosure(new_loop_closure);
 
   // For debugging
-  saveLoopClosuresToFile(log_output_path_ + "pcm_loop_closures.csv");
+  std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
+  saveLoopClosuresToFile(loop_closures,
+                         log_output_path_ + "pcm_loop_closures.csv");
 }
 
 void DistributedPcm::saveLoopClosuresToFile(

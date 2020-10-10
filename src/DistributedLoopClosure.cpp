@@ -261,15 +261,15 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
   ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
   assert(i_query.size() == i_match.size());
 
-  opengv::points_t f_ref, f_cur;
-  f_ref.resize(i_match.size());
-  f_cur.resize(i_query.size());
+  opengv::points_t f_match, f_query;
+  f_match.resize(i_match.size());
+  f_query.resize(i_query.size());
   for (size_t i = 0; i < i_match.size(); i++) {
-    f_cur[i] = (vlc_frames_[vertex_query].keypoints_.at(i_query[i]));
-    f_ref[i] = (vlc_frames_[vertex_match].keypoints_.at(i_match[i]));
+    f_query[i] = (vlc_frames_[vertex_query].keypoints_.at(i_query[i]));
+    f_match[i] = (vlc_frames_[vertex_match].keypoints_.at(i_match[i]));
   }
 
-  AdapterStereo adapter(f_ref, f_cur);
+  AdapterStereo adapter(f_query, f_match);
 
   // Compute transform using RANSAC 3-point method (Arun).
   std::shared_ptr<RansacProblemStereo> ptcloudproblem_ptr(
@@ -290,7 +290,7 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
     }
 
     double inlier_percentage =
-        static_cast<double>(ransac.inliers_.size()) / f_ref.size();
+        static_cast<double>(ransac.inliers_.size()) / f_match.size();
     if (inlier_percentage < geometric_verification_min_inlier_percentage_) {
       ROS_INFO_STREAM("Percentage of inlier correspondences after RANSAC "
                       << inlier_percentage << " is too low.");

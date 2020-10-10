@@ -50,6 +50,7 @@ class DistributedPcm {
   ros::NodeHandle nh_;
   RobotID my_id_;
   int num_robots_;
+  std::string log_output_path_;
 
   // ROS subscriber
   std::vector<ros::Subscriber> odom_edge_subscribers_;

@@ -11,13 +11,15 @@
     <param name="num_robots" value="$(arg num_robots)" />
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure.yaml"/>
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
+    <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
   </node>    
 
   <!-- Launch Kimera Distributed PCM Node -->
   <node name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
-    <param name="pcm_threshold_translation" value="0.001" />
-    <param name="pcm_threshold_rotation" value="0.001" />
+    <param name="pcm_threshold_translation" value="0.005" />
+    <param name="pcm_threshold_rotation" value="0.005" />
+    <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
   </node>    
 </launch>

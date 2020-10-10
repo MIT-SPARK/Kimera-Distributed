@@ -8,6 +8,7 @@
 #include <kimera_distributed/DistributedPcm.h>
 #include <kimera_distributed/prefix.h>
 #include <kimera_distributed/types.h>
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -27,8 +28,12 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
 
   // Pcm parameters
   double pcm_trans_threshold, pcm_rot_threshold;
-  assert(ros::param::get("~pcm_threshold_translation", pcm_trans_threshold));
-  assert(ros::param::get("~pcm_threshold_rotation", pcm_rot_threshold));
+  if (!ros::param::get("~log_output_path", log_output_path_) ||
+      !ros::param::get("~pcm_threshold_translation", pcm_trans_threshold) ||
+      !ros::param::get("~pcm_threshold_rotation", pcm_rot_threshold)) {
+    ROS_ERROR("PCM failed to get required parameters! Shutting down... ");
+    ros::shutdown();
+  }
 
   // Initialize pcm
   KimeraRPGO::RobustSolverParams pgo_params;
@@ -188,6 +193,9 @@ void DistributedPcm::loopclosureCallback(
   VLCEdgeFromMsg(*msg, &new_loop_closure);
 
   addLoopClosure(new_loop_closure);
+
+  // For debugging
+  saveLoopClosuresToFile(log_output_path_ + "pcm_loop_closures.csv");
 }
 
 void DistributedPcm::saveLoopClosuresToFile(

@@ -81,12 +81,14 @@
 
     <!-- Launch kimera pgmo -->
     <include file="$(find kimera_pgmo)/launch/kimera_pgmo.launch" if="$(arg mesh_reconstruction)">
-      <arg name="dataset"                     default="euroc" />
+      <arg name="dataset"                     default="$(arg dataset_name)" />
       <arg name="robot_id"                    default="$(arg robot_id)" />
       <arg name="run_mode"                    default="1" />
       <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
       <arg name="use_msg_time"                default="false" />
-       <arg name="output_path"                default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
+      <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
+      <arg name="horizon"                     default="100" />
+      <arg name="output_resolution"           default="0.02" />
     </include>
 
   </group>

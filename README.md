@@ -15,6 +15,10 @@ Launch two robots:
 ```
 roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc
 ```
+Note: If you do not want to build the mesh, do instead:
+```
+roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc mesh_reconstruction:=false
+```
 
 Play the rosbags for Euroc sequences:
 ```

@@ -4,6 +4,7 @@
 		<remap from="/warty/camera/image" to="/kimera0/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera0/cam1/image_raw"/>
 		<remap from="/warty/imu/data" to="/kimera0/imu0"/>
+		<remap from="/warty/lidar_points" to="/kimera0/lidar_points"/>
 		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera0/pose"/>
 	</node>  
 
@@ -11,6 +12,7 @@
 		<remap from="/warty/camera/image" to="/kimera1/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera1/cam1/image_raw"/>
 		<remap from="/warty/imu/data" to="/kimera1/imu0"/>
+		<remap from="/warty/lidar_points" to="/kimera1/lidar_points"/>
 		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera1/pose"/>
 	</node>
 

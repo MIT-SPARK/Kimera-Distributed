@@ -3,6 +3,7 @@
   <arg name="verbosity" default="0" />
   <arg name="robot_id" default="0" />
   <arg name="num_robots" default="1" />
+  <arg name="mesh_reconstruction" default="true" />
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
   <arg name="online" default="true" />
@@ -20,8 +21,8 @@
 
   <arg name="use_online_cam_params" value="false" />
 
-  <arg name="run_stereo_dense"     default="true" if="$(eval dataset_name == 'Euroc')"/>
-  <arg name="run_stereo_dense"     default="false" if="$(eval dataset_name == 'warty')"/>
+  <arg name="run_stereo_dense"     value="true" if="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+  <arg name="run_stereo_dense"     value="false" unless="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
 
   <!-- Change rosbag path if online argument is false -->
   <arg name="rosbag_path" default="/home/tonirv/datasets/EuRoC/V1_01_easy/V1_01_easy_retimestamped.bag" unless="$(arg online)" />
@@ -51,7 +52,7 @@
     </include>
 
     <!-- Launch Kimera-Semantics -->
-    <include file="$(find kimera_semantics_ros)/launch/kimera_semantics.launch">
+    <include file="$(find kimera_semantics_ros)/launch/kimera_semantics.launch" if="$(arg mesh_reconstruction)">
       <param name="use_sim_time" value="true" />
       <arg name="voxel_size"                     default="0.05"/>
       <arg name="max_ray_length_m"               default="5"/>
@@ -79,7 +80,7 @@
     </node>
 
     <!-- Launch kimera pgmo -->
-    <include file="$(find kimera_pgmo)/launch/kimera_pgmo.launch">
+    <include file="$(find kimera_pgmo)/launch/kimera_pgmo.launch" if="$(arg mesh_reconstruction)">
       <arg name="dataset"                     default="euroc" />
       <arg name="robot_id"                    default="$(arg robot_id)" />
       <arg name="run_mode"                    default="1" />

@@ -37,12 +37,14 @@ class DistributedPcm {
 
   void addLoopClosure(const VLCEdge& loop_closure);
 
-  std::vector<VLCEdge> getInlierLoopclosures() const;
+  std::vector<VLCEdge> getInlierLoopclosures(
+      const gtsam::NonlinearFactorGraph& nfg) const;
 
   void publishPoseGraph() const;
 
   // For debugging purpose
-  void saveLoopClosuresToFile(const std::string& filename);
+  void saveLoopClosuresToFile(const std::vector<VLCEdge>& loop_closures,
+                              const std::string& filename);
 
  private:
   ros::NodeHandle nh_;
@@ -84,6 +86,7 @@ class DistributedPcm {
       pose_graph_tools::PoseGraphQuery::Response& response);
 
   std::vector<VLCEdge> loop_closures_frozen_;
+  bool b_is_frozen_;
 };
 
 }  // namespace kimera_distributed

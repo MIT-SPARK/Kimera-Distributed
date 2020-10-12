@@ -3,12 +3,16 @@
 	<node pkg="rosbag" type="play" name="player0" output="screen" args="/home/yulun/hdd/Datasets/Euroc/rosbags/V1_01_easy.bag">
 		<remap from="/cam0/image_raw" to="/kimera0/cam0/image_raw"/>
 		<remap from="/cam1/image_raw" to="/kimera0/cam1/image_raw"/>
+		<remap from="/cam0/camera_info" to="/kimera0/cam0/camera_info"/>
+		<remap from="/cam1/camera_info" to="/kimera0/cam1/camera_info"/>
 		<remap from="/imu0" to="/kimera0/imu0"/>
 	</node>  
 
 	<node pkg="rosbag" type="play" name="player1" output="screen" args="/home/yulun/hdd/Datasets/Euroc/rosbags/V1_01_easy.bag">
 		<remap from="/cam0/image_raw" to="/kimera1/cam0/image_raw"/>
 		<remap from="/cam1/image_raw" to="/kimera1/cam1/image_raw"/>
+		<remap from="/cam0/camera_info" to="/kimera1/cam0/camera_info"/>
+		<remap from="/cam1/camera_info" to="/kimera1/cam1/camera_info"/>
 		<remap from="/imu0" to="/kimera1/imu0"/>
 	</node>  
 

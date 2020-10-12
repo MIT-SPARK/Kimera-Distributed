@@ -63,6 +63,11 @@
   <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
   <arg name="viz_type"     default="0" />
 
+  <!-- Unused args -->
+  <arg name="mesh_reconstruction"/>
+  <arg name="ptcld_topic" />
+  <arg name="freespace_ptcld_topic" />
+
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
         output="screen" ns="kimera_vio_ros"

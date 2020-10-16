@@ -57,12 +57,14 @@
       <arg name="publish_point_clouds"           default="false" if="$(arg run_stereo_dense)"/>
       <arg name="publish_point_clouds"           default="true" unless="$(arg run_stereo_dense)"/>
       <arg name="voxel_size"                     default="0.05"/>
-      <arg name="max_ray_length_m"               default="5"/>
+      <arg name="max_ray_length_m"               default="5" if="$(eval dataset_name == 'Euroc')"/>
+      <arg name="max_ray_length_m"               default="40" unless="$(eval dataset_name == 'Euroc')"/>
       <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
       <arg name="metric_semantic_reconstruction" default="false"/>
       <arg name="semantic_pointcloud"            default="$(arg ptcld_topic)"/>
       <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
-      <arg name="left_cam_info_topic"            default="cam0/camera_info"/>
+      <arg name="left_cam_info_topic"            default="depth/camera_info" if="$(eval dataset_name == 'warty')"/>
+      <arg name="left_cam_info_topic"            default="cam0/camera_info" unless="$(eval dataset_name == 'warty')"/>
       <arg name="right_cam_info_topic"           default="cam1/camera_info"/>
       <arg name="left_cam_topic"                 default="cam0/image_raw"/>
       <arg name="right_cam_topic"                default="cam1/image_raw"/>

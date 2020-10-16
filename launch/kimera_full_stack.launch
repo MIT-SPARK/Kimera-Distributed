@@ -32,7 +32,7 @@
   <arg name="right_cam_topic"                   default="/kimera$(arg robot_id)/cam1/image_raw"/>
   <arg name="imu_topic"                         default="/kimera$(arg robot_id)/imu0"/>
   <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/stereo_gray/dense_stereo/pointcloud" if="$(arg run_stereo_dense)"/>
-  <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/lidar_points" unless="$(arg run_stereo_dense)"/>
+  <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/semantic_pointcloud" unless="$(arg run_stereo_dense)"/>
   <arg name="freespace_ptcld_topic"             default="/kimera$(arg robot_id)/stereo_gray/dense_stereo/freespace_pointcloud"/>
 
   <!-- Launch robot in its unique namespace -->
@@ -53,7 +53,9 @@
 
     <!-- Launch Kimera-Semantics -->
     <include file="$(find kimera_semantics_ros)/launch/kimera_semantics.launch" if="$(arg mesh_reconstruction)">
-      <param name="use_sim_time" value="true" />
+      <arg name="use_sim_time"                   default="false" />
+      <arg name="publish_point_clouds"           default="false" if="$(arg run_stereo_dense)"/>
+      <arg name="publish_point_clouds"           default="true" unless="$(arg run_stereo_dense)"/>
       <arg name="voxel_size"                     default="0.05"/>
       <arg name="max_ray_length_m"               default="5"/>
       <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
@@ -67,8 +69,12 @@
       <!-- We don't have semantics in Euroc -->
       <arg name="left_cam_segmentation_topic"    default="/dev/null"/>
       <!-- We don't use a depth topic, but a pointcloud directly -->
-      <arg name="left_cam_depth_topic"           default="/dev/null"/>
-      <arg name="use_freespace_pointcloud"       default="true"/>
+      <arg name="left_cam_depth_topic"           default="/dev/null" if="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+      <arg name="left_cam_depth_topic"           default="depth/image_raw" unless="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+      <arg name="depth_cam_info_topic"           default="/dev/null" if="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+      <arg name="depth_cam_info_topic"           default="depth/camera_info" unless="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+      <arg name="use_freespace_pointcloud"       default="true" if="$(arg run_stereo_dense)"/>
+      <arg name="use_freespace_pointcloud"       default="false" unless="$(arg run_stereo_dense)"/>
       <arg name="freespace_pointcloud"           default="$(arg freespace_ptcld_topic)"/>
     </include>
 

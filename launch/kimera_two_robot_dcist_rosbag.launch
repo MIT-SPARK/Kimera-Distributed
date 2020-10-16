@@ -1,19 +1,24 @@
 <launch>
 
-	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.5 /hdd/Datasets/DCIST_simulator/camp/warty_tiny_loop2_metric_only.bag">
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.5 /home/yunchang/Downloads/warty_tiny_loop4.bag">
 		<remap from="/warty/camera/image" to="/kimera0/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera0/cam1/image_raw"/>
+		<remap from="/warty/camera/camera_info" to="/kimera0/cam0/camera_info"/>
+		<remap from="/warty/right_camera/camera_info" to="/kimera0/cam1/camera_info"/>
 		<remap from="/warty/imu/data" to="/kimera0/imu0"/>
-		<remap from="/warty/lidar_points" to="/kimera0/lidar_points"/>
+		<remap from="/warty/depth_camera/image" to="/kimera0/depth/image_raw" />
+		<remap from="/warty/depth_camera/camera_info" to="/kimera0/depth/camera_info" />
 		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera0/pose"/>
 	</node>  
 
-	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.5 /hdd/Datasets/DCIST_simulator/camp/warty_tiny_loop_metric_only.bag">
+	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.5 /home/yunchang/Downloads/warty_tiny_loop3.bag">
 		<remap from="/warty/camera/image" to="/kimera1/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera1/cam1/image_raw"/>
+		<remap from="/warty/camera/camera_info" to="/kimera1/cam0/camera_info"/>
+		<remap from="/warty/right_camera/camera_info" to="/kimera1/cam1/camera_info"/>
 		<remap from="/warty/imu/data" to="/kimera1/imu0"/>
-		<remap from="/warty/lidar_points" to="/kimera1/lidar_points"/>
+		<remap from="/warty/depth_camera/image" to="/kimera1/depth/image_raw" />
+		<remap from="/warty/depth_camera/camera_info" to="/kimera1/depth/camera_info" />
 		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera1/pose"/>
 	</node>
-
 </launch>

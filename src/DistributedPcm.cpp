@@ -46,7 +46,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     std::string topic = "/kimera" + std::to_string(id) +
                         "/kimera_vio_ros/pose_graph_incremental";
     ros::Subscriber sub =
-        nh_.subscribe(topic, 10, &DistributedPcm::odometryEdgeCallback, this);
+        nh_.subscribe(topic, 50, &DistributedPcm::odometryEdgeCallback, this);
     odom_edge_subscribers_.push_back(sub);
   }
 

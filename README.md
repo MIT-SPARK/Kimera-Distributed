@@ -4,7 +4,7 @@ This is the work-in-progress repository for distributed multirobot [Kimera](http
 
 To use this package, use the `feature/dcist_dataset` branch in `Kimera-VIO`, `feature/distributed_frontend` in `Kimera-VIO-ROS`, `feature/distributed_frontend` in `Kimera-RPGO`, `feature/multirobot` branch in `Kimera-PGMO`, and `feature/kimera_rpgo` branch in `Kimera-Semantics`. 
 
-Note that we are also using a forked version of the [image-pipeline package(https://github.com/yunzc/image_pipeline/tree/feature/kimera_distributed).
+Note that we are also using a forked version of the [image-pipeline package](https://github.com/yunzc/image_pipeline/tree/feature/kimera_distributed).
 Clone and checkout the `feature/kimera_distributed` branch. 
 
 Note: doing a full `catkin build` might cause problems with some of the dependencies of Kimera-Semantics, so it is recommended to build the modules one by one. 

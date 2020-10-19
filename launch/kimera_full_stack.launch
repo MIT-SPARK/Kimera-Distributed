@@ -4,6 +4,7 @@
   <arg name="robot_id" default="0" />
   <arg name="num_robots" default="1" />
   <arg name="mesh_reconstruction" default="true" />
+  <arg name="semantic_mesh" default="true" />
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
   <arg name="online" default="true" />
@@ -60,8 +61,8 @@
       <arg name="max_ray_length_m"               default="5" if="$(eval dataset_name == 'Euroc')"/>
       <arg name="max_ray_length_m"               default="40" unless="$(eval dataset_name == 'Euroc')"/>
       <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
-      <arg name="metric_semantic_reconstruction" default="false" if="$(eval dataset_name == 'Euroc')"/>
-      <arg name="metric_semantic_reconstruction" default="true" unless="$(eval dataset_name == 'Euroc')"/>
+      <arg name="metric_semantic_reconstruction" default="false" if="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
+      <arg name="metric_semantic_reconstruction" default="true" unless="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
       <arg name="semantic_pointcloud"            default="$(arg ptcld_topic)"/>
       <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
       <arg name="left_cam_info_topic"            default="cam0/camera_info" />

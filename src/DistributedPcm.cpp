@@ -38,6 +38,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   // Initialize pcm
   KimeraRPGO::RobustSolverParams pgo_params;
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
+  pgo_params.logOutput(log_output_path_);
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
 
@@ -46,7 +47,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     std::string topic = "/kimera" + std::to_string(id) +
                         "/kimera_vio_ros/pose_graph_incremental";
     ros::Subscriber sub =
-        nh_.subscribe(topic, 10, &DistributedPcm::odometryEdgeCallback, this);
+        nh_.subscribe(topic, 50, &DistributedPcm::odometryEdgeCallback, this);
     odom_edge_subscribers_.push_back(sub);
   }
 
@@ -101,6 +102,7 @@ void DistributedPcm::addLoopClosure(const VLCEdge& loop_closure) {
   new_factors.add(VLCEdgeToGtsam(loop_closure));
 
   pgo_->update(new_factors, new_values, false);
+  pgo_->saveData(log_output_path_);
   // TODO: Detect if the set of inliers changed
 
   nfg_ = pgo_->getFactorsUnsafe();

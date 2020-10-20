@@ -97,7 +97,7 @@ class DistributedLoopClosure {
                             const DBoW2::BowVector bow_vector_query,
                             VertexID* vertex_match);
 
-  void requestVLCFrame(const VertexID& vertex_id);
+  bool requestVLCFrame(const VertexID& vertex_id);
 
   void ComputeMatchedIndices(const VertexID& vertex_query,
                              const VertexID& vertex_match,

@@ -198,10 +198,10 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
   return false;
 }
 
-void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
+bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   if (vlc_frames_.find(vertex_id) != vlc_frames_.end()) {
     // Return if this frame already exists locally
-    return;
+    return true;
   }
   RobotID robot_id = vertex_id.first;
   PoseID pose_id = vertex_id.second;
@@ -211,8 +211,13 @@ void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   VLCFrameQuery query;
   query.request.robot_id = robot_id;
   query.request.pose_id = pose_id;
+  if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {
+    ROS_ERROR_STREAM("ROS service " << service_name << " does not exist!");
+    return false;
+  }
   if (!ros::service::call(service_name, query)) {
     ROS_ERROR_STREAM("Could not query VLC frame!");
+    return false;
   }
 
   VLCFrame frame;
@@ -221,6 +226,7 @@ void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   assert(frame.pose_id_ == pose_id);
 
   vlc_frames_[vertex_id] = frame;
+  return true;
 }
 
 void DistributedLoopClosure::ComputeMatchedIndices(
@@ -253,8 +259,8 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
       << " and "
       << "(" << vertex_match.first << ", " << vertex_match.second << ")");
 
-  requestVLCFrame(vertex_query);
-  requestVLCFrame(vertex_match);
+  if (!requestVLCFrame(vertex_query)) return false;
+  if (!requestVLCFrame(vertex_match)) return false;
 
   // Find correspondences between frames.
   std::vector<unsigned int> i_query, i_match;

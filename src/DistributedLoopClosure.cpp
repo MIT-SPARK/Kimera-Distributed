@@ -44,7 +44,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
 
   // Path to log outputs
-  ros::param::get("~log_output_path", log_output_path_);
+  log_output_ = ros::param::get("~log_output_path", log_output_dir_);
 
   // Visual place recognition params
   ros::param::get("~alpha", alpha_);
@@ -138,8 +138,15 @@ void DistributedLoopClosure::bowCallback(
     }
   }
 
-  // For debugging
-  saveLoopClosuresToFile(log_output_path_ + "loop_closures.csv");
+  if (robot_id != my_id_) {
+    received_bow_vector_bytes_.push_back(computeBowQueryPayloadBytes(*msg));
+  }
+
+  // Log all loop closures to file
+  if (log_output_) {
+    saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
+    logCommStat();
+  }
 
   // Add Bag-of-word vector to database
   if (robot_id == my_id_) {
@@ -226,6 +233,12 @@ bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   assert(frame.pose_id_ == pose_id);
 
   vlc_frames_[vertex_id] = frame;
+
+  if (robot_id != my_id_) {
+    received_vlc_frame_bytes_.push_back(
+        computeVLCFramePayloadBytes(query.response.frame));
+  }
+
   return true;
 }
 
@@ -359,6 +372,37 @@ void DistributedLoopClosure::publishLoopClosure(
   pose_graph_tools::PoseGraphEdge msg_edge;
   VLCEdgeToMsg(loop_closure_edge, &msg_edge);
   loop_closure_publisher_.publish(msg_edge);
+}
+
+void DistributedLoopClosure::logCommStat() {
+  std::string filename;
+  std::ofstream file;
+
+  // Save size of received bow vectors
+  filename = log_output_dir_ + "bow_vector_bytes.csv";
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << filename);
+    return;
+  }
+  file << "bytes\n";
+  for (size_t i = 0; i < received_bow_vector_bytes_.size(); ++i) {
+    file << received_bow_vector_bytes_[i] << "\n";
+  }
+  file.close();
+
+  // Save size of received VLC frames
+  filename = log_output_dir_ + "vlc_frame_bytes.csv";
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << filename);
+    return;
+  }
+  file << "bytes\n";
+  for (size_t i = 0; i < received_vlc_frame_bytes_.size(); ++i) {
+    file << received_vlc_frame_bytes_[i] << "\n";
+  }
+  file.close();
 }
 
 }  // namespace kimera_distributed

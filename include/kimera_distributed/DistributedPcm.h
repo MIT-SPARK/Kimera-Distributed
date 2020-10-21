@@ -86,7 +86,9 @@ class DistributedPcm {
       pose_graph_tools::PoseGraphQuery::Response& response);
 
   std::vector<VLCEdge> loop_closures_frozen_;
+  std::vector<bool> b_request_from_robot_;
   bool b_is_frozen_;
+  void unlockLoopClosuresIfNeeded();
 };
 
 }  // namespace kimera_distributed

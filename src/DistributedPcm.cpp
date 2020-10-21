@@ -209,7 +209,7 @@ void DistributedPcm::loopclosureCallback(
 
 void DistributedPcm::saveLoopClosuresToFile(
     const std::vector<VLCEdge>& loop_closures, const std::string& filename) {
-  ROS_INFO_STREAM("Saving pcm processed loop closures to " << filename);
+  // ROS_INFO_STREAM("Saving pcm processed loop closures to " << filename);
   std::ofstream file;
   file.open(filename);
 
@@ -252,7 +252,8 @@ void DistributedPcm::querySharedLoopClosures(
     if (!ros::service::call(service_name, query)) {
       ROS_ERROR("Could not query shared loop closures. ");
     }
-    *shared_lc = query.response.loop_closures;
+    shared_lc->insert(shared_lc->end(), query.response.loop_closures.begin(),
+                      query.response.loop_closures.end());
   }
 }
 
@@ -275,6 +276,8 @@ bool DistributedPcm::shareLoopClosuresCallback(
     loop_closures_frozen_ = getInlierLoopclosures(nfg_);
     b_is_frozen_ = true;
   }
+
+  ROS_INFO_STREAM("Received request from " << request_robot_id);
 
   for (auto lc_edge : loop_closures_frozen_) {
     if (lc_edge.vertex_src_.first == request_robot_id ||
@@ -305,6 +308,7 @@ bool DistributedPcm::requestPoseGraphCallback(
     loop_closures_frozen_ = getInlierLoopclosures(nfg_);
     b_is_frozen_ = true;
   }
+  ROS_INFO_STREAM("Received request from " << request.robot_id);
 
   std::vector<pose_graph_tools::PoseGraphEdge> interrobot_lc;
   querySharedLoopClosures(&interrobot_lc);
@@ -341,8 +345,7 @@ bool DistributedPcm::requestPoseGraphCallback(
   // Save all loop closures to file
   saveLoopClosuresToFile(
       output_loopclosures,
-      "/home/yunchang/catkin_ws/src/Kimera-Distributed/pcm_loop_closures_" +
-          std::to_string(my_id_) + ".csv");
+      log_output_path_ + "pcm_loop_closures_sent_to_dpgo.csv");
 
   unlockLoopClosuresIfNeeded();
 
@@ -361,6 +364,7 @@ void DistributedPcm::unlockLoopClosuresIfNeeded() {
   if (should_unlock) {
     b_is_frozen_ = false;
     b_request_from_robot_.assign(b_request_from_robot_.size(), false);
+    ROS_INFO("Unlock loop closures!");
   }
 }
 

@@ -44,7 +44,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
 
   // Path to log outputs
-  ros::param::get("~log_output_path", log_output_path_);
+  log_output_ = ros::param::get("~log_output_path", log_output_dir_);
 
   // Visual place recognition params
   ros::param::get("~alpha", alpha_);
@@ -138,8 +138,15 @@ void DistributedLoopClosure::bowCallback(
     }
   }
 
-  // For debugging
-  saveLoopClosuresToFile(log_output_path_ + "loop_closures.csv");
+  if (robot_id != my_id_) {
+    received_bow_vector_bytes_.push_back(computeBowQueryPayloadBytes(*msg));
+  }
+
+  // Log all loop closures to file
+  if (log_output_) {
+    saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
+    logCommStat();
+  }
 
   // Add Bag-of-word vector to database
   if (robot_id == my_id_) {
@@ -198,10 +205,10 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
   return false;
 }
 
-void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
+bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   if (vlc_frames_.find(vertex_id) != vlc_frames_.end()) {
     // Return if this frame already exists locally
-    return;
+    return true;
   }
   RobotID robot_id = vertex_id.first;
   PoseID pose_id = vertex_id.second;
@@ -211,8 +218,13 @@ void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   VLCFrameQuery query;
   query.request.robot_id = robot_id;
   query.request.pose_id = pose_id;
+  if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {
+    ROS_ERROR_STREAM("ROS service " << service_name << " does not exist!");
+    return false;
+  }
   if (!ros::service::call(service_name, query)) {
     ROS_ERROR_STREAM("Could not query VLC frame!");
+    return false;
   }
 
   VLCFrame frame;
@@ -221,6 +233,13 @@ void DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   assert(frame.pose_id_ == pose_id);
 
   vlc_frames_[vertex_id] = frame;
+
+  if (robot_id != my_id_) {
+    received_vlc_frame_bytes_.push_back(
+        computeVLCFramePayloadBytes(query.response.frame));
+  }
+
+  return true;
 }
 
 void DistributedLoopClosure::ComputeMatchedIndices(
@@ -253,8 +272,8 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
       << " and "
       << "(" << vertex_match.first << ", " << vertex_match.second << ")");
 
-  requestVLCFrame(vertex_query);
-  requestVLCFrame(vertex_match);
+  if (!requestVLCFrame(vertex_query)) return false;
+  if (!requestVLCFrame(vertex_match)) return false;
 
   // Find correspondences between frames.
   std::vector<unsigned int> i_query, i_match;
@@ -353,6 +372,37 @@ void DistributedLoopClosure::publishLoopClosure(
   pose_graph_tools::PoseGraphEdge msg_edge;
   VLCEdgeToMsg(loop_closure_edge, &msg_edge);
   loop_closure_publisher_.publish(msg_edge);
+}
+
+void DistributedLoopClosure::logCommStat() {
+  std::string filename;
+  std::ofstream file;
+
+  // Save size of received bow vectors
+  filename = log_output_dir_ + "bow_vector_bytes.csv";
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << filename);
+    return;
+  }
+  file << "bytes\n";
+  for (size_t i = 0; i < received_bow_vector_bytes_.size(); ++i) {
+    file << received_bow_vector_bytes_[i] << "\n";
+  }
+  file.close();
+
+  // Save size of received VLC frames
+  filename = log_output_dir_ + "vlc_frame_bytes.csv";
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << filename);
+    return;
+  }
+  file << "bytes\n";
+  for (size_t i = 0; i < received_vlc_frame_bytes_.size(); ++i) {
+    file << received_vlc_frame_bytes_[i] << "\n";
+  }
+  file.close();
 }
 
 }  // namespace kimera_distributed

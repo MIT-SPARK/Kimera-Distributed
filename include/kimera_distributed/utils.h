@@ -28,8 +28,8 @@ namespace kimera_distributed {
     void BowVectorToMsg(const DBoW2::BowVector& bow_vec, kimera_distributed::BowVector* msg);
     void BowVectorFromMsg(const kimera_distributed::BowVector& msg, DBoW2::BowVector* bow_vec);
 
-    void VLCFrameToMsg(const VLCFrame& frame, kimera_distributed::VLCFrameMsg* msg);
-    void VLCFrameFromMsg(const kimera_distributed::VLCFrameMsg& msg, VLCFrame* frame);
+    void VLCFrameToMsg(const VLCFrame& frame, VLCFrameMsg* msg);
+    void VLCFrameFromMsg(const VLCFrameMsg& msg, VLCFrame* frame);
     
     void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg);
 	void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge);
@@ -41,4 +41,10 @@ namespace kimera_distributed {
     pose_graph_tools::PoseGraph GtsamGraphToRos(
         const gtsam::NonlinearFactorGraph& factors,
         const gtsam::Values& values);
+
+    // Compute the payload size in a BowQuery message 
+    size_t computeBowQueryPayloadBytes(const BowQuery& msg);
+
+    // Compute the payload size of a VLC frame
+    size_t computeVLCFramePayloadBytes(const VLCFrameMsg& msg);
 }  // namespace kimera_distributed

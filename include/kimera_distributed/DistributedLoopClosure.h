@@ -44,7 +44,10 @@ class DistributedLoopClosure {
   RobotID my_id_;
   uint32_t num_robots_;
 
-  std::string log_output_path_;
+  bool log_output_;
+  std::string log_output_dir_;
+  std::vector<size_t> received_bow_vector_bytes_;
+  std::vector<size_t> received_vlc_frame_bytes_;
 
   // Database of BOW vectors from my trajectory
   std::unique_ptr<OrbDatabase> db_BoW_;
@@ -97,7 +100,7 @@ class DistributedLoopClosure {
                             const DBoW2::BowVector bow_vector_query,
                             VertexID* vertex_match);
 
-  void requestVLCFrame(const VertexID& vertex_id);
+  bool requestVLCFrame(const VertexID& vertex_id);
 
   void ComputeMatchedIndices(const VertexID& vertex_query,
                              const VertexID& vertex_match,
@@ -108,6 +111,8 @@ class DistributedLoopClosure {
                    gtsam::Pose3* T_query_match);
 
   void publishLoopClosure(const VLCEdge& loop_closure_edge);
+
+  void logCommStat();
 };
 
 }  // namespace kimera_distributed

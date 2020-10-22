@@ -34,7 +34,7 @@ void BowVectorFromMsg(const kimera_distributed::BowVector& msg,
 }
 
 void VLCFrameToMsg(const VLCFrame& frame,
-                   kimera_distributed::VLCFrameMsg* msg) {
+                   VLCFrameMsg* msg) {
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
@@ -57,7 +57,7 @@ void VLCFrameToMsg(const VLCFrame& frame,
   cv_img.toImageMsg(msg->descriptors_mat);
 }
 
-void VLCFrameFromMsg(const kimera_distributed::VLCFrameMsg& msg,
+void VLCFrameFromMsg(const VLCFrameMsg& msg,
                      VLCFrame* frame) {
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
@@ -245,6 +245,28 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
   posegraph.nodes = nodes;
   posegraph.edges = edges;
   return posegraph;
+}
+
+size_t computeBowQueryPayloadBytes(const BowQuery& msg) {
+  size_t bytes = 0;
+  bytes += sizeof(msg.robot_id);
+  bytes += sizeof(msg.pose_id);
+  bytes += sizeof(msg.bow_vector.word_ids[0]) * msg.bow_vector.word_ids.size();
+  bytes += sizeof(msg.bow_vector.word_values[0]) * msg.bow_vector.word_values.size();
+  return bytes;
+}
+
+size_t computeVLCFramePayloadBytes(const VLCFrameMsg& msg) {
+  size_t bytes = 0;
+  bytes += sizeof(msg.robot_id);
+  bytes += sizeof(msg.pose_id);
+  // descriptors
+  bytes += sizeof(msg.descriptors_mat);
+  bytes += sizeof(msg.descriptors_mat.data[0]) * msg.descriptors_mat.data.size();
+  // keypoints
+  bytes += sizeof(msg.keypoints);
+  bytes += sizeof(msg.keypoints.data[0]) * msg.keypoints.data.size();
+  return bytes;
 }
 
 }  // namespace kimera_distributed

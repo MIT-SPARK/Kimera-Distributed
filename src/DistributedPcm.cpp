@@ -134,7 +134,10 @@ std::vector<VLCEdge> DistributedPcm::getInlierLoopclosures(
         VertexID src(robot_prefix_to_id.at(src_key.chr()), src_key.index());
         VertexID dst(robot_prefix_to_id.at(dst_key.chr()), dst_key.index());
         VLCEdge vlc_edge(src, dst, lc_edge.measured());
-        loop_closures.push_back(vlc_edge);
+        if (std::find(loop_closures.begin(), loop_closures.end(), vlc_edge) ==
+            loop_closures.end()) {
+          loop_closures.push_back(vlc_edge);
+        }
       }
     }
   }

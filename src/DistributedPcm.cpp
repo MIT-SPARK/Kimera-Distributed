@@ -19,12 +19,17 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     : nh_(n), my_id_(-1), num_robots_(-1), b_is_frozen_(false) {
   int my_id_int = -1;
   int num_robots_int = -1;
-  assert(ros::param::get("~robot_id", my_id_int));
-  assert(ros::param::get("~num_robots", num_robots_int));
+  if (!ros::param::get("~robot_id", my_id_int) ||
+      !ros::param::get("~num_robots", num_robots_int)) {
+    ROS_ERROR("Distributed PCM failed to robot ID!");
+    ros::shutdown();
+  }
   assert(my_id_int >= 0);
   assert(num_robots_int > 0);
   my_id_ = my_id_int;
   num_robots_ = num_robots_int;
+
+  b_request_from_robot_.assign(num_robots_, false);
 
   // Pcm parameters
   double pcm_trans_threshold, pcm_rot_threshold;
@@ -129,7 +134,10 @@ std::vector<VLCEdge> DistributedPcm::getInlierLoopclosures(
         VertexID src(robot_prefix_to_id.at(src_key.chr()), src_key.index());
         VertexID dst(robot_prefix_to_id.at(dst_key.chr()), dst_key.index());
         VLCEdge vlc_edge(src, dst, lc_edge.measured());
-        loop_closures.push_back(vlc_edge);
+        if (std::find(loop_closures.begin(), loop_closures.end(), vlc_edge) ==
+            loop_closures.end()) {
+          loop_closures.push_back(vlc_edge);
+        }
       }
     }
   }
@@ -203,9 +211,8 @@ void DistributedPcm::loopclosureCallback(
 }
 
 void DistributedPcm::saveLoopClosuresToFile(
-    const std::vector<VLCEdge>& loop_closures,
-    const std::string& filename) {
-  ROS_INFO_STREAM("Saving pcm processed loop closures to " << filename);
+    const std::vector<VLCEdge>& loop_closures, const std::string& filename) {
+  // ROS_INFO_STREAM("Saving pcm processed loop closures to " << filename);
   std::ofstream file;
   file.open(filename);
 
@@ -248,7 +255,8 @@ void DistributedPcm::querySharedLoopClosures(
     if (!ros::service::call(service_name, query)) {
       ROS_ERROR("Could not query shared loop closures. ");
     }
-    *shared_lc = query.response.loop_closures;
+    shared_lc->insert(shared_lc->end(), query.response.loop_closures.begin(),
+                      query.response.loop_closures.end());
   }
 }
 
@@ -256,11 +264,23 @@ bool DistributedPcm::shareLoopClosuresCallback(
     kimera_distributed::requestSharedLoopClosures::Request& request,
     kimera_distributed::requestSharedLoopClosures::Response& response) {
   auto request_robot_id = request.robot_id;
-  if (!b_is_frozen_) {
-    ROS_WARN(
-        "Distributed PCM sharing interrobot loop closures but loop closures "
-        "are not frozen. ");
+  if (request_robot_id < my_id_) {
+    ROS_ERROR_STREAM("Should not receive request from robot "
+                     << request_robot_id);
+    return false;
   }
+  if (b_request_from_robot_[request_robot_id]) {
+    ROS_ERROR("Distributed PCM received repeated loop closure requests!! ");
+    return false;
+  }
+  b_request_from_robot_[request_robot_id] = true;
+  // freeze set of loop closures
+  if (!b_is_frozen_) {
+    loop_closures_frozen_ = getInlierLoopclosures(nfg_);
+    b_is_frozen_ = true;
+  }
+
+  ROS_INFO_STREAM("Received request from " << request_robot_id);
 
   for (auto lc_edge : loop_closures_frozen_) {
     if (lc_edge.vertex_src_.first == request_robot_id ||
@@ -270,19 +290,28 @@ bool DistributedPcm::shareLoopClosuresCallback(
       response.loop_closures.push_back(shared_lc_edge);
     }
   }
+
+  // Check if need to unfreeze loop closures
+  unlockLoopClosuresIfNeeded();
   return true;
 }
 
 bool DistributedPcm::requestPoseGraphCallback(
     pose_graph_tools::PoseGraphQuery::Request& request,
     pose_graph_tools::PoseGraphQuery::Response& response) {
+  // Check that id is from robot
+  assert(request.robot_id == my_id_);
+  if (b_request_from_robot_[request.robot_id]) {
+    ROS_ERROR("Distributed PCM received repeated pose graph requests!");
+    return false;
+  }
+  b_request_from_robot_[request.robot_id] = true;
   // freeze set of loop closures
   if (!b_is_frozen_) {
     loop_closures_frozen_ = getInlierLoopclosures(nfg_);
     b_is_frozen_ = true;
   }
-  // Check that id is from robot
-  assert(request.robot_id == my_id_);
+  ROS_INFO_STREAM("Received request from " << request.robot_id);
 
   std::vector<pose_graph_tools::PoseGraphEdge> interrobot_lc;
   querySharedLoopClosures(&interrobot_lc);
@@ -319,11 +348,27 @@ bool DistributedPcm::requestPoseGraphCallback(
   // Save all loop closures to file
   saveLoopClosuresToFile(
       output_loopclosures,
-      "/home/yunchang/catkin_ws/src/Kimera-Distributed/pcm_loop_closures_" +
-          std::to_string(my_id_) + ".csv");
-  b_is_frozen_ = false;
+      log_output_path_ + "pcm_loop_closures_sent_to_dpgo.csv");
+
+  unlockLoopClosuresIfNeeded();
 
   return true;
+}
+
+void DistributedPcm::unlockLoopClosuresIfNeeded() {
+  bool should_unlock = true;
+  for (size_t id = my_id_; id < b_request_from_robot_.size(); ++id) {
+    if (!b_request_from_robot_[id]) {
+      should_unlock = false;
+      break;
+    }
+  }
+
+  if (should_unlock) {
+    b_is_frozen_ = false;
+    b_request_from_robot_.assign(b_request_from_robot_.size(), false);
+    ROS_INFO("Unlock loop closures!");
+  }
 }
 
 }  // namespace kimera_distributed

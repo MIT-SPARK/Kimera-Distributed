@@ -50,6 +50,11 @@ namespace kimera_distributed {
 		VertexID vertex_src_;
 		VertexID vertex_dst_;
 		gtsam::Pose3 T_src_dst_;
+        bool operator==(const VLCEdge& other) {
+          return (vertex_src_ == other.vertex_src_ &&
+                  vertex_dst_ == other.vertex_dst_ &&
+                  T_src_dst_.equals(other.T_src_dst_));
+        }
 	}; // struct VLCEdge
 
 	typedef std::map<VertexID, VLCFrame, std::less<VertexID>> VLCFrameDict;

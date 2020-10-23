@@ -40,6 +40,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   num_robots_ = num_robots_int;
   next_pose_id_ = 0;
 
+  latest_bowvec_.resize(num_robots_);
+
   // Initiate orb matcher
   orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
 
@@ -50,7 +52,6 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ros::param::get("~alpha", alpha_);
   ros::param::get("~dist_local", dist_local_);
   ros::param::get("~max_db_results", max_db_results_);
-  ros::param::get("~base_nss_factor", base_nss_factor_);
   ros::param::get("~min_nss_factor", min_nss_factor_);
 
   // Geometric verification params
@@ -91,7 +92,6 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
                   << "alpha = " << alpha_ << "\n"
                   << "dist_local = " << dist_local_ << "\n"
                   << "max_db_results = " << max_db_results_ << "\n"
-                  << "base_nss_factor = " << base_nss_factor_ << "\n"
                   << "min_nss_factor = " << min_nss_factor_ << "\n"
                   << "lowe_ratio = " << lowe_ratio_ << "\n"
                   << "max_ransac_iterations = " << max_ransac_iterations_
@@ -152,26 +152,26 @@ void DistributedLoopClosure::bowCallback(
   if (robot_id == my_id_) {
     assert(pose_id == next_pose_id_);
     assert(db_BoW_->add(bow_vec) == next_pose_id_);
-    latest_bowvec_ = bow_vec;
     next_pose_id_++;
   } else {
     uint32_t db_index = shared_db_BoW_->add(bow_vec);
     shared_db_to_vertex_[db_index] = vertex_query;
   }
+  latest_bowvec_[robot_id] = bow_vec;
 }
 
 bool DistributedLoopClosure::detectLoopInMyDB(
     const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query,
     VertexID* vertex_match) {
-  double nss_factor = base_nss_factor_;
+  RobotID robot_query = vertex_query.first;
+  double nss_factor = db_BoW_->getVocabulary()->score(
+      bow_vector_query, latest_bowvec_[robot_query]);
   int max_possible_match_id = static_cast<int>(next_pose_id_) - 1;
   if (vertex_query.first == my_id_) {
     max_possible_match_id -= dist_local_;
-    nss_factor =
-        db_BoW_->getVocabulary()->score(bow_vector_query, latest_bowvec_);
-    if (nss_factor < min_nss_factor_) {
-      return false;
-    }
+  }
+  if (nss_factor < min_nss_factor_) {
+    return false;
   }
   if (max_possible_match_id < 0) max_possible_match_id = 0;
 
@@ -192,12 +192,19 @@ bool DistributedLoopClosure::detectLoopInMyDB(
 bool DistributedLoopClosure::detectLoopInSharedDB(
     const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query,
     VertexID* vertex_match) {
+  RobotID robot_query = vertex_query.first;
+  double nss_factor = db_BoW_->getVocabulary()->score(
+      bow_vector_query, latest_bowvec_[robot_query]);
+
+  if (nss_factor < min_nss_factor_) {
+    return false;
+  }
   DBoW2::QueryResults query_result;
   shared_db_BoW_->query(bow_vector_query, query_result, max_db_results_);
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    if (best_result.Score >= alpha_ * base_nss_factor_) {
+    if (best_result.Score >= alpha_ * nss_factor) {
       *vertex_match = shared_db_to_vertex_[best_result.Id];
       return true;
     }

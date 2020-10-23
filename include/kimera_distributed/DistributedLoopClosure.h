@@ -52,7 +52,7 @@ class DistributedLoopClosure {
   // Database of BOW vectors from my trajectory
   std::unique_ptr<OrbDatabase> db_BoW_;
   uint32_t next_pose_id_;
-  DBoW2::BowVector latest_bowvec_;
+  std::vector<DBoW2::BowVector> latest_bowvec_;
 
   // Database of BOW vectors from other robots
   std::unique_ptr<OrbDatabase> shared_db_BoW_;
@@ -71,7 +71,6 @@ class DistributedLoopClosure {
   float alpha_;
   int dist_local_;
   int max_db_results_;
-  float base_nss_factor_;
   float min_nss_factor_;
 
   // Parameters for geometric verification

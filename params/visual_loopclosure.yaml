@@ -1,12 +1,11 @@
 # Yaml configuration for visual loop closure parameters 
 
 # Matcher parameters (DBoW2)
-alpha: 0.5
+alpha: 0.3
 # min_temporal_matches: 3
-dist_local: 30
+dist_local: 50
 max_db_results: 5
-base_nss_factor: 0.1
-min_nss_factor: 0.1
+min_nss_factor: 0.05
 # min_matches_per_group: 1
 # max_intragroup_gap: 3
 # max_distance_between_groups: 3
@@ -15,4 +14,4 @@ lowe_ratio:  0.8
 max_ransac_iterations: 1000
 ransac_threshold: 0.1
 geometric_verification_min_inlier_count: 75
-geometric_verification_min_inlier_percentage: 0.20
+geometric_verification_min_inlier_percentage: 0.0

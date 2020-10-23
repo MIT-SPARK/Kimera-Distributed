@@ -3,6 +3,7 @@
   <arg name="num_robots" default="3"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="mesh_reconstruction" default="false" />
+  <arg name="semantic_mesh" default="false" />
 
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <!-- Yulun: safe to use system wall-clock time for multi-robot experiment? -->

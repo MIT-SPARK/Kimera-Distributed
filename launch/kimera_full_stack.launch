@@ -57,7 +57,8 @@
       <arg name="use_sim_time"                   default="false" />
       <arg name="publish_point_clouds"           default="false" if="$(arg run_stereo_dense)"/>
       <arg name="publish_point_clouds"           default="true" unless="$(arg run_stereo_dense)"/>
-      <arg name="voxel_size"                     default="0.05"/>
+      <arg name="voxel_size"                     default="0.05" if="$(eval dataset_name == 'Euroc')"/>
+      <arg name="voxel_size"                     default="0.1" unless="$(eval dataset_name == 'Euroc')"/>
       <arg name="max_ray_length_m"               default="5" if="$(eval dataset_name == 'Euroc')"/>
       <arg name="max_ray_length_m"               default="40" unless="$(eval dataset_name == 'Euroc')"/>
       <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
@@ -79,7 +80,7 @@
       <arg name="use_freespace_pointcloud"       default="true" if="$(arg run_stereo_dense)"/>
       <arg name="use_freespace_pointcloud"       default="false" unless="$(arg run_stereo_dense)"/>
       <arg name="freespace_pointcloud"           default="$(arg freespace_ptcld_topic)"/>
-      <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_camp_semantic_mapping.csv" />
+      <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_city_semantic_mapping.csv" />
     </include>
 
     <!-- Launch dpgo_ros -->

@@ -46,8 +46,9 @@ class DistributedLoopClosure {
 
   bool log_output_;
   std::string log_output_dir_;
-  std::vector<size_t> received_bow_vector_bytes_;
-  std::vector<size_t> received_vlc_frame_bytes_;
+  size_t total_geometric_verifications_;
+  std::vector<size_t> received_bow_bytes_; 
+  std::vector<size_t> received_vlc_bytes_;
 
   // Database of BOW vectors from my trajectory
   std::unique_ptr<OrbDatabase> db_BoW_;
@@ -111,7 +112,7 @@ class DistributedLoopClosure {
 
   void publishLoopClosure(const VLCEdge& loop_closure_edge);
 
-  void logCommStat();
+  void logCommStat(const std::string& filename);
 };
 
 }  // namespace kimera_distributed

@@ -39,8 +39,12 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   my_id_ = my_id_int;
   num_robots_ = num_robots_int;
   next_pose_id_ = 0;
-
   latest_bowvec_.resize(num_robots_);
+
+  // Used for logging
+  total_geometric_verifications_ = 0;
+  received_bow_bytes_.clear();
+  received_vlc_bytes_.clear();
 
   // Initiate orb matcher
   orb_feature_matcher_ = cv::DescriptorMatcher::create(3);
@@ -138,14 +142,15 @@ void DistributedLoopClosure::bowCallback(
     }
   }
 
+  // Inter-robot queries will count as communication payloads
   if (robot_id != my_id_) {
-    received_bow_vector_bytes_.push_back(computeBowQueryPayloadBytes(*msg));
+    received_bow_bytes_.push_back(computeBowQueryPayloadBytes(*msg));
   }
 
   // Log all loop closures to file
   if (log_output_) {
     saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
-    logCommStat();
+    logCommStat(log_output_dir_ + "lcd_log.csv");
   }
 
   // Add Bag-of-word vector to database
@@ -241,8 +246,9 @@ bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
 
   vlc_frames_[vertex_id] = frame;
 
+  // Inter-robot requests will incur communication payloads
   if (robot_id != my_id_) {
-    received_vlc_frame_bytes_.push_back(
+    received_vlc_bytes_.push_back(
         computeVLCFramePayloadBytes(query.response.frame));
   }
 
@@ -281,6 +287,8 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
 
   if (!requestVLCFrame(vertex_query)) return false;
   if (!requestVLCFrame(vertex_match)) return false;
+
+  total_geometric_verifications_++;
 
   // Find correspondences between frames.
   std::vector<unsigned int> i_query, i_match;
@@ -381,34 +389,20 @@ void DistributedLoopClosure::publishLoopClosure(
   loop_closure_publisher_.publish(msg_edge);
 }
 
-void DistributedLoopClosure::logCommStat() {
-  std::string filename;
+void DistributedLoopClosure::logCommStat(const std::string& filename) {
   std::ofstream file;
-
-  // Save size of received bow vectors
-  filename = log_output_dir_ + "bow_vector_bytes.csv";
   file.open(filename);
   if (!file.is_open()) {
     ROS_ERROR_STREAM("Error opening log file: " << filename);
     return;
   }
-  file << "bytes\n";
-  for (size_t i = 0; i < received_bow_vector_bytes_.size(); ++i) {
-    file << received_bow_vector_bytes_[i] << "\n";
-  }
-  file.close();
-
-  // Save size of received VLC frames
-  filename = log_output_dir_ + "vlc_frame_bytes.csv";
-  file.open(filename);
-  if (!file.is_open()) {
-    ROS_ERROR_STREAM("Error opening log file: " << filename);
-    return;
-  }
-  file << "bytes\n";
-  for (size_t i = 0; i < received_vlc_frame_bytes_.size(); ++i) {
-    file << received_vlc_frame_bytes_[i] << "\n";
-  }
+  // Header
+  file << "total_verifications, successful_verifications, total_bow_bytes, "
+          "total_vlc_bytes\n";
+  file << total_geometric_verifications_ << ",";
+  file << loop_closures_.size() << ",";
+  file << std::accumulate(received_bow_bytes_.begin(), received_bow_bytes_.end(), 0) << ",";
+  file << std::accumulate(received_vlc_bytes_.begin(), received_vlc_bytes_.end(), 0) << "\n";
   file.close();
 }
 

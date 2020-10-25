@@ -1,0 +1,27 @@
+<launch>
+
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.2 /hdd/Dropbox/'Dropbox (MIT)'/Datasets/DCIST_simulator/camp/warty_large_06.bag">
+		<remap from="/warty/camera/image" to="/kimera0/cam0/image_raw"/>
+		<remap from="/warty/right_camera/image" to="/kimera0/cam1/image_raw"/>
+		<remap from="/warty/imu/data" to="/kimera0/imu0"/>
+		<remap from="/warty/lidar_points" to="/kimera0/lidar_points"/>
+		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera0/pose"/>
+	</node>  
+
+	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.2 /hdd/Dropbox/'Dropbox (MIT)'/Datasets/DCIST_simulator/camp/warty_large_07.bag">
+		<remap from="/warty/camera/image" to="/kimera1/cam0/image_raw"/>
+		<remap from="/warty/right_camera/image" to="/kimera1/cam1/image_raw"/>
+		<remap from="/warty/imu/data" to="/kimera1/imu0"/>
+		<remap from="/warty/lidar_points" to="/kimera1/lidar_points"/>
+		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera1/pose"/>
+	</node>
+
+	<node pkg="rosbag" type="play" name="player2" output="screen" args="-r 0.2 /hdd/Dropbox/'Dropbox (MIT)'/Datasets/DCIST_simulator/camp/warty_large_08.bag">
+		<remap from="/warty/camera/image" to="/kimera2/cam0/image_raw"/>
+		<remap from="/warty/right_camera/image" to="/kimera2/cam1/image_raw"/>
+		<remap from="/warty/imu/data" to="/kimera2/imu0"/>
+		<remap from="/warty/lidar_points" to="/kimera2/lidar_points"/>
+		<remap from="/unity_command/ground_truth/warty/pose" to="/ground_truth/kimera2/pose"/>
+	</node>
+
+</launch>

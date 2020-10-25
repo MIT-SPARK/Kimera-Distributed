@@ -3,13 +3,15 @@
   <arg name="num_robots" default="1"/>
   <!-- Unique integer id of this robot. -->
   <arg name="robot_id" default="0"/>
+  <!-- dataset -->
+  <arg name="dataset_name" default="warty"/>
 
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
   <node name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
-    <rosparam file="$(find kimera_distributed)/params/visual_loopclosure.yaml"/>
+    <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
   </node>    
@@ -18,8 +20,7 @@
   <node name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
-    <param name="pcm_threshold_translation" value="0.05" />
-    <param name="pcm_threshold_rotation" value="0.05" />
+    <rosparam file="$(find kimera_distributed)/params/pcm_$(arg dataset_name).yaml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
   </node> 
 </launch>

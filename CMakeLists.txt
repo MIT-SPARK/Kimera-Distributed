@@ -54,6 +54,10 @@ cs_add_executable(kimera_distributed_pcm_node
   src/DistributedPcmNode.cpp)
 target_link_libraries(kimera_distributed_pcm_node ${PROJECT_NAME})
 
+cs_add_executable(publish_initial_rel_pose_node
+  src/PublishInitialRelPoseNode.cpp)
+target_link_libraries(publish_initial_rel_pose_node ${PROJECT_NAME})
+
 catkin_add_gtest(test_utils test/test_utils.cpp)
 target_link_libraries(test_utils ${PROJECT_NAME} -ltbb)
 

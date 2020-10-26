@@ -65,6 +65,7 @@
 
   <!-- Unused args -->
   <arg name="mesh_reconstruction"/>
+  <arg name="semantic_mesh"/>
   <arg name="ptcld_topic" />
   <arg name="freespace_ptcld_topic" />
 
@@ -141,6 +142,8 @@
     <param name="position_det_threshold"  value="0.3"/>
     <param name="stereo_ransac_threshold" value="20"/>
     <param name="mono_ransac_threshold"   value="30"/>
+
+    <param name="output_dir" value="$(arg log_output_path)"/>
 
     <!-- Load calibration -->
     <!-- <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/> -->

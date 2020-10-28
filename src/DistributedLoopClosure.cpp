@@ -337,6 +337,9 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
     *T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
                                   gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
 
+    inlier_count_.push_back(ransac.inliers_.size());
+    inlier_percentage_.push_back(inlier_percentage);
+
     ROS_INFO_STREAM("Verified loop closure!");
 
     return true;
@@ -355,11 +358,14 @@ void DistributedLoopClosure::saveLoopClosuresToFile(
   std::ofstream file;
   file.open(filename);
 
+  assert(loop_closures_.size() == inlier_count_.size());
+  assert(loop_closures_.size() == inlier_percentage_.size());
+
   std::vector<VLCEdge> loop_closures;
   getLoopClosures(&loop_closures);
 
   // file format
-  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz,inlier_num,inlier_percent\n";
 
   for (size_t i = 0; i < loop_closures.size(); ++i) {
     VLCEdge edge = loop_closures[i];
@@ -376,7 +382,9 @@ void DistributedLoopClosure::saveLoopClosuresToFile(
     file << quat.w() << ",";
     file << point.x() << ",";
     file << point.y() << ",";
-    file << point.z() << "\n";
+    file << point.z() << ",";
+    file << inlier_count_[i] << ",";
+    file << inlier_percentage_[i] << "\n";
   }
 
   file.close();

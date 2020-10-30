@@ -81,7 +81,7 @@
       <arg name="use_freespace_pointcloud"       default="true" if="$(arg run_stereo_dense)"/>
       <arg name="use_freespace_pointcloud"       default="false" unless="$(arg run_stereo_dense)"/>
       <arg name="freespace_pointcloud"           default="$(arg freespace_ptcld_topic)"/>
-      <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_city_semantic_mapping.csv" />
+      <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_camp_semantic_mapping.csv" />
     </include>
 
     <!-- Launch dpgo_ros -->
@@ -100,7 +100,7 @@
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
       <arg name="horizon"                     default="100" />
-      <arg name="output_resolution"           default="0.02" />
+      <arg name="output_resolution"           default="0.1" />
     </include>
 
   </group>

@@ -67,6 +67,8 @@ class DistributedLoopClosure {
 
   // List of discovered loop closures
   std::vector<VLCEdge> loop_closures_;
+  std::vector<size_t> inlier_count_;
+  std::vector<double> inlier_percentage_;
 
   // Parameters for visual loop closure detection
   float alpha_;

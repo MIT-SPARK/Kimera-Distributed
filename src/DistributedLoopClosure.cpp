@@ -296,11 +296,17 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
   assert(i_query.size() == i_match.size());
 
   opengv::points_t f_match, f_query;
-  f_match.resize(i_match.size());
-  f_query.resize(i_query.size());
+  // f_match.resize(i_match.size());
+  // f_query.resize(i_query.size());
   for (size_t i = 0; i < i_match.size(); i++) {
-    f_query[i] = (vlc_frames_[vertex_query].keypoints_.at(i_query[i]));
-    f_match[i] = (vlc_frames_[vertex_match].keypoints_.at(i_match[i]));
+    gtsam::Vector3 point_query =
+        vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
+    gtsam::Vector3 point_match =
+        vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
+    if (point_query.norm() > 1e-3 && point_match.norm() > 1e-3) {
+      f_query.push_back(point_query);
+      f_match.push_back(point_match);
+    }
   }
 
   AdapterStereo adapter(f_query, f_match);
@@ -333,9 +339,17 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
 
     opengv::transformation_t T = ransac.model_coefficients_;
 
+    gtsam::Point3 estimated_translation(T(0, 3), T(1, 3), T(2, 3));
+    if (ransac.inliers_.size() < 500 && estimated_translation.norm() < 1e-5) {
+      ROS_WARN("Detected loop closure close to identity! ");
+    }
+
     // Yulun: this is the relative pose from the query frame to the match frame?
     *T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
                                   gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
+
+    inlier_count_.push_back(ransac.inliers_.size());
+    inlier_percentage_.push_back(inlier_percentage);
 
     ROS_INFO_STREAM("Verified loop closure!");
 
@@ -355,11 +369,15 @@ void DistributedLoopClosure::saveLoopClosuresToFile(
   std::ofstream file;
   file.open(filename);
 
+  assert(loop_closures_.size() == inlier_count_.size());
+  assert(loop_closures_.size() == inlier_percentage_.size());
+
   std::vector<VLCEdge> loop_closures;
   getLoopClosures(&loop_closures);
 
   // file format
-  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz,inlier_num,inlier_"
+          "percent\n";
 
   for (size_t i = 0; i < loop_closures.size(); ++i) {
     VLCEdge edge = loop_closures[i];
@@ -376,7 +394,9 @@ void DistributedLoopClosure::saveLoopClosuresToFile(
     file << quat.w() << ",";
     file << point.x() << ",";
     file << point.y() << ",";
-    file << point.z() << "\n";
+    file << point.z() << ",";
+    file << inlier_count_[i] << ",";
+    file << inlier_percentage_[i] << "\n";
   }
 
   file.close();
@@ -401,8 +421,12 @@ void DistributedLoopClosure::logCommStat(const std::string& filename) {
           "total_vlc_bytes\n";
   file << total_geometric_verifications_ << ",";
   file << loop_closures_.size() << ",";
-  file << std::accumulate(received_bow_bytes_.begin(), received_bow_bytes_.end(), 0) << ",";
-  file << std::accumulate(received_vlc_bytes_.begin(), received_vlc_bytes_.end(), 0) << "\n";
+  file << std::accumulate(received_bow_bytes_.begin(),
+                          received_bow_bytes_.end(), 0)
+       << ",";
+  file << std::accumulate(received_vlc_bytes_.begin(),
+                          received_vlc_bytes_.end(), 0)
+       << "\n";
   file.close();
 }
 

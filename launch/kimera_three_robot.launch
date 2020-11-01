@@ -4,6 +4,7 @@
   <arg name="log_gt_data" default="true"/>
   <arg name="mesh_reconstruction" default="false" />
   <arg name="semantic_mesh" default="false" />
+  <arg name="environment" default="camp" />
 
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <!-- Yulun: safe to use system wall-clock time for multi-robot experiment? -->
@@ -28,6 +29,6 @@
   </include>
 
   <!-- DPGO visualization in rviz -->
-  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find kimera_distributed)/rviz/kimera_two_robot_euroc.rviz"></node>
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find kimera_distributed)/rviz/kimera_three_robot_$(arg dataset_name).rviz"></node>
 
 </launch>

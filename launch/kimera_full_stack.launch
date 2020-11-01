@@ -5,6 +5,7 @@
   <arg name="num_robots" default="1" />
   <arg name="mesh_reconstruction" default="true" />
   <arg name="semantic_mesh" default="true" />
+  <arg name="environment" default="camp" />
 
   <!-- Set online to true if you use rosbag play or sensor stream -->
   <arg name="online" default="true" />
@@ -81,7 +82,7 @@
       <arg name="use_freespace_pointcloud"       default="true" if="$(arg run_stereo_dense)"/>
       <arg name="use_freespace_pointcloud"       default="false" unless="$(arg run_stereo_dense)"/>
       <arg name="freespace_pointcloud"           default="$(arg freespace_ptcld_topic)"/>
-      <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_camp_semantic_mapping.csv" />
+      <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_$(arg environment)_semantic_mapping.csv" />
     </include>
 
     <!-- Launch dpgo_ros -->

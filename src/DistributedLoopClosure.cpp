@@ -296,8 +296,6 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
   assert(i_query.size() == i_match.size());
 
   opengv::points_t f_match, f_query;
-  // f_match.resize(i_match.size());
-  // f_query.resize(i_query.size());
   for (size_t i = 0; i < i_match.size(); i++) {
     gtsam::Vector3 point_query =
         vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
@@ -307,6 +305,11 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
       f_query.push_back(point_query);
       f_match.push_back(point_match);
     }
+  }
+
+  if (f_query.size() < 3) {
+    ROS_INFO("Less than 3 putative correspondences.");
+    return false;
   }
 
   AdapterStereo adapter(f_query, f_match);

@@ -44,6 +44,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   KimeraRPGO::RobustSolverParams pgo_params;
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
   pgo_params.logOutput(log_output_path_);
+  pgo_params.setIncremental();
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
 

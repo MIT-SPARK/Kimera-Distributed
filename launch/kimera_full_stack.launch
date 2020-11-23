@@ -60,7 +60,7 @@
       <arg name="publish_point_clouds"           default="false" if="$(arg run_stereo_dense)"/>
       <arg name="publish_point_clouds"           default="true" unless="$(arg run_stereo_dense)"/>
       <arg name="voxel_size"                     default="0.05" if="$(eval dataset_name == 'Euroc')"/>
-      <arg name="voxel_size"                     default="0.1" unless="$(eval dataset_name == 'Euroc')"/>
+      <arg name="voxel_size"                     default="0.2" unless="$(eval dataset_name == 'Euroc')"/>
       <arg name="max_ray_length_m"               default="5" if="$(eval dataset_name == 'Euroc')"/>
       <arg name="max_ray_length_m"               default="40" unless="$(eval dataset_name == 'Euroc')"/>
       <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
@@ -100,8 +100,8 @@
       <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
-      <arg name="horizon"                     default="100" />
-      <arg name="output_resolution"           default="0.1" />
+      <arg name="horizon"                     default="50" />
+      <arg name="output_resolution"           default="0.02" />
     </include>
 
   </group>

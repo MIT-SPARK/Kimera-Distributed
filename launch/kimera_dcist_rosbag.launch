@@ -2,7 +2,7 @@
 	<arg name="rosbag_path" default="/home/yunchang/Downloads/camp/warty_large_07.bag" />
 	<arg name="robot_id" default="0" />
 
-	<node pkg="rosbag" type="play" name="player$(arg robot_id)" output="screen" args="-r 0.2 $(arg rosbag_path)">
+	<node pkg="rosbag" type="play" name="player$(arg robot_id)" output="screen" args="-r 0.2 $(arg rosbag_path) --pause">
 		<remap from="/warty/camera/image" to="/kimera$(arg robot_id)/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera$(arg robot_id)/cam1/image_raw"/>
 		<remap from="/warty/camera/camera_info" to="/kimera$(arg robot_id)/cam0/camera_info"/>
@@ -11,8 +11,8 @@
 		<remap from="/warty/depth_camera/image" to="/kimera$(arg robot_id)/depth/image_raw" />
 		<remap from="/warty/depth_camera/camera_info" to="/kimera$(arg robot_id)/depth/camera_info" />
 		<remap from="/warty/camera/semantic_image" to="/kimera$(arg robot_id)/cam0/semantic_image" />
-		<remap from="/unity_command/ground_truth/warty/odom" to="/ground_truth/kimera$(arg robot_id)/pose"/>
 		<remap from="/warty/lidar_points" to="/kimera$(arg robot_id)/lidar_points"/>
+		<remap from="/unity_command/ground_truth/warty/odom" to="/ground_truth/kimera$(arg robot_id)/pose"/>
 	</node>  
 
 </launch>

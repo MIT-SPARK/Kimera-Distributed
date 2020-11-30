@@ -1,6 +1,6 @@
 <launch>
   <arg name="dataset_name" default="Euroc"/>
-  <arg name="num_robots" default="3"/>
+  <arg name="num_robots" default="1"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="mesh_reconstruction" default="false" />
   <arg name="semantic_mesh" default="false" />

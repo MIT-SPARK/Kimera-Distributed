@@ -86,11 +86,11 @@
     </include>
 
     <!-- Launch dpgo_ros -->
-    <!-- To use GDB: launch-prefix="gnome-terminal -x gdb -ex run \-\-args" -->
-    <node ns="dpgo_ros_node" name="agent" pkg="dpgo_ros" type="dpgo_ros_node" output="screen">
-      <param name="~agent_id" type="int" value="$(arg robot_id)" />
-      <param name="~log_output_path" type="str" value="$(arg log_output_path)" />
-    </node>
+    <include file="$(find dpgo_ros)/launch/PGOAgent.launch">
+      <arg name="agent_id" value="$(arg robot_id)" />
+      <arg name="num_robots" value="$(arg num_robots)" />
+      <arg name="acceleration" value="true" />
+    </include>
 
     <!-- Launch kimera pgmo -->
     <include file="$(find kimera_pgmo)/launch/kimera_pgmo.launch" if="$(arg mesh_reconstruction)">

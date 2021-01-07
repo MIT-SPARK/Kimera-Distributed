@@ -31,6 +31,7 @@ class KimeraCentralized {
   ros::NodeHandle nh_;
   int num_robots_;
   std::string log_output_path_;
+  bool b_log_output_;
 
   // Update timer
   ros::Timer update_timer_;
@@ -49,9 +50,12 @@ class KimeraCentralized {
 
   std::unique_ptr<KimeraRPGO::RobustSolver> pgo_;
 
+  std::vector<std::vector<gtsam::Pose3> > optimized_path_;
+
+ private:
   void timerCallback(const ros::TimerEvent&);
 
-  bool getNewPoseGraph(gtsam::NonlinearFactorGraph* new_factors,
+  void getNewPoseGraph(gtsam::NonlinearFactorGraph* new_factors,
                        gtsam::Values* new_values) const;
 
   bool requestRobotPoseGraph(const size_t& robot_id,

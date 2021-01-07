@@ -7,6 +7,7 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/slam/BetweenFactor.h>
+#include <nav_msgs/Path.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
 #include <pose_graph_tools/PoseGraphNode.h>
@@ -28,6 +29,11 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
     ros::shutdown();
   }
 
+  // Initialize optimized_path
+  for (size_t i = 0; i < num_robots_; i++) {
+    optimized_path_.push_back(std::vector<gtsam::Pose3>{});
+  }
+
   // Covariance parameters
   double odom_trans_precision, odom_rot_precision;
   double lc_trans_precision, lc_rot_precision;
@@ -41,7 +47,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
   }
 
   // Currently fixing covariance from params
-  Vector6 odom_precisions, lc_precisions;
+  gtsam::Vector6 odom_precisions, lc_precisions;
   odom_precisions.head<3>().setConstant(odom_rot_precision);
   odom_precisions.tail<3>().setConstant(odom_trans_precision);
   odom_noise_ = gtsam::noiseModel::Diagonal::Precisions(odom_precisions);
@@ -70,7 +76,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
       "pose_graph_optimized", 1, false);
 
   for (size_t i = 0; i < num_robots_; i++) {
-    std::string path_topic = "robot_" + str(i) + "_optimized_path";
+    std::string path_topic = "robot_" + std::to_string(i) + "_optimized_path";
     path_pub_.push_back(nh_.advertise<nav_msgs::Path>(path_topic, 1, false));
   }
 }
@@ -87,7 +93,7 @@ void KimeraCentralized::timerCallback(const ros::TimerEvent&) {
   // Log
 }
 
-bool KimeraCentralized::getNewPoseGraph(
+void KimeraCentralized::getNewPoseGraph(
     gtsam::NonlinearFactorGraph* new_factors,
     gtsam::Values* new_values) const {
   assert(NULL != new_factors);
@@ -106,12 +112,30 @@ bool KimeraCentralized::getNewPoseGraph(
     // Get the factors and initial estimates for robot i
     requestRobotPoseGraph(
         i, &odom_meas, &lc_meas, &inter_lc_meas, &init_values);
-    // Pick out the new odometry factors
 
-    // Pick out the new loop closures
+    // Add the new odometry factors
+    new_factors->add(odom_meas);
 
-    // Pick out new shared loop closures and check for duplicates with other
+    // Add the new loop closures
+    new_factors->add(lc_meas);
+
+    // Add new shared loop closures and check for duplicates with other
     // robots
+    for (const auto& shared_lc_factor : inter_lc_meas) {
+      // Check for duplicates
+      bool duplicate = false;
+      for (const auto& new_factor : *new_factors) {
+        if (new_factor->front() == shared_lc_factor->front() &&
+            new_factor->back() == shared_lc_factor->back()) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (!duplicate) new_factors->push_back(shared_lc_factor);
+    }
+
+    // Add the new initial estimates
+    new_values->insert(init_values);
   }
 }
 
@@ -121,12 +145,13 @@ bool KimeraCentralized::requestRobotPoseGraph(
     gtsam::NonlinearFactorGraph* private_lc_factors,
     gtsam::NonlinearFactorGraph* shared_lc_factors,
     gtsam::Values* values) const {
+  // Request pose graph and find the new nodes and edges
   assert(NULL != odom_factors);
   assert(NULL != private_lc_factors);
   assert(NULL != shared_lc_factors);
   assert(NULL != values);
   // Request pose graph
-  pose graph pose_graph_tools::PoseGraphQuery query;
+  pose_graph_tools::PoseGraphQuery query;
   std::string service_name = "/kimera" + std::to_string(robot_id) +
                              "/distributed_pcm/request_pose_graph";
   if (!ros::service::waitForService(service_name, ros::Duration(1.0))) {
@@ -147,10 +172,22 @@ bool KimeraCentralized::requestRobotPoseGraph(
 
   for (size_t i = 0; i < pose_graph.edges.size(); ++i) {
     const pose_graph_tools::PoseGraphEdge& edge = pose_graph.edges[i];
+    assert(edge.robot_from < num_robots_ && edge.robot_from >= 0);
+    assert(edge.robot_to < num_robots_ && edge.robot_to >= 0);
+    // check if new
+    // For now we assume that new edges have at least on previously
+    // unseen key frame.
+    // TODO: double check this
+    if (edge.key_from < optimized_path_[edge.robot_from].size() &&
+        edge.key_to < optimized_path_[edge.robot_to].size())
+      continue;  // Previously seen edge
+
+    // Extract key and transform if new edge
     const gtsam::Pose3& meas = RosPoseToGtsam(edge.pose);
-    const gtsam::Symbol from_key(robot_id_to_prefix(edge.robot_from),
+    const gtsam::Symbol from_key(robot_id_to_prefix.at(edge.robot_from),
                                  edge.key_from);
-    const gtsam::Symbol to_key(robot_id_to_prefix(edge.robot_to), edge.key_to);
+    const gtsam::Symbol to_key(robot_id_to_prefix.at(edge.robot_to),
+                               edge.key_to);
 
     if (edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
       // odometry factor
@@ -174,11 +211,23 @@ bool KimeraCentralized::requestRobotPoseGraph(
     }
   }
 
-  ROS_INFO_STREAM(
-      "Agent " << robot_id << " receives local pose graph with "
-               << odom_factors->size() << " odometry edges and "
-               << private_lc_factors->size() << " private loop closures and "
-               << shared_lc_factors->size() << " shared loop closures.");
+  for (size_t i = 0; i < pose_graph.nodes.size(); i++) {
+    const pose_graph_tools::PoseGraphNode& node = pose_graph.nodes[i];
+    assert(node.robot_id < num_robots_ && node.robot_id >= 0);
+    // Check if new
+    if (node.key >= optimized_path_[node.robot_id].size()) {
+      const gtsam::Pose3& pose = RosPoseToGtsam(node.pose);
+      const gtsam::Symbol key(robot_id_to_prefix.at(node.robot_id), node.key);
+      values->insert(key, pose);
+    }
+  }
+
+  ROS_INFO_STREAM("Agent " << robot_id << " receives local pose graph with "
+                           << odom_factors->size() << " new odometry edges and "
+                           << private_lc_factors->size()
+                           << " new private loop closures and "
+                           << shared_lc_factors->size()
+                           << " new shared loop closures.");
 
   return true;
 }

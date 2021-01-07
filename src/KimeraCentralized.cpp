@@ -85,12 +85,45 @@ KimeraCentralized::~KimeraCentralized() {}
 
 void KimeraCentralized::timerCallback(const ros::TimerEvent&) {
   // Request pose grah
+  gtsam::NonlinearFactorGraph nfg_new;
+  gtsam::Values values_new;
+  getNewPoseGraph(&nfg_new, &values_new);
 
   // Add and update rpgo
+  pgo_->update(nfg_new, values_new);
+  // Get the new factor graph and estimates
+  nfg_ = pgo_->getFactorsUnsafe();
+  values_ = pgo_->calculateBestEstimate();
+  // Update optimized path
+  updateOptimizedPath();
 
-  // Publish
+  // Publish and log
+  publishPoseGraph();
+  for (size_t i = 0; i < num_robots_; i++) {
+    publishRobotTrajectory(i);
 
-  // Log
+    if (b_log_output_) {
+      std::string filename = log_output_path_ + "/basestation/robot_" +
+                             std::to_string(i) + "_traj.csv";
+      logRobotTrajectory(i, filename);
+    }
+  }
+}
+
+void KimeraCentralized::updateOptimizedPath() {
+  // Use latest estimates to update optimized path
+  // values_.keys() should be ordered
+  for (const auto& key : values_.keys()) {
+    gtsam::Symbol key_symb(key);
+    size_t robot_id = robot_prefix_to_id.at(key_symb.chr());
+    size_t index = key_symb.index();
+    assert(robot_id < num_robots_ && robot_id >= 0);
+    if (index < optimized_path_[robot_id].size()) {
+      optimized_path_[robot_id][index] = values_.at<gtsam::Pose3>(key);
+    } else {
+      optimized_path_[robot_id].push_back(values_.at<gtsam::Pose3>(key));
+    }
+  }
 }
 
 void KimeraCentralized::getNewPoseGraph(
@@ -232,11 +265,47 @@ bool KimeraCentralized::requestRobotPoseGraph(
   return true;
 }
 
-void KimeraCentralized::publishPoseGraph() const {}
+void KimeraCentralized::publishPoseGraph() const {
+  pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
+  pose_graph_msg.header.frame_id = "world";
+  pose_graph_msg.header.stamp = ros::Time::now();
 
-void KimeraCentralized::publishRobotTrajectory(const size_t& robot_id) const {}
+  pose_graph_pub_.publish(pose_graph_msg);
+}
 
-bool KimeraCentralized::logRobotTrajectory(const size_t& robot_id,
-                                           const std::string& filename) const {}
+void KimeraCentralized::publishRobotTrajectory(const size_t& robot_id) const {
+  // Convert gtsam pose3 path to nav msg
+  assert(robot_id < num_robots_);
+  const nav_msgs::Path& path_msg =
+      GtsamPoseTrajectoryToPath(optimized_path_[robot_id]);
+  path_pub_[robot_id].publish(path_msg);
+}
+
+void KimeraCentralized::logRobotTrajectory(const size_t& robot_id,
+                                           const std::string& filename) const {
+  assert(robot_id < num_robots_);
+  std::ofstream file;
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("KimeraCentralized: Error opening log file: " << filename);
+    return;
+  }
+
+  file << "pose_index,qx,qy,qz,qw,tx,ty,tz\n";
+  for (size_t i = 0; i < optimized_path_[robot_id].size(); i++) {
+    const geometry_msgs::Pose& pose =
+        GtsamPoseToRos(optimized_path_[robot_id][i]);
+    file << i << ",";
+    file << pose.orientation.x << ",";
+    file << pose.orientation.y << ",";
+    file << pose.orientation.z << ",";
+    file << pose.orientation.w << ",";
+    file << pose.position.x << ",";
+    file << pose.position.y << ",";
+    file << pose.position.z << "\n";
+  }
+
+  file.close();
+}
 
 }  // namespace kimera_distributed

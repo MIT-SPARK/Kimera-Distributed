@@ -33,8 +33,7 @@ void BowVectorFromMsg(const kimera_distributed::BowVector& msg,
   }
 }
 
-void VLCFrameToMsg(const VLCFrame& frame,
-                   VLCFrameMsg* msg) {
+void VLCFrameToMsg(const VLCFrame& frame, VLCFrameMsg* msg) {
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
@@ -57,8 +56,7 @@ void VLCFrameToMsg(const VLCFrame& frame,
   cv_img.toImageMsg(msg->descriptors_mat);
 }
 
-void VLCFrameFromMsg(const VLCFrameMsg& msg,
-                     VLCFrame* frame) {
+void VLCFrameFromMsg(const VLCFrameMsg& msg, VLCFrame* frame) {
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
 
@@ -111,6 +109,24 @@ gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform) {
                   transform.orientation.z),
       gtsam::Point3(
           transform.position.x, transform.position.y, transform.position.z));
+  return pose;
+}
+
+geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform) {
+  geometry_msgs::Pose pose;
+
+  const gtsam::Point3& position = transform.translation();
+  const gtsam::Quaternion& orientation = transform.rotation().toQuaternion();
+
+  pose.position.x = position.x();
+  pose.position.y = position.y();
+  pose.position.z = position.z();
+
+  pose.orientation.x = orientation.x();
+  pose.orientation.y = orientation.y();
+  pose.orientation.z = orientation.z();
+  pose.orientation.w = orientation.w();
+
   return pose;
 }
 
@@ -184,18 +200,8 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
       } else {
         edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
       }
-      // transforms - translation
-      const gtsam::Point3& translation = factor.measured().translation();
-      edge.pose.position.x = translation.x();
-      edge.pose.position.y = translation.y();
-      edge.pose.position.z = translation.z();
-      // transforms - rotation (to quaternion)
-      const gtsam::Quaternion& quaternion =
-          factor.measured().rotation().toQuaternion();
-      edge.pose.orientation.x = quaternion.x();
-      edge.pose.orientation.y = quaternion.y();
-      edge.pose.orientation.z = quaternion.z();
-      edge.pose.orientation.w = quaternion.w();
+
+      edge.pose = GtsamPoseToRos(factor.measured());
 
       // transfer covariance
       gtsam::Matrix66 covariance =
@@ -226,15 +232,7 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
       const gtsam::Point3& translation = value.translation();
       const gtsam::Quaternion& quaternion = value.rotation().toQuaternion();
 
-      // pose - translation
-      node.pose.position.x = translation.x();
-      node.pose.position.y = translation.y();
-      node.pose.position.z = translation.z();
-      // pose - rotation (to quaternion)
-      node.pose.orientation.x = quaternion.x();
-      node.pose.orientation.y = quaternion.y();
-      node.pose.orientation.z = quaternion.z();
-      node.pose.orientation.w = quaternion.w();
+      node.pose = GtsamPoseToRos(value);
       nodes.push_back(node);
     } catch (...) {
       // ignore
@@ -245,6 +243,19 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
   posegraph.nodes = nodes;
   posegraph.edges = edges;
   return posegraph;
+}
+
+nav_msgs::Path GtsamPoseTrajectoryToPath(
+    const std::vector<gtsam::Pose3>& gtsam_poses) {
+  nav_msgs::Path msg;
+  msg.header.frame_id = "/world";
+  msg.header.stamp = ros::Time::now();
+  for (size_t i = 0; i < gtsam_poses.size(); i++) {
+    geometry_msgs::PoseStamped pose_stamped;
+    pose_stamped.pose = GtsamPoseToRos(gtsam_poses[i]);
+    msg.poses.push_back(pose_stamped);
+  }
+  return msg;
 }
 
 size_t computeBowQueryPayloadBytes(const BowQuery& msg) {

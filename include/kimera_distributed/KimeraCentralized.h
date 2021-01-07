@@ -55,6 +55,8 @@ class KimeraCentralized {
  private:
   void timerCallback(const ros::TimerEvent&);
 
+  void updateOptimizedPath();
+
   void getNewPoseGraph(gtsam::NonlinearFactorGraph* new_factors,
                        gtsam::Values* new_values) const;
 
@@ -68,7 +70,7 @@ class KimeraCentralized {
 
   void publishRobotTrajectory(const size_t& robot_id) const;
 
-  bool logRobotTrajectory(const size_t& robot_id,
+  void logRobotTrajectory(const size_t& robot_id,
                           const std::string& filename) const;
 };
 

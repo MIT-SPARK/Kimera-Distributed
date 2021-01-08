@@ -85,7 +85,8 @@
   </group>
 
   <!-- Launch Basestation -->
-  <node name="kimera_centralized_node" pkg="kimera_distributed" type="kimera_centralized_node" output="screen" >
+  <node name="kimera_centralized_node" pkg="kimera_distributed" 
+    type="kimera_centralized_node" output="screen" ns="kimera_centralized">
     <param name="num_robots" value="$(arg num_robots)" />
     <rosparam file="$(find kimera_distributed)/params/centralized.yaml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/basestation/"/>

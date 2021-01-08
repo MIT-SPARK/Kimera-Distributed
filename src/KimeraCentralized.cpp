@@ -79,6 +79,10 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
     std::string path_topic = "robot_" + std::to_string(i) + "_optimized_path";
     path_pub_.push_back(nh_.advertise<nav_msgs::Path>(path_topic, 1, false));
   }
+
+  // Initialize timer
+  update_timer_ = nh_.createTimer(
+      ros::Duration(1.0), &KimeraCentralized::timerCallback, this);
 }
 
 KimeraCentralized::~KimeraCentralized() {}
@@ -185,6 +189,7 @@ bool KimeraCentralized::requestRobotPoseGraph(
   assert(NULL != values);
   // Request pose graph
   pose_graph_tools::PoseGraphQuery query;
+  query.request.robot_id = robot_id;
   std::string service_name = "/kimera" + std::to_string(robot_id) +
                              "/distributed_pcm/request_pose_graph";
   if (!ros::service::waitForService(service_name, ros::Duration(1.0))) {
@@ -246,7 +251,7 @@ bool KimeraCentralized::requestRobotPoseGraph(
 
   for (size_t i = 0; i < pose_graph.nodes.size(); i++) {
     const pose_graph_tools::PoseGraphNode& node = pose_graph.nodes[i];
-    assert(node.robot_id < num_robots_ && node.robot_id >= 0);
+    if (node.robot_id != robot_id) continue;
     // Check if new
     if (node.key >= optimized_path_[node.robot_id].size()) {
       const gtsam::Pose3& pose = RosPoseToGtsam(node.pose);
@@ -266,6 +271,7 @@ bool KimeraCentralized::requestRobotPoseGraph(
 }
 
 void KimeraCentralized::publishPoseGraph() const {
+  if (pose_graph_pub_.getNumSubscribers() == 0) return;
   pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
   pose_graph_msg.header.frame_id = "world";
   pose_graph_msg.header.stamp = ros::Time::now();
@@ -274,8 +280,9 @@ void KimeraCentralized::publishPoseGraph() const {
 }
 
 void KimeraCentralized::publishRobotTrajectory(const size_t& robot_id) const {
-  // Convert gtsam pose3 path to nav msg
   assert(robot_id < num_robots_);
+  if (path_pub_[robot_id].getNumSubscribers() == 0) return;
+  // Convert gtsam pose3 path to nav msg
   const nav_msgs::Path& path_msg =
       GtsamPoseTrajectoryToPath(optimized_path_[robot_id]);
   path_pub_[robot_id].publish(path_msg);

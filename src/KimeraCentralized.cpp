@@ -103,8 +103,8 @@ void KimeraCentralized::timerCallback(const ros::TimerEvent&) {
     publishRobotTrajectory(i);
 
     if (b_log_output_) {
-      std::string filename = log_output_path_ + "/basestation/robot_" +
-                             std::to_string(i) + "_traj.csv";
+      std::string filename =
+          log_output_path_ + "/robot_" + std::to_string(i) + "_traj.csv";
       logRobotTrajectory(i, filename);
     }
   }

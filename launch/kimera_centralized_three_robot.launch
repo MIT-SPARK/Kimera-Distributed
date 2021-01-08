@@ -19,9 +19,6 @@
       <arg name="left_cam_topic"        default="/kimera0/cam0/image_raw"/>
       <arg name="right_cam_topic"       default="/kimera0/cam1/image_raw"/>
       <arg name="imu_topic"             default="/kimera0/imu0"/>
-      <arg name="ptcld_topic"           default="/kimera0/stereo_gray/dense_stereo/pointcloud" if="$(arg run_stereo_dense)"/>
-      <arg name="ptcld_topic"           default="/kimera0/semantic_pointcloud" unless="$(arg run_stereo_dense)"/>
-      <arg name="freespace_ptcld_topic" default="/kimera0/stereo_gray/dense_stereo/freespace_pointcloud"/>
       <arg name="gt_topic"              default="/ground_truth/kimera0/pose" />
     </include>
 
@@ -93,5 +90,14 @@
     <rosparam file="$(find kimera_distributed)/params/centralized.yaml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/basestation/"/>
   </node> 
+
+  <!-- Pose Graph Visualizer -->
+  <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
+    <arg name="frame_id"      value="world" />
+    <arg name="graph_topic"   value="pose_graph_optimized" />
+    <arg name="ns"            value="kimera_centralized"/>
+  </include>
+
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find kimera_distributed)/rviz/kimera_centralized.rviz"></node>
 
 </launch>

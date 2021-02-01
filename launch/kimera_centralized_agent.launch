@@ -1,0 +1,68 @@
+<launch>
+  <arg name="dataset_name" default="Euroc" />
+  <arg name="verbosity" default="0" />
+  <arg name="num_robots" default="3" />
+  <arg name="mesh_reconstruction" default="true" />
+  <arg name="semantic_mesh" default="true" />
+  <arg name="environment" default="camp" />
+  <arg name="robot_id" default="0" />
+
+  <arg name="use_lcd" value="true" />
+  <arg name="visualize" value="true" />
+  <arg name="use_online_cam_params" value="false" />
+  <arg name="online" value="true" />
+  <!-- Frame IDs -->
+  <arg name="base_link_frame_id" value="kimera$(arg robot_id)_base_link"/>
+  <arg name="left_cam_frame_id"  value="kimera$(arg robot_id)_left_cam"/>
+  <arg name="right_cam_frame_id" value="kimera$(arg robot_id)_right_cam"/>
+  <!-- Subscribed Topics -->
+  <arg name="left_cam_topic"        value="/kimera$(arg robot_id)/cam0/image_raw"/>
+  <arg name="right_cam_topic"       value="/kimera$(arg robot_id)/cam1/image_raw"/>
+  <arg name="imu_topic"             value="/kimera$(arg robot_id)/imu0"/>
+  <arg name="gt_topic"              value="/ground_truth/kimera$(arg robot_id)/pose" />
+
+  <arg name="run_stereo_dense"     value="true" if="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+  <arg name="run_stereo_dense"     value="false" unless="$(eval dataset_name == 'Euroc' and mesh_reconstruction)"/>
+
+  <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/stereo_gray/dense_stereo/pointcloud" if="$(arg run_stereo_dense)"/>
+  <arg name="ptcld_topic"                       default="/kimera$(arg robot_id)/semantic_pointcloud" unless="$(arg run_stereo_dense)"/>
+  <arg name="freespace_ptcld_topic"             default="/kimera$(arg robot_id)/stereo_gray/dense_stereo/freespace_pointcloud"/>
+
+  <!-- Launch Kimera-VIO -->
+  <include file="$(find kimera_distributed)/launch/kimera_vio_ros.launch" pass_all_args="true" />
+
+  <!-- Launch Kimera-Distributed -->
+  <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch" pass_all_args="true" />
+
+  <!-- Launch Kimera-Semantics -->
+  <include file="$(find kimera_semantics_ros)/launch/kimera_semantics.launch" if="$(arg mesh_reconstruction)">
+    <arg name="use_sim_time"                   default="false" />
+    <arg name="publish_point_clouds"           default="false" if="$(arg run_stereo_dense)"/>
+    <arg name="publish_point_clouds"           default="true" unless="$(arg run_stereo_dense)"/>
+    <arg name="voxel_size"                     default="0.05" if="$(eval dataset_name == 'Euroc')"/>
+    <arg name="voxel_size"                     default="0.2" unless="$(eval dataset_name == 'Euroc')"/>
+    <arg name="max_ray_length_m"               default="5" if="$(eval dataset_name == 'Euroc')"/>
+    <arg name="max_ray_length_m"               default="40" unless="$(eval dataset_name == 'Euroc')"/>
+    <arg name="sensor_frame"                   default="$(arg left_cam_frame_id)"/>
+    <arg name="metric_semantic_reconstruction" default="false" if="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
+    <arg name="metric_semantic_reconstruction" default="true" unless="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
+    <arg name="semantic_pointcloud"            default="$(arg ptcld_topic)"/>
+    <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
+    <arg name="left_cam_info_topic"            default="cam0/camera_info" />
+    <arg name="seg_cam_info_topic"             default="cam0/camera_info" />
+    <arg name="right_cam_info_topic"           default="cam1/camera_info"/>
+    <arg name="left_cam_topic"                 default="cam0/image_raw"/>
+    <arg name="right_cam_topic"                default="cam1/image_raw"/>
+    <arg name="left_cam_segmentation_topic"    default="/dev/null" if="$(eval dataset_name == 'Euroc')"/>
+    <arg name="left_cam_segmentation_topic"    default="cam0/semantic_image" unless="$(eval dataset_name == 'Euroc')"/>
+    <arg name="left_cam_depth_topic"           default="/dev/null" if="$(eval dataset_name == 'Euroc')"/>
+    <arg name="left_cam_depth_topic"           default="depth/image_raw" unless="$(eval dataset_name == 'Euroc')"/>
+    <arg name="depth_cam_info_topic"           default="/dev/null" if="$(eval dataset_name == 'Euroc')"/>
+    <arg name="depth_cam_info_topic"           default="depth/camera_info" unless="$(eval dataset_name == 'Euroc')"/>
+    <arg name="use_freespace_pointcloud"       default="true" if="$(arg run_stereo_dense)"/>
+    <arg name="use_freespace_pointcloud"       default="false" unless="$(arg run_stereo_dense)"/>
+    <arg name="freespace_pointcloud"           default="$(arg freespace_ptcld_topic)"/>
+    <arg name="semantic_labels_path"           default="$(find kimera_distributed)/params/dcist_$(arg environment)_semantic_mapping.csv" />
+  </include>
+
+</launch>

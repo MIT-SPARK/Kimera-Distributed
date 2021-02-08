@@ -90,6 +90,9 @@
       <arg name="agent_id" value="$(arg robot_id)" />
       <arg name="num_robots" value="$(arg num_robots)" />
       <arg name="acceleration" value="true" />
+      <arg name="robust_cost_type" value="GNC_TLS" />
+      <arg name="GNC_barc" value="5.0" />
+      <arg name="log_directory" value="$(arg log_output_path)" />
     </include>
 
     <!-- Launch kimera pgmo -->

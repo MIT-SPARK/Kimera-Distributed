@@ -1,5 +1,5 @@
 <launch>
-  <arg name="dataset_name" default="Euroc"/>
+  <arg name="dataset_name" default="warty"/>
   <arg name="num_robots" default="3"/>
   <arg name="log_gt_data" default="true"/>
   <arg name="mesh_reconstruction" default="false" />
@@ -9,12 +9,6 @@
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <!-- Yulun: safe to use system wall-clock time for multi-robot experiment? -->
   <param name="use_sim_time" value="false"/>
-
-  <!-- DPGO params -->
-  <param name="/num_robots" type="int" value="$(arg num_robots)" />
-  <param name="/dimension" type="int" value="3" />
-  <param name="/relaxation_rank" type="int" value="5" />
-  <rosparam file="$(find kimera_distributed)/params/dpgo_$(arg dataset_name).yaml"/>
 
   <include file="$(find kimera_distributed)/launch/kimera_full_stack.launch" pass_all_args="true">
       <arg name="robot_id" value="0" />

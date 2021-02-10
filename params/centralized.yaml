@@ -4,3 +4,4 @@ odom_trans_precision: 100 # 1/(0.1*0.1)
 odom_rot_precision: 10000 # 1/(0.01*0.01)
 lc_trans_precision: 100 # 1/(0.1*0.1)
 lc_rot_precision: 10000 # 1/(0.01*0.01)
+gnc_confidence: 0.7

@@ -57,8 +57,10 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
 
   // Pcm parameters
   double pcm_trans_threshold, pcm_rot_threshold;
+  double gnc_alpha;
   if (!ros::param::get("~pcm_threshold_translation", pcm_trans_threshold) ||
-      !ros::param::get("~pcm_threshold_rotation", pcm_rot_threshold)) {
+      !ros::param::get("~pcm_threshold_rotation", pcm_rot_threshold) ||
+      !ros::param::get("~gnc_confidence", gnc_alpha)) {
     ROS_ERROR("Failed to get required PCM parameters! Shutting down... ");
     ros::shutdown();
   }
@@ -68,6 +70,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
   pgo_params.logOutput(log_output_path_);
   pgo_params.setIncremental();
+  pgo_params.setGncInlierCostThresholdsAtProbability(gnc_alpha);
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
 

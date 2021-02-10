@@ -2,7 +2,7 @@
   <arg name="dataset_name" default="Euroc" />
   <arg name="verbosity" default="0" />
   <arg name="num_robots" default="3" />
-  <arg name="mesh_reconstruction" default="true" />
+  <arg name="mesh_reconstruction" default="false" />
   <arg name="semantic_mesh" default="true" />
   <arg name="environment" default="camp" />
   
@@ -29,8 +29,15 @@
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/basestation/"/>
   </node> 
 
+  <!-- Kimera-PGMO -->
+  <include if="$(arg mesh_reconstruction)" file="$(find kimera_pgmo)/launch/kimera_pgmo_multi.launch" pass_all_args="true" >
+    <arg name="dataset" value="$(arg dataset_name)" />
+    <arg name="use_msg_time" value="true" />
+    <arg name="log" value="true" />
+  </include>
+
   <!-- Pose Graph Visualizer -->
-  <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
+  <include unless="$(arg mesh_reconstruction)" file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
     <arg name="frame_id"      value="world" />
     <arg name="graph_topic"   value="pose_graph_optimized" />
     <arg name="ns"            value="kimera_centralized"/>

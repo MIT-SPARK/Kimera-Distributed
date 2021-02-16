@@ -32,7 +32,11 @@
   <include file="$(find kimera_distributed)/launch/kimera_vio_ros.launch" pass_all_args="true" />
 
   <!-- Launch Kimera-Distributed -->
-  <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch" pass_all_args="true" />
+  <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch">
+    <arg name="robot_id" value="$(arg robot_id)" />
+    <arg name="num_robots" value="$(arg num_robots)" />
+    <arg name="dataset_name" value="$(arg dataset_name)" />
+  </include>
 
   <!-- Launch Kimera-Semantics -->
   <include file="$(find kimera_semantics_ros)/launch/kimera_semantics.launch" if="$(arg mesh_reconstruction)">

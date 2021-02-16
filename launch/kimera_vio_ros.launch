@@ -68,6 +68,7 @@
   <arg name="semantic_mesh"/>
   <arg name="ptcld_topic" />
   <arg name="freespace_ptcld_topic" />
+  <arg name="environment" />
 
   <!-- Launch main node  -->
   <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"

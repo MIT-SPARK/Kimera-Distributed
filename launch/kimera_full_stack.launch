@@ -12,10 +12,10 @@
 
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
-  <arg name="log_output" default="false" />
+  <arg name="log_output" default="true" />
   <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
   <!-- Set to true and specify gt_topic if you want to log ground-truth data -->
-  <arg name="log_gt_data" default="false" />
+  <arg name="log_gt_data" default="true" />
   <arg name="gt_topic" default="/ground_truth/kimera$(arg robot_id)/pose" />
 
   <arg name="use_lcd" default="true" />

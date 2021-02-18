@@ -8,6 +8,7 @@
 #include <kimera_distributed/DistributedPcm.h>
 #include <kimera_distributed/prefix.h>
 #include <kimera_distributed/types.h>
+#include <pose_graph_tools/utils.h>
 
 #include <fstream>
 #include <iostream>
@@ -297,8 +298,7 @@ bool DistributedPcm::shareLoopClosuresCallback(
     return false;
   }
   if (b_request_from_robot_[request_robot_id]) {
-    ROS_ERROR("Distributed PCM received repeated loop closure requests!! ");
-    return false;
+    ROS_WARN("Distributed PCM received repeated loop closure requests!! ");
   }
   b_request_from_robot_[request_robot_id] = true;
   // freeze set of loop closures
@@ -329,8 +329,7 @@ bool DistributedPcm::requestPoseGraphCallback(
   // Check that id is from robot
   assert(request.robot_id == my_id_);
   if (b_request_from_robot_[request.robot_id]) {
-    ROS_ERROR("Distributed PCM received repeated pose graph requests!");
-    return false;
+    ROS_WARN("Distributed PCM received repeated pose graph requests!");
   }
   b_request_from_robot_[request.robot_id] = true;
   // freeze set of loop closures
@@ -371,11 +370,13 @@ bool DistributedPcm::requestPoseGraphCallback(
     output_loopclosures.push_back(edge);
   }
 
+  // Filter duplicate edges from pose graph
+  out_graph = pose_graph_tools::filterDuplicateEdges(out_graph);
   response.pose_graph = out_graph;
-  // Save all loop closures to file
-  saveLoopClosuresToFile(
-      output_loopclosures,
-      log_output_path_ + "pcm_loop_closures_sent_to_dpgo.csv");
+
+  // Debug: save final graph to file
+  std::string filename = log_output_path_ + "pcm_pose_graph_edges.csv";
+  pose_graph_tools::savePoseGraphEdgesToFile(out_graph, filename);
 
   unlockLoopClosuresIfNeeded();
 

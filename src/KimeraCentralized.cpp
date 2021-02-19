@@ -103,6 +103,8 @@ void KimeraCentralized::timerCallback(const ros::TimerEvent&) {
   values_ = pgo_->calculateBestEstimate();
   // Update optimized path
   updateOptimizedPath();
+  // Log accepted loop closures
+  logAcceptedLoopClosures(log_output_path_ + "accepted_loop_closures.csv");
 
   // Publish and log
   publishPoseGraph();
@@ -263,12 +265,12 @@ bool KimeraCentralized::requestRobotPoseGraph(
     }
   }
 
-  ROS_INFO_STREAM("Agent " << robot_id << " receives local pose graph with "
-                           << odom_factors->size() << " new odometry edges and "
-                           << private_lc_factors->size()
-                           << " new private loop closures and "
-                           << shared_lc_factors->size()
-                           << " new shared loop closures.");
+  // ROS_INFO_STREAM("Agent " << robot_id << " receives local pose graph with "
+  //                          << odom_factors->size() << " new odometry edges and "
+  //                          << private_lc_factors->size()
+  //                          << " new private loop closures and "
+  //                          << shared_lc_factors->size()
+  //                          << " new shared loop closures.");
 
   return true;
 }
@@ -313,6 +315,41 @@ void KimeraCentralized::logRobotTrajectory(const size_t& robot_id,
     file << pose.position.x << ",";
     file << pose.position.y << ",";
     file << pose.position.z << "\n";
+  }
+
+  file.close();
+}
+
+void KimeraCentralized::logAcceptedLoopClosures(const std::string& filename) const {
+  std::ofstream file;
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("KimeraCentralized: Error opening log file: " << filename);
+    return;
+  }
+  file << "robot1,pose1,robot2,pose2\n";
+
+  gtsam::Vector gnc_weights = pgo_->getGncWeights();
+
+  for (size_t i = 0; i < nfg_.size(); ++i) {
+    gtsam::Symbol key_from = nfg_[i]->front();
+    gtsam::Symbol key_to   = nfg_[i]->back();
+    size_t robot_from = robot_prefix_to_id.at(key_from.chr());
+    size_t pose_from =  key_from.index();
+    size_t robot_to = robot_prefix_to_id.at(key_to.chr());
+    size_t pose_to = key_to.index();
+    double w = gnc_weights[i];
+
+    // Skip measurements that are not accepted
+    if (w < 0.999) continue; 
+
+    // Only save loop closures
+    if ((robot_from != robot_to) || (pose_from + 1 != pose_to)) {
+      file << robot_from << ",";
+      file << pose_from << ",";
+      file << robot_to << ",";
+      file << pose_to << "\n";
+    }
   }
 
   file.close();

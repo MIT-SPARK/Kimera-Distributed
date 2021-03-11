@@ -2,10 +2,10 @@
 
 This is the work-in-progress repository for distributed multirobot [Kimera](https://github.com/MIT-SPARK/Kimera). This package implements a fully distributed architecture where individual robots use peer-to-peer communication to perform inter-robot place recognition, loop closure detection, and outlier loop closure rejection. The resulting pose graph is sent to [DPGO](https://gitlab.com/mit-acl/dpgo/dpgo) to initiate distributed pose graph optimization.  
 
-To use this package, use the `feature/dcist_dataset` branch in `Kimera-VIO`, `feature/distributed_frontend` in `Kimera-VIO-ROS`, `feature/distributed_frontend` in `Kimera-RPGO`, `feature/multirobot` branch in `Kimera-PGMO`, and `feature/kimera_rpgo` branch in `Kimera-Semantics`. 
+To use this package, use the `feature/kimera_distributed` branch in `Kimera-VIO`, `feature/kimera_distributed` in `Kimera-VIO-ROS`, `feature/gnc` in `Kimera-RPGO`, `master` branch in `Kimera-PGMO`, and `feature/kimera_pgmo` branch in `Kimera-Semantics`. 
 
 Note that we are also using a forked version of the [image-pipeline package](https://github.com/yunzc/image_pipeline/tree/feature/kimera_distributed).
-Clone and checkout the `feature/kimera_distributed` branch. 
+Clone and checkout the `feature/kimera_distributed` branch.
 
 Note: doing a full `catkin build` might cause problems with some of the dependencies of Kimera-Semantics, so it is recommended to build the modules one by one. 
 ```bash
@@ -50,6 +50,26 @@ To save the optimized mesh:
 rosservice call /kimera0/kimera_pgmo_node/save_mesh
 ```
 And substitue `kimera0` for your robot name. 
+
+
+### Running Centralized 
+```
+roslaunch kimera_distributed kimera_centralized_three_robot.launch mesh_reconstruction:=true dataset_name:=warty environment:=camp
+```
+
+Play the rosbags: 
+```
+roslaunch kimera_distributed camp_three_robot_rosbag.launch
+```
+
+Loop closure information will still be logged to the `logs/kimerax` folder while basestation trajectory and other basestation data 
+will be logged to the `logs/basestation` folder. 
+
+To save the meshes and trajectories in pgmo, do: 
+```
+rosservice call /kimera_pgmo_multi_node/save_mesh
+rosservice call /kimera_pgmo_multi_node/save_trajectory
+```
 
 ## Notes
 1. When running stereo dense reconstruction (see `kimera_vio_ros.launch`), you might get an error like `[ERROR] [1538875392.391423846]: Image P matrices must match (excluding x offset)`. A fix for this is to [downgrade to gcc 6](https://tuxamito.com/wiki/index.php/Installing_newer_GCC_versions_in_Ubuntu). 

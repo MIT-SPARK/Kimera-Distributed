@@ -303,18 +303,18 @@ void KimeraCentralized::logRobotTrajectory(const size_t& robot_id,
     return;
   }
 
-  file << "pose_index,qx,qy,qz,qw,tx,ty,tz\n";
+  file << "pose_index,x,y,z,qx,qy,qz,qw\n";
   for (size_t i = 0; i < optimized_path_[robot_id].size(); i++) {
     const geometry_msgs::Pose& pose =
         GtsamPoseToRos(optimized_path_[robot_id][i]);
     file << i << ",";
+    file << pose.position.x << ",";
+    file << pose.position.y << ",";
+    file << pose.position.z << ",";
     file << pose.orientation.x << ",";
     file << pose.orientation.y << ",";
     file << pose.orientation.z << ",";
-    file << pose.orientation.w << ",";
-    file << pose.position.x << ",";
-    file << pose.position.y << ",";
-    file << pose.position.z << "\n";
+    file << pose.orientation.w << "\n";
   }
 
   file.close();

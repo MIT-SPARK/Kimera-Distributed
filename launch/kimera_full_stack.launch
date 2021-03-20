@@ -101,7 +101,8 @@
       <arg name="dataset"                     default="$(arg dataset_name)" />
       <arg name="robot_id"                    default="$(arg robot_id)" />
       <arg name="run_mode"                    default="1" />
-      <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
+      <arg name="optimized_path_topic"        default="dpgo_ros_node/path" unless="$(arg mesh_reconstruction)" />
+      <arg name="optimized_path_topic"        default="/dev/null" if="$(arg mesh_reconstruction)" />
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
       <arg name="horizon"                     default="50" />

@@ -72,6 +72,8 @@ class KimeraCentralized {
 
   void logRobotTrajectory(const size_t& robot_id,
                           const std::string& filename) const;
+
+  void logAcceptedLoopClosures(const std::string& filename) const;
 };
 
 }  // namespace kimera_distributed

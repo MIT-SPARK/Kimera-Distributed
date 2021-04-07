@@ -50,7 +50,10 @@ class DistributedPcm {
   ros::NodeHandle nh_;
   RobotID my_id_;
   int num_robots_;
+  bool b_is_frozen_;
+  bool b_offline_mode_;
   std::string log_output_path_;
+  std::string offline_data_path_;
 
   // ROS subscriber
   std::vector<ros::Subscriber> odom_edge_subscribers_;
@@ -68,6 +71,10 @@ class DistributedPcm {
   gtsam::NonlinearFactorGraph nfg_;
 
   std::unique_ptr<KimeraRPGO::RobustSolver> pgo_;
+
+  // Handle to log files
+  std::ofstream pose_file_;        // log received poses
+  std::ofstream odom_file_;        // log received odometry
 
   void odometryEdgeCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
 
@@ -87,8 +94,27 @@ class DistributedPcm {
 
   std::vector<VLCEdge> loop_closures_frozen_;
   std::vector<bool> b_request_from_robot_;
-  bool b_is_frozen_;
   void unlockLoopClosuresIfNeeded();
+
+  // Logging 
+  void createLogs();
+  void closeLogs();
+  void saveNewPosesToLog(const pose_graph_tools::PoseGraphNode& node);
+  void saveNewOdometryToLog(const pose_graph_tools::PoseGraphEdge& edge);
+
+  // Offline data loading
+  void initializeOffline();
+
+  // Load a set of poses from file. 
+  // Each row (except first header row) corresponds to a pose in the following format: 
+  // robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz
+  gtsam::Values loadPosesOffline(const std::string& filename);
+
+  // Load a set of measurements from file
+  // Each row (except first header row) corresponds to a measurement in the following format: 
+  // robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz
+  // Additional columns in the file will be ignored
+  gtsam::NonlinearFactorGraph loadMeasurementsOffline(const std::string& filename, bool is_odometry = false);
 };
 
 }  // namespace kimera_distributed

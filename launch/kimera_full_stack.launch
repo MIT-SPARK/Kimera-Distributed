@@ -87,11 +87,12 @@
 
     <!-- Launch dpgo_ros -->
     <include file="$(find dpgo_ros)/launch/PGOAgent.launch">
+      <arg name="verbose"                          value="true" />
       <arg name="agent_id"                         value="$(arg robot_id)" />
       <arg name="num_robots"                       value="$(arg num_robots)" />
-      <arg name="acceleration"                     value="true" />
+      <arg name="acceleration"                     value="false" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
-      <arg name="GNC_barc"                         value="3.0" />
+      <arg name="GNC_quantile"                     value="0.9" />
       <arg name="min_converged_loop_closure_ratio" value="0.95" />
       <arg name="log_directory"                    value="$(arg log_output_path)" />
     </include>
@@ -100,8 +101,11 @@
     <include file="$(find kimera_pgmo)/launch/kimera_pgmo.launch" if="$(arg mesh_reconstruction)">
       <arg name="dataset"                     default="$(arg dataset_name)" />
       <arg name="robot_id"                    default="$(arg robot_id)" />
-      <arg name="run_mode"                    default="1" />
-      <arg name="optimized_path_topic"        default="dpgo_ros_node/path" />
+      <arg name="run_mode"                    default="2" />
+      <arg name="optimized_path_topic"        default="dpgo_ros_node/path" unless="$(arg mesh_reconstruction)" />
+      <arg name="optimized_path_topic"        default="/dev/null" if="$(arg mesh_reconstruction)" />
+      <arg name="dpgmo_topic"                 default="dpgo_ros_node/optimized_pose_graph" if="$(arg mesh_reconstruction)" />
+      <arg name="dpgmo_topic"                 default="/dev/null" unless="$(arg mesh_reconstruction)" />
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
       <arg name="horizon"                     default="50" />

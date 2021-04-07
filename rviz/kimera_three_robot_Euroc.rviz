@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /OptimizedMeshColored3
         - /OptimizedMesh2/Display Type1
         - /OptimizedMesh3/Display Type1
       Splitter Ratio: 0.5
@@ -250,7 +249,7 @@ Visualization Manager:
         Faces Alpha: 0.10000000149011612
         Faces Color: 0; 255; 0
         Value: Fixed Color
-      Enabled: true
+      Enabled: false
       Mesh Buffer Size: 1
       Name: OptimizedMeshColored
       Show Normals:
@@ -263,13 +262,13 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera0/kimera_pgmo_node/optimized_mesh
-      Value: true
+      Value: false
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 0.10000000149011612
         Faces Color: 239; 41; 41
         Value: Fixed Color
-      Enabled: true
+      Enabled: false
       Mesh Buffer Size: 1
       Name: OptimizedMeshColored
       Show Normals:
@@ -282,13 +281,13 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera1/kimera_pgmo_node/optimized_mesh
-      Value: true
+      Value: false
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 0.10000000149011612
         Faces Color: 114; 159; 207
         Value: Fixed Color
-      Enabled: true
+      Enabled: false
       Mesh Buffer Size: 1
       Name: OptimizedMeshColored
       Show Normals:
@@ -301,7 +300,7 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera2/kimera_pgmo_node/optimized_mesh
-      Value: true
+      Value: false
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 0.009999999776482582
@@ -359,6 +358,96 @@ Visualization Manager:
         Wireframe Color: 0; 0; 0
       Topic: /kimera2/kimera_pgmo_node/optimized_mesh
       Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud
+      Color: 0; 255; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.10000000149011612
+      Style: Flat Squares
+      Topic: /kimera0/dpgo_ros_node/optimized_mesh_points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud
+      Color: 204; 0; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.10000000149011612
+      Style: Flat Squares
+      Topic: /kimera1/dpgo_ros_node/optimized_mesh_points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud
+      Color: 52; 101; 164
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.10000000149011612
+      Style: Flat Squares
+      Topic: /kimera2/dpgo_ros_node/optimized_mesh_points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -387,25 +476,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 15.920414924621582
+      Distance: 16.96100425720215
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.657244086265564
-        Y: 1.0619966983795166
-        Z: -0.22522205114364624
+        X: -0.992830753326416
+        Y: 1.3584275245666504
+        Z: -0.557590901851654
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -0.8247970342636108
+      Pitch: -0.6397970914840698
       Target Frame: map
       Value: Orbit (rviz)
-      Yaw: 0.20039835572242737
+      Yaw: 0.020368117839097977
     Saved: ~
 Window Geometry:
   Displays:

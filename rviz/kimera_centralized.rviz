@@ -120,6 +120,14 @@ Visualization Manager:
       Topic: /kimera_centralized/robot_2_optimized_path
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /kimera_centralized/posegraph_viewer/loop_edges
+      Name: Loop Closures
+      Namespaces:
+        world: true
+      Queue Size: 100
+      Value: true
     - Class: rviz/Image
       Enabled: true
       Image Topic: /kimera0/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
@@ -224,85 +232,97 @@ Visualization Manager:
       Topic: /kimera1/kimera_vio_ros/odometry
       Unreliable: false
       Value: false
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /kimera_centralized/posegraph_viewer/loop_edges
-      Name: Loop Closures
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /kimera_pgmo_multi_node/deformation_graph
-      Name: Deformation Graph
-      Namespaces:
-        "": true
-      Queue Size: 100
-      Value: true
-    - Class: rviz_mesh_plugin/TriangleMesh
-      Display Type:
-        Faces Alpha: 1
-        Faces Color: 0; 255; 0
-        Value: Vertex Color
-      Enabled: true
-      Mesh Buffer Size: 1
-      Name: TriangleMesh
-      Show Normals:
-        Normals Alpha: 1
-        Normals Color: 255; 0; 255
-        Normals Scaling Factor: 0.10000000149011612
-        Value: false
-      Show Wireframe:
-        Value: false
-        Wireframe Alpha: 1
-        Wireframe Color: 0; 0; 0
-      Topic: /kimera_pgmo_multi_node/kimera0/optimized_mesh
-      Value: true
-    - Class: rviz_mesh_plugin/TriangleMesh
-      Display Type:
-        Faces Alpha: 1
-        Faces Color: 0; 255; 0
-        Value: Vertex Color
-      Enabled: true
-      Mesh Buffer Size: 1
-      Name: TriangleMesh
-      Show Normals:
-        Normals Alpha: 1
-        Normals Color: 255; 0; 255
-        Normals Scaling Factor: 0.10000000149011612
-        Value: false
-      Show Wireframe:
-        Value: false
-        Wireframe Alpha: 1
-        Wireframe Color: 0; 0; 0
-      Topic: /kimera_pgmo_multi_node/kimera1/optimized_mesh
-      Value: true
-    - Class: rviz_mesh_plugin/TriangleMesh
-      Display Type:
-        Faces Alpha: 1
-        Faces Color: 0; 255; 0
-        Value: Vertex Color
-      Enabled: true
-      Mesh Buffer Size: 1
-      Name: TriangleMesh
-      Show Normals:
-        Normals Alpha: 1
-        Normals Color: 255; 0; 255
-        Normals Scaling Factor: 0.10000000149011612
-        Value: false
-      Show Wireframe:
-        Value: false
-        Wireframe Alpha: 1
-        Wireframe Color: 0; 0; 0
-      Topic: /kimera_pgmo_multi_node/kimera2/optimized_mesh
-      Value: true
     - Class: voxblox_rviz_plugin/VoxbloxMesh
       Enabled: false
       Name: VoxbloxMesh
       Topic: /kimera0/kimera_semantics_node/mesh
       Unreliable: false
       Value: false
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz_mesh_plugin/TriangleMesh
+          Display Type:
+            Faces Alpha: 1
+            Faces Color: 0; 255; 0
+            Value: Vertex Color
+          Enabled: true
+          Mesh Buffer Size: 1
+          Name: TriangleMesh
+          Show Normals:
+            Normals Alpha: 1
+            Normals Color: 255; 0; 255
+            Normals Scaling Factor: 0.10000000149011612
+            Value: false
+          Show Wireframe:
+            Value: false
+            Wireframe Alpha: 1
+            Wireframe Color: 0; 0; 0
+          Topic: /kimera_pgmo/kimera0/optimized_mesh
+          Value: true
+        - Class: rviz_mesh_plugin/TriangleMesh
+          Display Type:
+            Faces Alpha: 1
+            Faces Color: 0; 255; 0
+            Value: Vertex Color
+          Enabled: true
+          Mesh Buffer Size: 1
+          Name: TriangleMesh
+          Show Normals:
+            Normals Alpha: 1
+            Normals Color: 255; 0; 255
+            Normals Scaling Factor: 0.10000000149011612
+            Value: false
+          Show Wireframe:
+            Value: false
+            Wireframe Alpha: 1
+            Wireframe Color: 0; 0; 0
+          Topic: /kimera_pgmo/kimera1/optimized_mesh
+          Value: true
+        - Class: rviz_mesh_plugin/TriangleMesh
+          Display Type:
+            Faces Alpha: 1
+            Faces Color: 0; 255; 0
+            Value: Vertex Color
+          Enabled: true
+          Mesh Buffer Size: 1
+          Name: TriangleMesh
+          Show Normals:
+            Normals Alpha: 1
+            Normals Color: 255; 0; 255
+            Normals Scaling Factor: 0.10000000149011612
+            Value: false
+          Show Wireframe:
+            Value: false
+            Wireframe Alpha: 1
+            Wireframe Color: 0; 0; 0
+          Topic: /kimera_pgmo/kimera2/optimized_mesh
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /kimera_pgmo/deformation_graph
+          Name: Deformation Graph
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /kimera_pgmo/posegraph_viewer/loop_edges
+          Name: Loop Closures
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /kimera_pgmo/posegraph_viewer/odometry_edges
+          Name: Odometry
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: PGMO
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -331,25 +351,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10.100041389465332
+      Distance: 15.892610549926758
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.657244086265564
-        Y: 1.0619966983795166
-        Z: -0.22522205114364624
+        X: -0.020527824759483337
+        Y: 1.804666519165039
+        Z: -0.2871982753276825
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -1.4947963953018188
+      Pitch: 1.4997962713241577
       Target Frame: map
       Value: Orbit (rviz)
-      Yaw: 0.5853981375694275
+      Yaw: 0.3903987407684326
     Saved: ~
 Window Geometry:
   Displays:

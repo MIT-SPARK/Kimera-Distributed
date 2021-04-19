@@ -1,0 +1,27 @@
+<launch>
+  <arg name="robot_id" default="0"/>
+  <arg name="service_discovery" default="true"/>
+  <arg name="simulation" default="false"/>
+
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/>
+
+  <node if="$(arg service_discovery)" pkg="reliable_udp_comms" type="remote_host_discovery.py" name="remote_host_discovery" output="screen">
+    <param name="group_name" value="TESTING"/>
+  </node>
+
+  <node pkg="reliable_udp_comms" type="dummy_service" name="service" output="screen"/>
+
+  <node pkg="reliable_udp_comms" type="remote_topic_manager" name="rtp" output="screen" launch-prefix="xterm -e">
+
+    <param name="simulation" value="$(arg simulation)"/>
+
+    <param unless="$(arg service_discovery)" name="enet_port" value="11411"/>
+
+    <!-- Load topics to be transmited to other robots -->
+    <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics$(arg robot_id).yaml"/>
+
+    <param name="latch" value="true"/>
+    <param name="status_pub_period" value="1.0"/>
+  </node>
+
+</launch>

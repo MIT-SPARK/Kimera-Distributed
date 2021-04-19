@@ -1,0 +1,14 @@
+# BoW vectors
+- /kimera2/kimera_vio_ros/bow_query
+
+# VLC frames callback
+- /kimera2/kimera_vio_ros/VLCFrame/feedback
+- /kimera2/kimera_vio_ros/VLCFrame/result
+- /kimera2/kimera_vio_ros/VLCFrame/status
+
+# Action requests to other robots
+- /kimera0/kimera_vio_ros/VLCFrame/cancel
+- /kimera0/kimera_vio_ros/VLCFrame/goal
+
+- /kimera1/kimera_vio_ros/VLCFrame/cancel
+- /kimera1/kimera_vio_ros/VLCFrame/goal

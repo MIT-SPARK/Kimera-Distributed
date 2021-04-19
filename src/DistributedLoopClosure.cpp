@@ -5,9 +5,12 @@
  */
 
 #include <kimera_distributed/DistributedLoopClosure.h>
+#include <kimera_distributed/VLCFrameAction.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
 #include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
 
 #include <cassert>
 #include <fstream>
@@ -80,7 +83,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     std::string topic =
         "/kimera" + std::to_string(id) + "/kimera_vio_ros/bow_query";
     ros::Subscriber sub =
-        nh_.subscribe(topic, 10, &DistributedLoopClosure::bowCallback, this);
+        nh_.subscribe(topic, 1000, &DistributedLoopClosure::bowCallback, this);
     bow_subscribers.push_back(sub);
   }
 
@@ -224,35 +227,44 @@ bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   }
   RobotID robot_id = vertex_id.first;
   PoseID pose_id = vertex_id.second;
-  std::string service_name =
-      "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_query";
 
-  VLCFrameQuery query;
-  query.request.robot_id = robot_id;
-  query.request.pose_id = pose_id;
-  if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {
-    ROS_ERROR_STREAM("ROS service " << service_name << " does not exist!");
-    return false;
+  std::string action_name = "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/VLCFrame";
+  actionlib::SimpleActionClient<kimera_distributed::VLCFrameAction> ac(action_name, true);
+
+  double wait_time = 0.5;
+  for (size_t action_attempts = 0; action_attempts < 5; ++ action_attempts){
+    ROS_INFO_STREAM("Calling action server:" <<  action_name);
+    kimera_distributed::VLCFrameGoal goal;
+    goal.robot_id = robot_id;
+    goal.pose_id = pose_id;
+    ac.sendGoal(goal);
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(wait_time));
+    if (finished_before_timeout) {
+      if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+        ROS_INFO("Action succeeded.");
+        // Process the received frame
+        const auto action_result = ac.getResult();
+        VLCFrame frame;
+        VLCFrameFromMsg(action_result->frame, &frame);
+        assert(frame.robot_id_ == robot_id);
+        assert(frame.pose_id_ == pose_id);
+        vlc_frames_[vertex_id] = frame;
+        // Inter-robot requests will incur communication payloads
+        if (robot_id != my_id_) {
+          received_vlc_bytes_.push_back(
+              computeVLCFramePayloadBytes(action_result->frame));
+        }
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      ROS_WARN("Action server timeout.");
+      wait_time += 0.5;
+    }
   }
-  if (!ros::service::call(service_name, query)) {
-    ROS_ERROR_STREAM("Could not query VLC frame!");
-    return false;
-  }
-
-  VLCFrame frame;
-  VLCFrameFromMsg(query.response.frame, &frame);
-  assert(frame.robot_id_ == robot_id);
-  assert(frame.pose_id_ == pose_id);
-
-  vlc_frames_[vertex_id] = frame;
-
-  // Inter-robot requests will incur communication payloads
-  if (robot_id != my_id_) {
-    received_vlc_bytes_.push_back(
-        computeVLCFramePayloadBytes(query.response.frame));
-  }
-
-  return true;
+  // Program reaches here only if all action requests have timed out.
+  return false;
 }
 
 void DistributedLoopClosure::ComputeMatchedIndices(

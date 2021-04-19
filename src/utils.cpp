@@ -48,7 +48,7 @@ void VLCFrameToMsg(const VLCFrame& frame, VLCFrameMsg* msg) {
 
   // Convert descriptors
   assert(frame.descriptors_mat_.type() ==
-         0);  // check that the matrix is of type CV_8U
+         CV_8UC1);  // check that the matrix is of type CV_8U
   cv_bridge::CvImage cv_img;
   // cv_img.header   = in_msg->header; // Yulun: need to set header explicitly?
   cv_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;

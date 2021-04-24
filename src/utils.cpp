@@ -15,7 +15,7 @@
 namespace kimera_distributed {
 
 void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
-                    kimera_distributed::BowVector* msg) {
+                    kimera_vio_ros::BowVector* msg) {
   msg->word_ids.clear();
   msg->word_values.clear();
   for (auto it = bow_vec.begin(); it != bow_vec.end(); ++it) {
@@ -24,7 +24,7 @@ void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
   }
 }
 
-void BowVectorFromMsg(const kimera_distributed::BowVector& msg,
+void BowVectorFromMsg(const kimera_vio_ros::BowVector& msg,
                       DBoW2::BowVector* bow_vec) {
   assert(msg.word_ids.size() == msg.word_values.size());
   bow_vec->clear();
@@ -33,7 +33,7 @@ void BowVectorFromMsg(const kimera_distributed::BowVector& msg,
   }
 }
 
-void VLCFrameToMsg(const VLCFrame& frame, VLCFrameMsg* msg) {
+void VLCFrameToMsg(const VLCFrame& frame, kimera_vio_ros::VLCFrameMsg* msg) {
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
@@ -56,7 +56,7 @@ void VLCFrameToMsg(const VLCFrame& frame, VLCFrameMsg* msg) {
   cv_img.toImageMsg(msg->descriptors_mat);
 }
 
-void VLCFrameFromMsg(const VLCFrameMsg& msg, VLCFrame* frame) {
+void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg, VLCFrame* frame) {
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
 
@@ -258,22 +258,24 @@ nav_msgs::Path GtsamPoseTrajectoryToPath(
   return msg;
 }
 
-size_t computeBowQueryPayloadBytes(const BowQuery& msg) {
+size_t computeBowQueryPayloadBytes(const kimera_vio_ros::BowQuery& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);
   bytes += sizeof(msg.pose_id);
   bytes += sizeof(msg.bow_vector.word_ids[0]) * msg.bow_vector.word_ids.size();
-  bytes += sizeof(msg.bow_vector.word_values[0]) * msg.bow_vector.word_values.size();
+  bytes +=
+      sizeof(msg.bow_vector.word_values[0]) * msg.bow_vector.word_values.size();
   return bytes;
 }
 
-size_t computeVLCFramePayloadBytes(const VLCFrameMsg& msg) {
+size_t computeVLCFramePayloadBytes(const kimera_vio_ros::VLCFrameMsg& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);
   bytes += sizeof(msg.pose_id);
   // descriptors
   bytes += sizeof(msg.descriptors_mat);
-  bytes += sizeof(msg.descriptors_mat.data[0]) * msg.descriptors_mat.data.size();
+  bytes +=
+      sizeof(msg.descriptors_mat.data[0]) * msg.descriptors_mat.data.size();
   // keypoints
   bytes += sizeof(msg.keypoints);
   bytes += sizeof(msg.keypoints.data[0]) * msg.keypoints.data.size();

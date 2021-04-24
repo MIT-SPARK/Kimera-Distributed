@@ -110,7 +110,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 DistributedLoopClosure::~DistributedLoopClosure() {}
 
 void DistributedLoopClosure::bowCallback(
-    const kimera_distributed::BowQueryConstPtr& msg) {
+    const kimera_vio_ros::BowQueryConstPtr& msg) {
   RobotID robot_id = msg->robot_id;
   assert(robot_id >= my_id_);
   PoseID pose_id = msg->pose_id;
@@ -227,7 +227,7 @@ bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   std::string service_name =
       "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_query";
 
-  VLCFrameQuery query;
+  kimera_vio_ros::VLCFrameQuery query;
   query.request.robot_id = robot_id;
   query.request.pose_id = pose_id;
   if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {

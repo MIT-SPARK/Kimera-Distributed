@@ -20,6 +20,7 @@
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac_problems/point_cloud/PointCloudSacProblem.hpp>
 #include <opengv/sac_problems/relative_pose/CentralRelativePoseSacProblem.hpp>
+#include <memory>
 #include <string>
 
 using RansacProblem =
@@ -32,7 +33,12 @@ using RansacProblemStereo =
 namespace kimera_distributed {
 
 DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
-    : nh_(n) {
+    : nh_(n), my_id_(0), num_robots_(1), use_actionlib_(false), log_output_(false),
+    alpha_(0.3), dist_local_(50), max_db_results_(5), min_nss_factor_(0.05),
+    max_ransac_iterations_(1000), lowe_ratio_(0.8), ransac_threshold_(0.05),
+    geometric_verification_min_inlier_count_(5),
+    geometric_verification_min_inlier_percentage_(0.0)
+    {
   int my_id_int = -1;
   int num_robots_int = -1;
   ros::param::get("~robot_id", my_id_int);
@@ -43,6 +49,11 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   num_robots_ = num_robots_int;
   next_pose_id_ = 0;
   latest_bowvec_.resize(num_robots_);
+
+  // Use service or actionlib for communication
+  ros::param::get("~use_actionlib", use_actionlib_);
+  if (use_actionlib_)
+    ROS_WARN("DistributedLoopClosure: using actionlib.");
 
   // Used for logging
   total_geometric_verifications_ = 0;
@@ -220,7 +231,45 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
   return false;
 }
 
-bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
+bool DistributedLoopClosure::requestVLCFrameService(const VertexID &vertex_id) {
+  if (vlc_frames_.find(vertex_id) != vlc_frames_.end()) {
+    // Return if this frame already exists locally
+    return true;
+  }
+  RobotID robot_id = vertex_id.first;
+  PoseID pose_id = vertex_id.second;
+  std::string service_name =
+      "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_query";
+
+  VLCFrameQuery query;
+  query.request.robot_id = robot_id;
+  query.request.pose_id = pose_id;
+  if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {
+    ROS_ERROR_STREAM("ROS service " << service_name << " does not exist!");
+    return false;
+  }
+  if (!ros::service::call(service_name, query)) {
+    ROS_ERROR_STREAM("Could not query VLC frame!");
+    return false;
+  }
+
+  VLCFrame frame;
+  VLCFrameFromMsg(query.response.frame, &frame);
+  assert(frame.robot_id_ == robot_id);
+  assert(frame.pose_id_ == pose_id);
+
+  vlc_frames_[vertex_id] = frame;
+
+  // Inter-robot requests will incur communication payloads
+  if (robot_id != my_id_) {
+    received_vlc_bytes_.push_back(
+        computeVLCFramePayloadBytes(query.response.frame));
+  }
+
+  return true;
+}
+
+bool DistributedLoopClosure::requestVLCFrameAction(const VertexID &vertex_id) {
   if (vlc_frames_.find(vertex_id) != vlc_frames_.end()) {
     // Return if this frame already exists locally
     return true;
@@ -265,6 +314,14 @@ bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   }
   // Program reaches here only if all action requests have timed out.
   return false;
+}
+
+bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
+  if (use_actionlib_) {
+    return requestVLCFrameAction(vertex_id);
+  } else {
+    return requestVLCFrameService(vertex_id);
+  }
 }
 
 void DistributedLoopClosure::ComputeMatchedIndices(

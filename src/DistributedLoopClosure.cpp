@@ -102,7 +102,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   std::string loop_closure_topic =
       "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
   loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(
-      loop_closure_topic, 10, false);
+      loop_closure_topic, 1000, false);
 
   ROS_INFO_STREAM("Distributed Kimera node initialized (ID = "
                   << my_id_ << "). \n"
@@ -277,7 +277,7 @@ bool DistributedLoopClosure::requestVLCFrameAction(const VertexID &vertex_id) {
   RobotID robot_id = vertex_id.first;
   PoseID pose_id = vertex_id.second;
 
-  std::string action_name = "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/VLCFrame";
+  std::string action_name = "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_action";
   actionlib::SimpleActionClient<kimera_distributed::VLCFrameAction> ac(action_name, true);
 
   double wait_time = 0.5;

@@ -7,10 +7,12 @@
 #pragma once
 
 #include <kimera_distributed/requestSharedLoopClosures.h>
+#include <kimera_distributed/SharedLoopClosureAction.h>
 #include <kimera_distributed/types.h>
 #include <kimera_distributed/utils.h>
 #include <ros/ros.h>
 #include <ros/time.h>
+#include <actionlib/server/simple_action_server.h>
 #include <iostream>
 #include <vector>
 
@@ -50,6 +52,7 @@ class DistributedPcm {
   ros::NodeHandle nh_;
   RobotID my_id_;
   int num_robots_;
+  bool use_actionlib_;
   bool b_is_frozen_;
   bool b_offline_mode_;
   std::string log_output_path_;
@@ -66,6 +69,11 @@ class DistributedPcm {
   ros::ServiceServer shared_lc_server_;
   ros::ServiceServer pose_graph_request_server_;
 
+  // Action server
+  actionlib::SimpleActionServer<kimera_distributed::SharedLoopClosureAction> lc_action_server_;
+  kimera_distributed::SharedLoopClosureFeedback action_feedback_;
+  kimera_distributed::SharedLoopClosureResult action_result_;
+
   // Latest pcm processed pose graph
   gtsam::Values values_;
   gtsam::NonlinearFactorGraph nfg_;
@@ -81,10 +89,13 @@ class DistributedPcm {
   void loopclosureCallback(
       const pose_graph_tools::PoseGraphEdge::ConstPtr& msg);
 
-  void querySharedLoopClosures(
-      std::vector<pose_graph_tools::PoseGraphEdge>* shared_lc);
+  void querySharedLoopClosuresService(size_t robot_id, std::vector<pose_graph_tools::PoseGraphEdge>* shared_lc) const;
+  void querySharedLoopClosuresAction(size_t robot_id, std::vector<pose_graph_tools::PoseGraphEdge>* shared_lc) const;
+  void querySharedLoopClosures(std::vector<pose_graph_tools::PoseGraphEdge>* shared_lc) const;
 
-  bool shareLoopClosuresCallback(
+  void shareLoopClosureActionCallback(const kimera_distributed::SharedLoopClosureGoalConstPtr &goal);
+
+  bool shareLoopClosureServiceCallback(
       kimera_distributed::requestSharedLoopClosures::Request& request,
       kimera_distributed::requestSharedLoopClosures::Response& response);
 

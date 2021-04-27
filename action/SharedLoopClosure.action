@@ -1,0 +1,9 @@
+# This action is used to request shared loop closures from another robot
+# goal definition
+uint32 robot_id
+---
+# result definition
+pose_graph_tools/PoseGraphEdge[] loop_closures
+---
+# feedback
+bool active

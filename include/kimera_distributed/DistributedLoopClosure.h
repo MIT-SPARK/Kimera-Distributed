@@ -43,6 +43,7 @@ class DistributedLoopClosure {
   ros::NodeHandle nh_;
   RobotID my_id_;
   uint32_t num_robots_;
+  bool use_actionlib_;
 
   bool log_output_;
   std::string log_output_dir_;
@@ -103,6 +104,20 @@ class DistributedLoopClosure {
                             VertexID* vertex_match);
 
   bool requestVLCFrame(const VertexID& vertex_id);
+
+  /**
+   * @brief Request a VLC frame using ROS service
+   * @param vertex_id
+   * @return
+   */
+  bool requestVLCFrameService(const VertexID& vertex_id);
+
+  /**
+   * @brief Request a VLC frame using actionlib
+   * @param vertex_id
+   * @return
+   */
+  bool requestVLCFrameAction(const VertexID& vertex_id);
 
   void ComputeMatchedIndices(const VertexID& vertex_query,
                              const VertexID& vertex_match,

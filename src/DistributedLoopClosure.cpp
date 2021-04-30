@@ -5,9 +5,12 @@
  */
 
 #include <kimera_distributed/DistributedLoopClosure.h>
+#include <kimera_distributed/VLCFrameAction.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
 #include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
 
 #include <cassert>
 #include <fstream>
@@ -17,6 +20,7 @@
 #include <opengv/sac/Ransac.hpp>
 #include <opengv/sac_problems/point_cloud/PointCloudSacProblem.hpp>
 #include <opengv/sac_problems/relative_pose/CentralRelativePoseSacProblem.hpp>
+#include <memory>
 #include <string>
 
 using RansacProblem =
@@ -29,7 +33,12 @@ using RansacProblemStereo =
 namespace kimera_distributed {
 
 DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
-    : nh_(n) {
+    : nh_(n), my_id_(0), num_robots_(1), use_actionlib_(false), log_output_(false),
+    alpha_(0.3), dist_local_(50), max_db_results_(5), min_nss_factor_(0.05),
+    max_ransac_iterations_(1000), lowe_ratio_(0.8), ransac_threshold_(0.05),
+    geometric_verification_min_inlier_count_(5),
+    geometric_verification_min_inlier_percentage_(0.0)
+    {
   int my_id_int = -1;
   int num_robots_int = -1;
   ros::param::get("~robot_id", my_id_int);
@@ -40,6 +49,11 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   num_robots_ = num_robots_int;
   next_pose_id_ = 0;
   latest_bowvec_.resize(num_robots_);
+
+  // Use service or actionlib for communication
+  ros::param::get("~use_actionlib", use_actionlib_);
+  if (use_actionlib_)
+    ROS_WARN("DistributedLoopClosure: using actionlib.");
 
   // Used for logging
   total_geometric_verifications_ = 0;
@@ -80,7 +94,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     std::string topic =
         "/kimera" + std::to_string(id) + "/kimera_vio_ros/bow_query";
     ros::Subscriber sub =
-        nh_.subscribe(topic, 10, &DistributedLoopClosure::bowCallback, this);
+        nh_.subscribe(topic, 1000, &DistributedLoopClosure::bowCallback, this);
     bow_subscribers.push_back(sub);
   }
 
@@ -88,7 +102,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   std::string loop_closure_topic =
       "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
   loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(
-      loop_closure_topic, 10, false);
+      loop_closure_topic, 1000, false);
 
   ROS_INFO_STREAM("Distributed Kimera node initialized (ID = "
                   << my_id_ << "). \n"
@@ -217,7 +231,7 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
   return false;
 }
 
-bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
+bool DistributedLoopClosure::requestVLCFrameService(const VertexID &vertex_id) {
   if (vlc_frames_.find(vertex_id) != vlc_frames_.end()) {
     // Return if this frame already exists locally
     return true;
@@ -253,6 +267,61 @@ bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
   }
 
   return true;
+}
+
+bool DistributedLoopClosure::requestVLCFrameAction(const VertexID &vertex_id) {
+  if (vlc_frames_.find(vertex_id) != vlc_frames_.end()) {
+    // Return if this frame already exists locally
+    return true;
+  }
+  RobotID robot_id = vertex_id.first;
+  PoseID pose_id = vertex_id.second;
+
+  std::string action_name = "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_action";
+  actionlib::SimpleActionClient<kimera_distributed::VLCFrameAction> ac(action_name, true);
+
+  double wait_time = 0.5;
+  for (size_t action_attempts = 0; action_attempts < 5; ++ action_attempts){
+    ROS_INFO_STREAM("Calling action server:" <<  action_name);
+    kimera_distributed::VLCFrameGoal goal;
+    goal.robot_id = robot_id;
+    goal.pose_id = pose_id;
+    ac.sendGoal(goal);
+    bool finished_before_timeout = ac.waitForResult(ros::Duration(wait_time));
+    if (finished_before_timeout) {
+      if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+        ROS_INFO("Action succeeded.");
+        // Process the received frame
+        const auto action_result = ac.getResult();
+        VLCFrame frame;
+        VLCFrameFromMsg(action_result->frame, &frame);
+        assert(frame.robot_id_ == robot_id);
+        assert(frame.pose_id_ == pose_id);
+        vlc_frames_[vertex_id] = frame;
+        // Inter-robot requests will incur communication payloads
+        if (robot_id != my_id_) {
+          received_vlc_bytes_.push_back(
+              computeVLCFramePayloadBytes(action_result->frame));
+        }
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      ROS_WARN("Action server timeout.");
+      wait_time += 0.5;
+    }
+  }
+  // Program reaches here only if all action requests have timed out.
+  return false;
+}
+
+bool DistributedLoopClosure::requestVLCFrame(const VertexID& vertex_id) {
+  if (use_actionlib_) {
+    return requestVLCFrameAction(vertex_id);
+  } else {
+    return requestVLCFrameService(vertex_id);
+  }
 }
 
 void DistributedLoopClosure::ComputeMatchedIndices(

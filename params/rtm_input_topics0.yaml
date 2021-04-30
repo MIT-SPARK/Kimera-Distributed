@@ -1,0 +1,31 @@
+# ROS messages to send to others
+- /kimera0/kimera_vio_ros/bow_query
+- /kimera0/kimera_vio_ros/pose_graph_incremental
+- /kimera0/kimera_distributed/loop_closure
+- /kimera0/dpgo_ros_node/lifting_matrix
+- /kimera0/dpgo_ros_node/status
+- /kimera0/dpgo_ros_node/command
+- /kimera0/dpgo_ros_node/anchor
+- /kimera0/dpgo_ros_node/public_poses
+- /kimera0/dpgo_ros_node/measurement_weights
+- /kimera0/dpgo_ros_node/path
+
+# Actions hosted by this robot
+- /kimera0/kimera_vio_ros/vlc_frame_action/feedback
+- /kimera0/kimera_vio_ros/vlc_frame_action/result
+- /kimera0/kimera_vio_ros/vlc_frame_action/status
+
+- /kimera0/distributed_pcm/shared_lc_action/feedback
+- /kimera0/distributed_pcm/shared_lc_action/result
+- /kimera0/distributed_pcm/shared_lc_action/status
+
+# Action requests to other robots
+- /kimera1/kimera_vio_ros/vlc_frame_action/cancel
+- /kimera1/kimera_vio_ros/vlc_frame_action/goal
+- /kimera2/kimera_vio_ros/vlc_frame_action/cancel
+- /kimera2/kimera_vio_ros/vlc_frame_action/goal
+
+- /kimera1/distributed_pcm/shared_lc_action/cancel
+- /kimera1/distributed_pcm/shared_lc_action/goal
+- /kimera2/distributed_pcm/shared_lc_action/cancel
+- /kimera2/distributed_pcm/shared_lc_action/goal

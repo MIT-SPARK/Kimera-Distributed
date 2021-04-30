@@ -20,7 +20,7 @@
   </node>    
 
   <!-- Launch Kimera Distributed PCM Node -->
-  <node launch-prefix="xterm -e"  name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
+  <node name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
     <param name="use_actionlib" value="$(arg use_actionlib)" />

@@ -651,7 +651,7 @@ gtsam::Values DistributedPcm::loadPosesOffline(const std::string& filename) {
   }
 
   infile.close();
-  ROS_INFO("Read %i poses.", num_poses_read);
+  ROS_INFO("Read %zu poses.", num_poses_read);
   return new_values;
 }
 
@@ -745,7 +745,7 @@ gtsam::NonlinearFactorGraph DistributedPcm::loadMeasurementsOffline(const std::s
   }
 
   infile.close();
-  ROS_INFO("Read %i measurements.", num_measurements_read);
+  ROS_INFO("Read %zu measurements.", num_measurements_read);
   return new_factors;
 }
 

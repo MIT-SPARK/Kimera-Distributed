@@ -27,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -306,7 +306,7 @@ Visualization Manager:
         Faces Alpha: 0.009999999776482582
         Faces Color: 0; 255; 0
         Value: Vertex Color
-      Enabled: false
+      Enabled: true
       Mesh Buffer Size: 1
       Name: OptimizedMesh
       Show Normals:
@@ -319,13 +319,13 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera0/kimera_pgmo_node/optimized_mesh
-      Value: false
+      Value: true
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 0.009999999776482582
         Faces Color: 239; 41; 41
         Value: Vertex Color
-      Enabled: false
+      Enabled: true
       Mesh Buffer Size: 1
       Name: OptimizedMesh
       Show Normals:
@@ -338,13 +338,13 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera1/kimera_pgmo_node/optimized_mesh
-      Value: false
+      Value: true
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 0.009999999776482582
         Faces Color: 114; 159; 207
         Value: Vertex Color
-      Enabled: false
+      Enabled: true
       Mesh Buffer Size: 1
       Name: OptimizedMesh
       Show Normals:
@@ -357,7 +357,7 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera2/kimera_pgmo_node/optimized_mesh
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:

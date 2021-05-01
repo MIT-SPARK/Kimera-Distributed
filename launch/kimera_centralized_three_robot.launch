@@ -30,7 +30,7 @@
   </node> 
 
   <!-- Kimera-PGMO -->
-  <include if="$(arg mesh_reconstruction)" file="$(find kimera_centralized_pgmo)/launch/kimera_pgmo_basestation.launch" pass_all_args="true" >
+  <include if="$(arg mesh_reconstruction)" file="$(find kimera_centralized_pgmo)/launch/kimera_basestation.launch" pass_all_args="true" >
     <arg name="output_path" default="$(find kimera_distributed)/logs/basestation" />
     <arg name="dataset" value="$(arg dataset_name)" />
     <arg name="use_msg_time" value="true" />

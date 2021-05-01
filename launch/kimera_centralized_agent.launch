@@ -67,11 +67,10 @@
    </include>
 
   <!-- Launch Kimera-PGMO Voxblox Processing Node -->
-  <node name="voxblox_processing" pkg="kimera_pgmo" type="voxblox_processing_node" >
-    <param name="horizon" value="100" />
-    <param name="output_mesh_resolution" value="0.04" />
-    <param name="robot_id" value="$(arg robot_id)" />
-    <remap from="~voxblox_mesh" to="kimera_semantics_node/mesh" />
-  </node> 
+  <include file="$(find kimera_centralized_pgmo)/launch/mesh_frontend.launch" pass_all_args="true" >
+    <arg name="horizon" default="60" />
+    <arg name="output_resolution" default="0.02" />
+    <arg name="d_graph_resolution" default="2.0" />
+  </include>
 
 </launch>

@@ -63,7 +63,7 @@ TEST(UtilsTest, VLCFrameMessage) {
 
   VLCFrame frame_in(robot_id, pose_id, keypoints, descriptors_mat);
   VLCFrame frame;
-  VLCFrameMsg msg;
+  kimera_vio_ros::VLCFrameMsg msg;
   VLCFrameToMsg(frame_in, &msg);
   VLCFrameFromMsg(msg, &frame);
 

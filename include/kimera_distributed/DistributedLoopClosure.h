@@ -93,7 +93,7 @@ class DistributedLoopClosure {
   // ROS publisher
   ros::Publisher loop_closure_publisher_;
 
-  void bowCallback(const kimera_distributed::BowQueryConstPtr& msg);
+  void bowCallback(const kimera_vio_ros::BowQueryConstPtr& msg);
 
   bool detectLoopInMyDB(const VertexID& vertex_query,
                         const DBoW2::BowVector bow_vector_query,

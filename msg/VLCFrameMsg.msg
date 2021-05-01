@@ -1,4 +1,0 @@
-uint32 robot_id
-uint32 pose_id
-sensor_msgs/Image descriptors_mat
-sensor_msgs/PointCloud2 keypoints

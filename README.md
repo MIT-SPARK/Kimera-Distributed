@@ -67,8 +67,8 @@ will be logged to the `logs/basestation` folder.
 
 To save the meshes and trajectories in pgmo, do: 
 ```
-rosservice call /kimera_pgmo_multi_node/save_mesh
-rosservice call /kimera_pgmo_multi_node/save_trajectory
+rosservice call /kimera_pgmo/save_mesh
+rosservice call /kimera_pgmo/save_trajectory
 ```
 
 ## Notes

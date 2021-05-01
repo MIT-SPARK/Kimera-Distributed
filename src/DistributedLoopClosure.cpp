@@ -4,13 +4,13 @@
  * Authors: Yulun Tian (yulun@mit.edu)
  */
 
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
 #include <kimera_distributed/DistributedLoopClosure.h>
-#include <kimera_distributed/VLCFrameAction.h>
+#include <kimera_vio_ros/VLCFrameAction.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
 #include <ros/ros.h>
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
 
 #include <cassert>
 #include <fstream>
@@ -278,12 +278,13 @@ bool DistributedLoopClosure::requestVLCFrameAction(const VertexID &vertex_id) {
   PoseID pose_id = vertex_id.second;
 
   std::string action_name = "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_action";
-  actionlib::SimpleActionClient<kimera_distributed::VLCFrameAction> ac(action_name, true);
+  actionlib::SimpleActionClient<kimera_vio_ros::VLCFrameAction> ac(action_name,
+                                                                   true);
 
   double wait_time = 0.5;
   for (size_t action_attempts = 0; action_attempts < 5; ++ action_attempts){
     ROS_INFO_STREAM("Calling action server:" <<  action_name);
-    kimera_distributed::VLCFrameGoal goal;
+    kimera_vio_ros::VLCFrameGoal goal;
     goal.robot_id = robot_id;
     goal.pose_id = pose_id;
     ac.sendGoal(goal);

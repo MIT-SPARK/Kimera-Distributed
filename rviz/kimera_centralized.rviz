@@ -299,19 +299,19 @@ Visualization Manager:
           Topic: /kimera_pgmo/kimera2/optimized_mesh
           Value: true
         - Class: rviz/Marker
-          Enabled: true
+          Enabled: false
           Marker Topic: /kimera_pgmo/deformation_graph
           Name: Deformation Graph
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
+          Value: false
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /kimera_pgmo/posegraph_viewer/loop_edges
           Name: Loop Closures
           Namespaces:
-            world: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker

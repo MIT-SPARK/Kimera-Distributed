@@ -1,0 +1,14 @@
+<launch>
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.2 /home/yunchang/Downloads/medfield-sim-1.bag">
+		<remap from="/acl_jackal/camera/image" to="/kimera0/cam0/image_raw"/>
+		<remap from="/acl_jackal/right_camera/image" to="/kimera0/cam1/image_raw"/>
+		<remap from="/acl_jackal/camera/camera_info" to="/kimera0/cam0/camera_info"/>
+		<remap from="/acl_jackal/right_camera/camera_info" to="/kimera0/cam1/camera_info"/>
+		<remap from="/acl_jackal/imu/data" to="/kimera0/imu0"/>
+		<remap from="/acl_jackal/depth_camera/image" to="/kimera0/depth/image_raw" />
+		<remap from="/acl_jackal/depth_camera/camera_info" to="/kimera0/depth/camera_info" />
+		<remap from="/acl_jackal/camera/semantic_image" to="/kimera0/cam0/semantic_image" />
+		<remap from="/acl_jackal/lidar_points" to="/kimera0/lidar_points"/>
+		<remap from="/unity_command/ground_truth/acl_jackal/odom" to="/ground_truth/kimera0/pose"/>
+	</node>  
+</launch>

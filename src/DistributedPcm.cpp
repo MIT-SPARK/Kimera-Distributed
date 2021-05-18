@@ -63,14 +63,20 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     ros::shutdown();
   }
 
+  bool b_multirobot_initialization_;
+  if (!ros::param::get("~multirobot_initialization", b_multirobot_initialization_)) {
+    ROS_ERROR("PCM failed to get required parameters! Shutting down... ");
+    ros::shutdown();
+  }
+
   // Initialize pcm
   KimeraRPGO::RobustSolverParams pgo_params;
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
   pgo_params.logOutput(log_output_path_);
   pgo_params.setIncremental();
+  if (b_multirobot_initialization_) pgo_params.setMultirobotFrameAlignment();
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
-
 
   if (b_offline_mode_) {
     // Offline initialization

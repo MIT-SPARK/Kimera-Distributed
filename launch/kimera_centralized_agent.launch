@@ -70,7 +70,7 @@
    </include>
 
   <!-- Launch Kimera-PGMO Voxblox Processing Node -->
-   <node name="mesh_frontend" pkg="kimera_pgmo" type="mesh_frontend_node" >
+   <node if="$(arg mesh_reconstruction)" name="mesh_frontend" pkg="kimera_pgmo" type="mesh_frontend_node" >
      <param name="horizon" value="30" />
      <param name="output_mesh_resolution" value="0.04" />
      <param name="robot_id" value="$(arg robot_id)" />

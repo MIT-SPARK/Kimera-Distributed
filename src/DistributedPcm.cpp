@@ -234,9 +234,18 @@ void DistributedPcm::odometryEdgeCallback(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
 
       saveNewOdometryToLog(pg_edge);
+    } else if (pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
+      VLCEdge new_loop_closure;
+      VLCEdgeFromMsg(pg_edge, &new_loop_closure);
+
+      addLoopClosure(new_loop_closure);
     }
   }
 
+  // For debugging
+  std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
+  saveLoopClosuresToFile(loop_closures,
+                         log_output_path_ + "pcm_loop_closures.csv");
   pgo_->update(new_factors, new_values, false);
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();

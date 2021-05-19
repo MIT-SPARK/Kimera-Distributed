@@ -1,2 +1,2 @@
-pcm_threshold_translation: 0.002
-pcm_threshold_rotation: 0.002
+pcm_threshold_translation: 1
+pcm_threshold_rotation: 1

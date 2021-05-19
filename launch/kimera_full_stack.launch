@@ -7,6 +7,9 @@
   <arg name="semantic_mesh" default="false" />
   <arg name="environment" default="camp" />
   <arg name="dpgmo" default="false" />
+  <arg name="use_external_odom" default="false"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <!-- True if multiple ROS masters are running. This turns on reliable UDP. -->
   <arg name="multi_master" default="false" />

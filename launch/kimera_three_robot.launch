@@ -5,6 +5,9 @@
   <arg name="mesh_reconstruction" default="false" />
   <arg name="semantic_mesh" default="false" />
   <arg name="environment" default="camp" />
+  <arg name="use_external_odom" default="false"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
   <!-- Yulun: safe to use system wall-clock time for multi-robot experiment? -->

@@ -2,7 +2,7 @@
   <!-- Unique integer id of this robot. -->
   <arg name="robot_id" default="0"/>
   
-  <arg name="dataset_name" value="Euroc"/>
+  <arg name="dataset_name" default="Euroc"/>
   <arg name="robot_id"     default="0" /> 
   <arg name="verbosity"    default="0" />
   <arg name="do_coarse_temporal_sync" default="false"/>
@@ -38,7 +38,7 @@
   <!-- Empty string ("") means no ground-truth available. Used for init if
    requested to do ground-truth initialization. -->
   <arg name="odometry_ground_truth_topic"       default="$(arg gt_topic)"/>
-  <arg name="external_odom_topic"               default="dev/null"/>
+  <arg name="external_odom_topic"               default="/kimera$(arg robot_id)/external_odom"/>
 
   <!-- If true, SparkVio will log output of all modules to the
        'log_output_path' location. -->

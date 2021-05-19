@@ -1,0 +1,36 @@
+<launch>
+
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.4 /home/yunchang/Downloads/stata_red_2021-05-15-13-05-19.bag">
+		<remap from="/acl_jackal/d435i/infra1/image_rect_raw" to="/kimera0/cam0/image_raw"/>
+		<remap from="/acl_jackal/d435i/infra2/image_rect_raw" to="/kimera0/cam1/image_raw"/>
+		<remap from="/acl_jackal/d435i/infra1/camera_info" to="/kimera0/cam0/camera_info"/>
+		<remap from="/acl_jackal/d435i/infra2/camera_info" to="/kimera0/cam1/camera_info"/>
+		<remap from="/acl_jackal/d435i/imu" to="/kimera0/imu0"/>
+		<remap from="/acl_jackal/d435i/depth/image_rect_raw" to="/kimera0/depth/image_raw" />
+		<remap from="/acl_jackal/d435i/depth/camera_info" to="/kimera0/depth/camera_info" />
+		<remap from="/acl_jackal/jackal_velocity_controller/odom" to="/kimera0/external_odom" />
+	</node>  
+
+	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.4 -s 20 /home/yunchang/Downloads/stata_orange2_2021-05-15-13-12-52.bag">
+		<remap from="/acl_jackal/d435i/infra1/image_rect_raw" to="/kimera1/cam0/image_raw"/>
+		<remap from="/acl_jackal/d435i/infra2/image_rect_raw" to="/kimera1/cam1/image_raw"/>
+		<remap from="/acl_jackal/d435i/infra1/camera_info" to="/kimera1/cam0/camera_info"/>
+		<remap from="/acl_jackal/d435i/infra2/camera_info" to="/kimera1/cam1/camera_info"/>
+		<remap from="/acl_jackal/d435i/imu" to="/kimera1/imu0"/>
+		<remap from="/acl_jackal/d435i/depth/image_rect_raw" to="/kimera1/depth/image_raw" />
+		<remap from="/acl_jackal/d435i/depth/camera_info" to="/kimera1/depth/camera_info" />
+		<remap from="/acl_jackal/jackal_velocity_controller/odom" to="/kimera1/external_odom" />
+	</node>
+
+	<node pkg="rosbag" type="play" name="player2" output="screen" args="-r 0.4 /home/yunchang/Downloads/stata_blue_2021-05-15-12-44-39.bag">
+		<remap from="/acl_jackal/d435i/infra1/image_rect_raw" to="/kimera2/cam0/image_raw"/>
+		<remap from="/acl_jackal/d435i/infra2/image_rect_raw" to="/kimera2/cam1/image_raw"/>
+		<remap from="/acl_jackal/d435i/infra1/camera_info" to="/kimera2/cam0/camera_info"/>
+		<remap from="/acl_jackal/d435i/infra2/camera_info" to="/kimera2/cam1/camera_info"/>
+		<remap from="/acl_jackal/d435i/imu" to="/kimera2/imu0"/>
+		<remap from="/acl_jackal/d435i/depth/image_rect_raw" to="/kimera2/depth/image_raw" />
+		<remap from="/acl_jackal/d435i/depth/camera_info" to="/kimera2/depth/camera_info" />
+		<remap from="/acl_jackal/jackal_velocity_controller/odom" to="/kimera2/external_odom" />
+	</node>
+
+</launch>

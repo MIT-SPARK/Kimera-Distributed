@@ -191,7 +191,7 @@ void DistributedPcm::odometryEdgeCallback(
   // New gtsam factors and values
   gtsam::Values new_values;
   gtsam::NonlinearFactorGraph new_factors;
-
+  bool detected_lc;
   // Iterate through nodes
   for (pose_graph_tools::PoseGraphNode pg_node : msg->nodes) {
     const gtsam::Pose3 estimate = RosPoseToGtsam(pg_node.pose);
@@ -237,18 +237,21 @@ void DistributedPcm::odometryEdgeCallback(
     } else if (pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
       VLCEdge new_loop_closure;
       VLCEdgeFromMsg(pg_edge, &new_loop_closure);
-
-      addLoopClosure(new_loop_closure);
+      detected_lc = true;
+      new_factors.add(VLCEdgeToGtsam(new_loop_closure));
     }
   }
 
-  // For debugging
-  std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
-  saveLoopClosuresToFile(loop_closures,
-                         log_output_path_ + "pcm_loop_closures.csv");
   pgo_->update(new_factors, new_values, false);
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();
+
+  // For debugging
+  if (detected_lc) {
+    std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
+    saveLoopClosuresToFile(loop_closures,
+                           log_output_path_ + "pcm_loop_closures.csv");
+  }
 }
 
 void DistributedPcm::loopclosureCallback(

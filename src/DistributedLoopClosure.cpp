@@ -80,6 +80,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
                   geometric_verification_min_inlier_count_);
   ros::param::get("~geometric_verification_min_inlier_percentage",
                   geometric_verification_min_inlier_percentage_);
+  ros::param::get("~detect_interrobot_only", detect_inter_robot_only_);
 
   // Initialize bag-of-word database
   std::string orb_vocab_path;
@@ -118,7 +119,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
                   << "geometric_verification_min_inlier_count = "
                   << geometric_verification_min_inlier_count_ << "\n"
                   << "geometric_verification_min_inlier_percentage = "
-                  << geometric_verification_min_inlier_percentage_);
+                  << geometric_verification_min_inlier_percentage_ << "\n"
+                  << "interrobot loop closure only = " 
+                  << detect_inter_robot_only_);
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {}
@@ -135,12 +138,14 @@ void DistributedLoopClosure::bowCallback(
 
   VertexID vertex_match;
   // Detect loop closures with my trajectory
-  if (detectLoopInMyDB(vertex_query, bow_vec, &vertex_match)) {
-    gtsam::Pose3 T_query_match;
-    if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
-      VLCEdge edge(vertex_query, vertex_match, T_query_match);
-      loop_closures_.push_back(edge);
-      publishLoopClosure(edge);  // Publish to pcm node
+  if (!detect_inter_robot_only_ || robot_id != my_id_) {
+    if (detectLoopInMyDB(vertex_query, bow_vec, &vertex_match)) {
+      gtsam::Pose3 T_query_match;
+      if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
+        VLCEdge edge(vertex_query, vertex_match, T_query_match);
+        loop_closures_.push_back(edge);
+        publishLoopClosure(edge);  // Publish to pcm node
+      }
     }
   }
 

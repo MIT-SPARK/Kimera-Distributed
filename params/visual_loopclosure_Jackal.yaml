@@ -1,7 +1,7 @@
 # Yaml configuration for visual loop closure parameters 
 
 # Matcher parameters (DBoW2)
-alpha: 1.0
+alpha: 0.1
 # min_temporal_matches: 3
 dist_local: 100
 max_db_results: 5

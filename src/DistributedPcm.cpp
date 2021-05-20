@@ -234,7 +234,8 @@ void DistributedPcm::odometryEdgeCallback(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
 
       saveNewOdometryToLog(pg_edge);
-    } else if (pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
+    } else if (robot_from == my_id_ && robot_to == my_id_ &&
+               pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
       VLCEdge new_loop_closure;
       VLCEdgeFromMsg(pg_edge, &new_loop_closure);
       detected_lc = true;
@@ -365,7 +366,7 @@ void DistributedPcm::querySharedLoopClosures(
 
 void DistributedPcm::shareLoopClosureActionCallback(const kimera_distributed::SharedLoopClosureGoalConstPtr &goal) {
   auto request_robot_id = goal->robot_id;
-  ROS_INFO_STREAM("Received request from " << request_robot_id);
+  ROS_DEBUG_STREAM("Received request from " << request_robot_id);
   bool success = true;
   if (!use_actionlib_) {
     ROS_ERROR("Distributed PCM: Not using actionlib but received action goal.");
@@ -408,7 +409,7 @@ bool DistributedPcm::shareLoopClosureServiceCallback(
     kimera_distributed::requestSharedLoopClosures::Request& request,
     kimera_distributed::requestSharedLoopClosures::Response& response) {
   auto request_robot_id = request.robot_id;
-  ROS_INFO_STREAM("Received request from " << request_robot_id);
+  ROS_DEBUG_STREAM("Received request from " << request_robot_id);
   if (use_actionlib_) {
     ROS_ERROR("Distributed PCM: Using actionlib but received service request.");
     return false;
@@ -509,7 +510,7 @@ void DistributedPcm::unlockLoopClosuresIfNeeded() {
   if (should_unlock) {
     b_is_frozen_ = false;
     b_request_from_robot_.assign(b_request_from_robot_.size(), false);
-    ROS_INFO("Unlock loop closures!");
+    ROS_DEBUG("Unlock loop closures!");
   }
 }
 

@@ -8,7 +8,7 @@
   <!-- Use service or actionlib for communication -->
   <arg name="use_actionlib" default="false"/>
   <!-- Multirobot frame alignmnet  -->
-  <arg name="multirobot_initialization" default="false"/>
+  <arg name="multirobot_initialization" default="true"/>
 
 
   <!-- Launch Kimera Distributed Loop Closure Node -->

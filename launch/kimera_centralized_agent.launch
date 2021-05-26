@@ -14,6 +14,7 @@
   <arg name="visualize" value="true" />
   <arg name="use_online_cam_params" value="false" />
   <arg name="online" value="true" />
+  <arg name="should_use_sim_time" default="false"/>
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="kimera$(arg robot_id)_base_link"/>
   <arg name="left_cam_frame_id"  value="kimera$(arg robot_id)_left_cam"/>

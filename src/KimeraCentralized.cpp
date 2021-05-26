@@ -70,7 +70,8 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
   pgo_params.logOutput(log_output_path_);
   pgo_params.setIncremental();
-  pgo_params.setGncInlierCostThresholdsAtProbability(gnc_alpha);
+  if (gnc_alpha > 0 && gnc_alpha < 1)
+    pgo_params.setGncInlierCostThresholdsAtProbability(gnc_alpha);
   pgo_params.setMultirobotFrameAlignment();
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
@@ -86,7 +87,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
 
   // Initialize timer
   update_timer_ = nh_.createTimer(
-      ros::Duration(1.0), &KimeraCentralized::timerCallback, this);
+      ros::Duration(30.0), &KimeraCentralized::timerCallback, this);
 }
 
 KimeraCentralized::~KimeraCentralized() {}

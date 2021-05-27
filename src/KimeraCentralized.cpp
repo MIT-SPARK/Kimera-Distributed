@@ -72,7 +72,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
   pgo_params.setIncremental();
   if (gnc_alpha > 0 && gnc_alpha < 1)
     pgo_params.setGncInlierCostThresholdsAtProbability(gnc_alpha);
-  pgo_params.setMultirobotFrameAlignment();
+  pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
 

@@ -10,7 +10,7 @@ min_nss_factor: 0.05
 lowe_ratio:  0.85
 
 # Mono RANSAC 
-ransac_threshold_mono: 0.001
+ransac_threshold_mono: 0.00001
 ransac_inlier_percentage_mono: 0.01
 max_ransac_iterations_mono: 500
 

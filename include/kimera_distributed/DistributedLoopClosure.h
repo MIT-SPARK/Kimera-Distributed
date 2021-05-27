@@ -125,7 +125,10 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_query,
                              std::vector<unsigned int>* i_match) const;
 
-  bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match,
+  bool recoverPose(const VertexID& vertex_query,
+                   const VertexID& vertex_match,
+                   const std::vector<unsigned int>& i_query,
+                   const std::vector<unsigned int>& i_match,
                    gtsam::Pose3* T_query_match);
 
   void publishLoopClosure(const VLCEdge& loop_closure_edge);

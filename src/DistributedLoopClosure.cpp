@@ -140,8 +140,14 @@ void DistributedLoopClosure::bowCallback(
   // Detect loop closures with my trajectory
   if (!detect_inter_robot_only_ || robot_id != my_id_) {
     if (detectLoopInMyDB(vertex_query, bow_vec, &vertex_match)) {
+      // Find correspondences between frames.
+      std::vector<unsigned int> i_query, i_match;
+      ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+      assert(i_query.size() == i_match.size());
+
       gtsam::Pose3 T_query_match;
-      if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
+      if (recoverPose(
+              vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
         VLCEdge edge(vertex_query, vertex_match, T_query_match);
         loop_closures_.push_back(edge);
         publishLoopClosure(edge);  // Publish to pcm node
@@ -152,8 +158,14 @@ void DistributedLoopClosure::bowCallback(
   // Detect loop closures with other robots' trajectories
   if (robot_id == my_id_) {
     if (detectLoopInSharedDB(vertex_query, bow_vec, &vertex_match)) {
+      // Find correspondences between frames.
+      std::vector<unsigned int> i_query, i_match;
+      ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+      assert(i_query.size() == i_match.size());
+
       gtsam::Pose3 T_query_match;
-      if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
+      if (recoverPose(
+              vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
         VLCEdge edge(vertex_query, vertex_match, T_query_match);
         loop_closures_.push_back(edge);
         publishLoopClosure(edge);  // Publish to pcm node
@@ -351,9 +363,12 @@ void DistributedLoopClosure::ComputeMatchedIndices(
   }
 }
 
-bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
-                                         const VertexID& vertex_match,
-                                         gtsam::Pose3* T_query_match) {
+bool DistributedLoopClosure::recoverPose(
+    const VertexID& vertex_query,
+    const VertexID& vertex_match,
+    const std::vector<unsigned int>& i_query,
+    const std::vector<unsigned int>& i_match,
+    gtsam::Pose3* T_query_match) {
   ROS_INFO_STREAM(
       "Checking loop closure between "
       << "(" << vertex_query.first << ", " << vertex_query.second << ")"
@@ -364,11 +379,6 @@ bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
   if (!requestVLCFrame(vertex_match)) return false;
 
   total_geometric_verifications_++;
-
-  // Find correspondences between frames.
-  std::vector<unsigned int> i_query, i_match;
-  ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
-  assert(i_query.size() == i_match.size());
 
   opengv::points_t f_match, f_query;
   for (size_t i = 0; i < i_match.size(); i++) {

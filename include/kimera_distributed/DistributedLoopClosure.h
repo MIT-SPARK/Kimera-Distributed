@@ -79,6 +79,10 @@ class DistributedLoopClosure {
   bool detect_inter_robot_only_;
 
   // Parameters for geometric verification
+  double ransac_threshold_mono_;
+  double ransac_inlier_percentage_mono_;
+  int max_ransac_iterations_mono_;
+
   int max_ransac_iterations_;
   double lowe_ratio_;
   double ransac_threshold_;
@@ -124,6 +128,11 @@ class DistributedLoopClosure {
                              const VertexID& vertex_match,
                              std::vector<unsigned int>* i_query,
                              std::vector<unsigned int>* i_match) const;
+
+  bool geometricVerificationNister(const VertexID& vertex_query,
+                                   const VertexID& vertex_match,
+                                   std::vector<unsigned int>* inlier_query,
+                                   std::vector<unsigned int>* inlier_match);
 
   bool recoverPose(const VertexID& vertex_query,
                    const VertexID& vertex_match,

@@ -29,6 +29,8 @@ using Adapter = opengv::relative_pose::CentralRelativeAdapter;
 using AdapterStereo = opengv::point_cloud::PointCloudAdapter;
 using RansacProblemStereo =
     opengv::sac_problems::point_cloud::PointCloudSacProblem;
+using BearingVectors =
+    std::vector<gtsam::Vector3, Eigen::aligned_allocator<gtsam::Vector3>>;
 
 namespace kimera_distributed {
 
@@ -73,6 +75,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ros::param::get("~min_nss_factor", min_nss_factor_);
 
   // Geometric verification params
+  ros::param::get("~ransac_threshold_mono", ransac_threshold_mono_);
+  ros::param::get("~ransac_inlier_percentage_mono", ransac_inlier_percentage_mono_);
+  ros::param::get("~max_ransac_iterations_mono", max_ransac_iterations_mono_);
   ros::param::get("~lowe_ratio", lowe_ratio_);
   ros::param::get("~max_ransac_iterations", max_ransac_iterations_);
   ros::param::get("~ransac_threshold", ransac_threshold_);
@@ -115,6 +120,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
                   << "lowe_ratio = " << lowe_ratio_ << "\n"
                   << "max_ransac_iterations = " << max_ransac_iterations_
                   << "\n"
+                  << "mono ransac threshold = " << ransac_threshold_mono_ << "\n"
+                  << "mono ransac max iterations = " << max_ransac_iterations_mono_ << "\n"
+                  << "mono ransac min inlier percentage = " << ransac_inlier_percentage_mono_ << "\n"
                   << "ransac_threshold = " << ransac_threshold_ << "\n"
                   << "geometric_verification_min_inlier_count = "
                   << geometric_verification_min_inlier_count_ << "\n"
@@ -361,6 +369,64 @@ void DistributedLoopClosure::ComputeMatchedIndices(
       i_match->push_back(match[0].trainIdx);
     }
   }
+}
+
+bool DistributedLoopClosure::geometricVerificationNister(
+    const VertexID& vertex_query,
+    const VertexID& vertex_match,
+    std::vector<unsigned int>* inlier_query,
+    std::vector<unsigned int>* inlier_match) {
+  if (!requestVLCFrame(vertex_query)) return false;
+  if (!requestVLCFrame(vertex_match)) return false;
+  assert(NULL != inlier_query);
+  assert(NULL != inlier_match);
+
+  std::vector<unsigned int> i_query = *inlier_query;
+  std::vector<unsigned int> i_match = *inlier_match;
+
+  BearingVectors query_versors, match_versors;
+
+  query_versors.resize(i_query.size());
+  match_versors.resize(i_match.size());
+  for (size_t i = 0; i < i_match.size(); i++) {
+    gtsam::Vector3 query_keypt_i =
+        vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
+    gtsam::Vector3 match_keypt_i =
+        vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
+    query_versors[i] = query_keypt_i.normalized();
+    match_versors[i] = match_keypt_i.normalized();
+  }
+
+  Adapter adapter(match_versors, query_versors);
+
+  // Use RANSAC to solve the central-relative-pose problem.
+  opengv::sac::Ransac<RansacProblem> ransac;
+
+  ransac.sac_model_ = std::make_shared<RansacProblem>(
+      adapter, RansacProblem::Algorithm::NISTER, true);
+  ransac.max_iterations_ = max_ransac_iterations_mono_;
+  ransac.threshold_ = ransac_threshold_mono_;
+
+  // Compute transformation via RANSAC.
+  bool ransac_success = ransac.computeModel();
+
+  if (ransac_success) {
+    double inlier_percentage =
+        static_cast<double>(ransac.inliers_.size()) / query_versors.size();
+
+    if (inlier_percentage >= ransac_inlier_percentage_mono_) {
+      if (ransac.iterations_ < max_ransac_iterations_mono_) {
+        inlier_query->clear();
+        inlier_match->clear();
+        for (auto idx : ransac.inliers_) {
+          inlier_query->push_back(i_query[idx]);
+          inlier_match->push_back(i_match[idx]);
+        }
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool DistributedLoopClosure::recoverPose(

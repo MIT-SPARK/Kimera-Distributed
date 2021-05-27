@@ -10,12 +10,12 @@ min_nss_factor: 0.05
 lowe_ratio:  0.85
 
 # Mono RANSAC 
-ransac_threshold_mono: 1e-5
+ransac_threshold_mono: 0.001
 ransac_inlier_percentage_mono: 0.01
 max_ransac_iterations_mono: 500
 
 # Stereo RANSAC
-max_ransac_iterations: 1000
-ransac_threshold: 0.05
+max_ransac_iterations: 500
+ransac_threshold: 0.3
 geometric_verification_min_inlier_count: 5
 geometric_verification_min_inlier_percentage: 0.0

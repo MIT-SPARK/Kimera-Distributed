@@ -31,6 +31,7 @@ using RansacProblemStereo =
     opengv::sac_problems::point_cloud::PointCloudSacProblem;
 using BearingVectors =
     std::vector<gtsam::Vector3, Eigen::aligned_allocator<gtsam::Vector3>>;
+using DMatchVec = std::vector<cv::DMatch>;
 
 namespace kimera_distributed {
 
@@ -148,17 +149,29 @@ void DistributedLoopClosure::bowCallback(
   // Detect loop closures with my trajectory
   if (!detect_inter_robot_only_ || robot_id != my_id_) {
     if (detectLoopInMyDB(vertex_query, bow_vec, &vertex_match)) {
-      // Find correspondences between frames.
-      std::vector<unsigned int> i_query, i_match;
-      ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
-      assert(i_query.size() == i_match.size());
-
-      gtsam::Pose3 T_query_match;
-      if (recoverPose(
-              vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
-        VLCEdge edge(vertex_query, vertex_match, T_query_match);
-        loop_closures_.push_back(edge);
-        publishLoopClosure(edge);  // Publish to pcm node
+      ROS_INFO_STREAM(
+          "Checking loop closure between "
+          << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+          << " and "
+          << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+      if (requestVLCFrame(vertex_query) && requestVLCFrame(vertex_match)) {
+        // Find correspondences between frames.
+        std::vector<unsigned int> i_query, i_match;
+        ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+        assert(i_query.size() == i_match.size());
+        gtsam::Pose3 T_query_match;
+        if (geometricVerificationNister(
+                vertex_query, vertex_match, &i_query, &i_match)) {
+          if (recoverPose(vertex_query,
+                          vertex_match,
+                          i_query,
+                          i_match,
+                          &T_query_match)) {
+            VLCEdge edge(vertex_query, vertex_match, T_query_match);
+            loop_closures_.push_back(edge);
+            publishLoopClosure(edge);  // Publish to pcm node
+          }
+        }
       }
     }
   }
@@ -166,17 +179,30 @@ void DistributedLoopClosure::bowCallback(
   // Detect loop closures with other robots' trajectories
   if (robot_id == my_id_) {
     if (detectLoopInSharedDB(vertex_query, bow_vec, &vertex_match)) {
-      // Find correspondences between frames.
-      std::vector<unsigned int> i_query, i_match;
-      ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
-      assert(i_query.size() == i_match.size());
+      ROS_INFO_STREAM(
+          "Checking loop closure between "
+          << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+          << " and "
+          << "(" << vertex_match.first << ", " << vertex_match.second << ")");
 
-      gtsam::Pose3 T_query_match;
-      if (recoverPose(
-              vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
-        VLCEdge edge(vertex_query, vertex_match, T_query_match);
-        loop_closures_.push_back(edge);
-        publishLoopClosure(edge);  // Publish to pcm node
+      if (requestVLCFrame(vertex_query) && requestVLCFrame(vertex_match)) {
+        // Find correspondences between frames.
+        std::vector<unsigned int> i_query, i_match;
+        ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+        assert(i_query.size() == i_match.size());
+        gtsam::Pose3 T_query_match;
+        if (geometricVerificationNister(
+                vertex_query, vertex_match, &i_query, &i_match)) {
+          if (recoverPose(vertex_query,
+                          vertex_match,
+                          i_query,
+                          i_match,
+                          &T_query_match)) {
+            VLCEdge edge(vertex_query, vertex_match, T_query_match);
+            loop_closures_.push_back(edge);
+            publishLoopClosure(edge);  // Publish to pcm node
+          }
+        }
       }
     }
   }
@@ -354,8 +380,13 @@ void DistributedLoopClosure::ComputeMatchedIndices(
     const VertexID& vertex_query, const VertexID& vertex_match,
     std::vector<unsigned int>* i_query,
     std::vector<unsigned int>* i_match) const {
+  assert(i_query != NULL);
+  assert(i_match != NULL);
+  i_query->clear();
+  i_match->clear();
+
   // Get two best matches between frame descriptors.
-  std::vector<std::vector<cv::DMatch>> matches;
+  std::vector<DMatchVec> matches;
 
   VLCFrame frame_query = vlc_frames_.find(vertex_query)->second;
   VLCFrame frame_match = vlc_frames_.find(vertex_match)->second;
@@ -363,8 +394,11 @@ void DistributedLoopClosure::ComputeMatchedIndices(
   orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
                                  frame_match.descriptors_mat_, matches, 2u);
 
-  for (const std::vector<cv::DMatch>& match : matches) {
-    if (match.at(0).distance < lowe_ratio_ * match.at(1).distance) {
+  const size_t& n_matches = matches.size();
+  for (size_t i = 0; i < n_matches; i++) {
+    const DMatchVec& match = matches[i];
+    if (match.size() < 2) continue;
+    if (match[0].distance < lowe_ratio_ * match[1].distance) {
       i_query->push_back(match[0].queryIdx);
       i_match->push_back(match[0].trainIdx);
     }
@@ -435,14 +469,6 @@ bool DistributedLoopClosure::recoverPose(
     const std::vector<unsigned int>& i_query,
     const std::vector<unsigned int>& i_match,
     gtsam::Pose3* T_query_match) {
-  ROS_INFO_STREAM(
-      "Checking loop closure between "
-      << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-      << " and "
-      << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-
-  if (!requestVLCFrame(vertex_query)) return false;
-  if (!requestVLCFrame(vertex_match)) return false;
 
   total_geometric_verifications_++;
 

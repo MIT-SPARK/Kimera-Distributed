@@ -47,6 +47,7 @@ class DistributedLoopClosure {
 
   bool log_output_;
   std::string log_output_dir_;
+  size_t total_geom_verifications_mono_;
   size_t total_geometric_verifications_;
   std::vector<size_t> received_bow_bytes_; 
   std::vector<size_t> received_vlc_bytes_;

@@ -59,6 +59,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     ROS_WARN("DistributedLoopClosure: using actionlib.");
 
   // Used for logging
+  total_geom_verifications_mono_ = 0;
   total_geometric_verifications_ = 0;
   received_bow_bytes_.clear();
   received_vlc_bytes_.clear();
@@ -415,6 +416,8 @@ bool DistributedLoopClosure::geometricVerificationNister(
   assert(NULL != inlier_query);
   assert(NULL != inlier_match);
 
+  total_geom_verifications_mono_++;
+
   std::vector<unsigned int> i_query = *inlier_query;
   std::vector<unsigned int> i_match = *inlier_match;
 
@@ -597,8 +600,9 @@ void DistributedLoopClosure::logCommStat(const std::string& filename) {
     return;
   }
   // Header
-  file << "total_verifications, successful_verifications, total_bow_bytes, "
+  file << "total_verifications_mono, total_verifications, successful_verifications, total_bow_bytes, "
           "total_vlc_bytes\n";
+  file << total_geom_verifications_mono_ << ",";
   file << total_geometric_verifications_ << ",";
   file << loop_closures_.size() << ",";
   file << std::accumulate(received_bow_bytes_.begin(),

@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /PGMO1
       Splitter Ratio: 0.5
     Tree Height: 200
   - Class: rviz/Selection
@@ -126,7 +125,15 @@ Visualization Manager:
       Marker Topic: /kimera_centralized/posegraph_viewer/loop_edges
       Name: Loop Closures
       Namespaces:
-        world: true
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /kimera_centralized/posegraph_viewer/rejected_loop_edges
+      Name: Rejected Loop Closures
+      Namespaces:
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Image

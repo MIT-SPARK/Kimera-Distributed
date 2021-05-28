@@ -172,7 +172,8 @@ void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge) {
 // Convert gtsam posegaph to PoseGraph msg
 pose_graph_tools::PoseGraph GtsamGraphToRos(
     const gtsam::NonlinearFactorGraph& factors,
-    const gtsam::Values& values) {
+    const gtsam::Values& values,
+    const gtsam::Vector& gnc_weights) {
   std::vector<pose_graph_tools::PoseGraphEdge> edges;
 
   // first store the factors as edges
@@ -199,6 +200,9 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
 
       } else {
         edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+        if (gnc_weights.size() == factors.size() && gnc_weights(i) < 0.5) {
+          edge.type = pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
+        }
       }
 
       edge.pose = GtsamPoseToRos(factor.measured());

@@ -72,7 +72,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
   pgo_params.setIncremental();
   if (gnc_alpha > 0 && gnc_alpha < 1)
     pgo_params.setGncInlierCostThresholdsAtProbability(gnc_alpha);
-  pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
+  // pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
 
@@ -280,7 +280,9 @@ bool KimeraCentralized::requestRobotPoseGraph(
 
 void KimeraCentralized::publishPoseGraph() const {
   if (pose_graph_pub_.getNumSubscribers() == 0) return;
-  pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
+  gtsam::Vector gnc_weights = pgo_->getGncWeights();
+  pose_graph_tools::PoseGraph pose_graph_msg =
+      GtsamGraphToRos(nfg_, values_, gnc_weights);
   pose_graph_msg.header.frame_id = "world";
   pose_graph_msg.header.stamp = ros::Time::now();
 

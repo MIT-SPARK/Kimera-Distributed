@@ -33,6 +33,7 @@ cs_add_library(${PROJECT_NAME}
   src/DistributedLoopClosure.cpp
   src/DistributedPcm.cpp
   src/KimeraCentralized.cpp
+  src/LcdThirdPartyWrapper.cpp
   src/types.cpp
   src/utils.cpp
 )

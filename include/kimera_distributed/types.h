@@ -64,6 +64,61 @@ struct VLCEdge {
   }
 };  // struct VLCEdge
 
+struct MatchIsland {
+  MatchIsland()
+      : start_id_(0),
+        end_id_(0),
+        island_score_(0),
+        best_id_(0),
+        best_score_(0) {}
+
+  MatchIsland(const size_t& start, const size_t& end)
+      : start_id_(start),
+        end_id_(end),
+        island_score_(0),
+        best_id_(0),
+        best_score_(0) {}
+
+  MatchIsland(const size_t& start, const size_t& end, const double& score)
+      : start_id_(start),
+        end_id_(end),
+        island_score_(score),
+        best_id_(0),
+        best_score_(0) {}
+
+  inline bool operator<(const MatchIsland& other) const {
+    return island_score_ < other.island_score_;
+  }
+
+  inline bool operator>(const MatchIsland& other) const {
+    return island_score_ > other.island_score_;
+  }
+
+  inline size_t size() const { return end_id_ - start_id_ + 1; }
+
+  inline void clear() {
+    start_id_ = 0;
+    end_id_ = 0;
+    island_score_ = 0;
+    best_id_ = 0;
+    best_score_ = 0;
+  }
+
+  size_t start_id_;
+  size_t end_id_;
+  double island_score_;
+  size_t best_id_;
+  double best_score_;
+};  // struct MatchIsland
+
+struct LcdTpParams {
+  int max_nrFrames_between_queries_;
+  int max_nrFrames_between_islands_;
+  int min_temporal_matches_;
+  int max_intraisland_gap_;
+  int min_matches_per_island_;
+};
+
 typedef std::map<VertexID, VLCFrame, std::less<VertexID>> VLCFrameDict;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudRGB;

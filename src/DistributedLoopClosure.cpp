@@ -40,7 +40,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     alpha_(0.3), dist_local_(50), max_db_results_(5), min_nss_factor_(0.05),
     max_ransac_iterations_(1000), lowe_ratio_(0.8), ransac_threshold_(0.05),
     geometric_verification_min_inlier_count_(5),
-    geometric_verification_min_inlier_percentage_(0.0)
+    geometric_verification_min_inlier_percentage_(0.0),
+    lcd_tp_wrapper_(nullptr),
+    shared_lcd_tp_wrapper_(nullptr)
     {
   int my_id_int = -1;
   int num_robots_int = -1;
@@ -76,6 +78,28 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ros::param::get("~max_db_results", max_db_results_);
   ros::param::get("~min_nss_factor", min_nss_factor_);
 
+  // Lcd Third Party Wrapper Params
+  ros::param::get("~max_nrFrames_between_islands",
+                  lcd_tp_params_.max_nrFrames_between_islands_);
+  ros::param::get("~max_nrFrames_between_queries",
+                  lcd_tp_params_.max_nrFrames_between_queries_);
+  ros::param::get("~max_intraisland_gap", lcd_tp_params_.max_intraisland_gap_);
+  ros::param::get("~min_matches_per_island",
+                  lcd_tp_params_.min_matches_per_island_);
+  ros::param::get("~min_temporal_matches",
+                  lcd_tp_params_.min_temporal_matches_);
+
+  ros::param::get("~max_nrFrames_between_islands",
+                  shared_lcd_tp_params_.max_nrFrames_between_islands_);
+  ros::param::get("~max_nrFrames_between_queries",
+                  shared_lcd_tp_params_.max_nrFrames_between_queries_);
+  ros::param::get("~max_intraisland_gap",
+                  shared_lcd_tp_params_.max_intraisland_gap_);
+  ros::param::get("~min_matches_per_island",
+                  shared_lcd_tp_params_.min_matches_per_island_);
+  ros::param::get("~min_temporal_matches",
+                  shared_lcd_tp_params_.min_temporal_matches_);
+
   // Geometric verification params
   ros::param::get("~ransac_threshold_mono", ransac_threshold_mono_);
   ros::param::get("~ransac_inlier_percentage_mono", ransac_inlier_percentage_mono_);
@@ -96,6 +120,11 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   vocab.load(orb_vocab_path);
   db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
   shared_db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
+
+  lcd_tp_wrapper_ = std::unique_ptr<LcdThirdPartyWrapper>(
+      new LcdThirdPartyWrapper(lcd_tp_params_));
+  shared_lcd_tp_wrapper_ = std::unique_ptr<LcdThirdPartyWrapper>(
+      new LcdThirdPartyWrapper(shared_lcd_tp_params_));
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
@@ -261,8 +290,24 @@ bool DistributedLoopClosure::detectLoopInMyDB(
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    *vertex_match = std::make_pair(my_id_, best_result.Id);
-    return true;
+
+    // Compute islands in the matches.
+    // An island is a group of matches with close frame_ids.
+    std::vector<MatchIsland> islands;
+    lcd_tp_wrapper_->computeIslands(&query_result, &islands);
+    if (!islands.empty()) {
+      // Find the best island grouping using MatchIsland sorting.
+      const MatchIsland& best_island =
+          *std::max_element(islands.begin(), islands.end());
+
+      // Run temporal constraint check on this best island.
+      bool pass_temporal_constraint = lcd_tp_wrapper_->checkTemporalConstraint(
+          vertex_query.second, best_island);
+      if (pass_temporal_constraint) {
+        *vertex_match = std::make_pair(my_id_, best_result.Id);
+        return true;
+      }
+    }
   }
   return false;
 }
@@ -292,8 +337,15 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    *vertex_match = shared_db_to_vertex_[best_result.Id];
-    return true;
+
+    // Compute islands in the matches.
+    // An island is a group of matches with close frame_ids.
+    std::vector<MatchIsland> islands;
+    shared_lcd_tp_wrapper_->computeIslands(&query_result, &islands);
+    if (!islands.empty()) {
+      *vertex_match = shared_db_to_vertex_[best_result.Id];
+      return true;
+    }
   }
   return false;
 }

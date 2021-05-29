@@ -292,6 +292,7 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
+    *vertex_match = shared_db_to_vertex_[best_result.Id];
     return true;
   }
   return false;
@@ -440,10 +441,8 @@ bool DistributedLoopClosure::geometricVerificationNister(
   query_versors.resize(i_query.size());
   match_versors.resize(i_match.size());
   for (size_t i = 0; i < i_match.size(); i++) {
-    gtsam::Vector3 query_keypt_i =
-        vlc_frames_[vertex_query].versors_.at(i_query[i]);
-    gtsam::Vector3 match_keypt_i =
-        vlc_frames_[vertex_match].versors_.at(i_match[i]);
+    query_versors[i] = vlc_frames_[vertex_query].versors_.at(i_query[i]);
+    match_versors[i] = vlc_frames_[vertex_match].versors_.at(i_match[i]);
   }
 
   Adapter adapter(match_versors, query_versors);
@@ -458,7 +457,6 @@ bool DistributedLoopClosure::geometricVerificationNister(
 
   // Compute transformation via RANSAC.
   bool ransac_success = ransac.computeModel();
-  ROS_INFO("Failed Mono RANSAC. ");
   if (ransac_success) {
     double inlier_percentage =
         static_cast<double>(ransac.inliers_.size()) / query_versors.size();

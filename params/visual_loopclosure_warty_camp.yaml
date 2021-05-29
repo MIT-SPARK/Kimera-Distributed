@@ -8,6 +8,11 @@ dist_local: 100
 max_db_results: 5
 min_nss_factor: 0.05 
 lowe_ratio:  0.8
+min_temporal_matches: 3
+min_matches_per_island: 1
+max_intraisland_gap: 3
+max_nrFrames_between_islands: 3
+max_nrFrames_between_queries: 2
 
 # Mono RANSAC 
 ransac_threshold_mono: 1e-5

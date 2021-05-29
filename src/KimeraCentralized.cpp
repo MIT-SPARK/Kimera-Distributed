@@ -72,7 +72,7 @@ KimeraCentralized::KimeraCentralized(const ros::NodeHandle& n) : nh_(n) {
   pgo_params.setIncremental();
   if (gnc_alpha > 0 && gnc_alpha < 1)
     pgo_params.setGncInlierCostThresholdsAtProbability(gnc_alpha);
-  // pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
+  pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
 
@@ -100,6 +100,7 @@ void KimeraCentralized::timerCallback(const ros::TimerEvent&) {
 
   // Add and update rpgo
   pgo_->update(nfg_new, values_new);
+  if (nfg_new.size() == 0) pgo_->forceUpdate(nfg_new, values_new);
   // Get the new factor graph and estimates
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();

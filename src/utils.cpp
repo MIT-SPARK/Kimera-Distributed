@@ -37,14 +37,19 @@ void VLCFrameToMsg(const VLCFrame& frame, kimera_vio_ros::VLCFrameMsg* msg) {
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
-  // Convert keypoints
+  // Convert keypoints and versors
   PointCloud keypoints;
+  PointCloud versors;
   for (size_t i = 0; i < frame.keypoints_.size(); ++i) {
     gtsam::Vector3 p_ = frame.keypoints_[i];
     pcl::PointXYZ p(p_(0), p_(1), p_(2));
     keypoints.push_back(p);
+    gtsam::Vector3 v_ = frame.versors_[i];
+    pcl::PointXYZ v(v_(0), v_(1), v_(2));
+    versors.push_back(v);
   }
   pcl::toROSMsg(keypoints, msg->keypoints);
+  pcl::toROSMsg(versors, msg->versors);
 
   // Convert descriptors
   assert(frame.descriptors_mat_.type() ==
@@ -60,13 +65,17 @@ void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg, VLCFrame* frame) {
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
 
-  // Convert keypoints
-  PointCloud keypoints;
+  // Convert keypoints and vesors
+  PointCloud keypoints, versors;
   pcl::fromROSMsg(msg.keypoints, keypoints);
+  pcl::fromROSMsg(msg.versors, versors);
   frame->keypoints_.clear();
+  frame->versors_.clear();
   for (size_t i = 0; i < keypoints.size(); ++i) {
     gtsam::Vector3 p(keypoints[i].x, keypoints[i].y, keypoints[i].z);
     frame->keypoints_.push_back(p);
+    gtsam::Vector3 v(versors[i].x, versors[i].y, versors[i].z);
+    frame->versors_.push_back(v);
   }
 
   // Convert descriptors
@@ -175,7 +184,10 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
     const gtsam::Values& values,
     const gtsam::Vector& gnc_weights) {
   std::vector<pose_graph_tools::PoseGraphEdge> edges;
-
+  size_t single_robot_lcs = 0;
+  size_t inter_robot_lcs = 0;
+  size_t single_robot_inliers = 0;
+  size_t inter_robot_inliers = 0;
   // first store the factors as edges
   for (size_t i = 0; i < factors.size(); i++) {
     // check if between factor
@@ -200,8 +212,19 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
 
       } else {
         edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+        if (edge.robot_from == edge.robot_to) {
+          single_robot_lcs++;
+        } else {
+          inter_robot_lcs++;
+        }
         if (gnc_weights.size() == factors.size() && gnc_weights(i) < 0.5) {
           edge.type = pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
+        } else {
+          if (edge.robot_from == edge.robot_to) {
+            single_robot_inliers++;
+          } else {
+            inter_robot_inliers++;
+          }
         }
       }
 
@@ -246,6 +269,13 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
   pose_graph_tools::PoseGraph posegraph;
   posegraph.nodes = nodes;
   posegraph.edges = edges;
+  ROS_INFO(
+      "Detected %d single robot loop closures with %d inliers and %d "
+      "inter-robot loop closures with %d inliers. ",
+      single_robot_lcs,
+      single_robot_inliers,
+      inter_robot_lcs,
+      inter_robot_inliers);
   return posegraph;
 }
 

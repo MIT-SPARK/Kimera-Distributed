@@ -247,15 +247,22 @@ bool DistributedLoopClosure::detectLoopInMyDB(
   if (max_possible_match_id < 0) max_possible_match_id = 0;
 
   DBoW2::QueryResults query_result;
-  db_BoW_->query(bow_vector_query, query_result, max_db_results_,
-                 max_possible_match_id);
+  db_BoW_->query(
+      bow_vector_query, query_result, max_db_results_, max_possible_match_id);
+  // Remove low scores from the QueryResults based on nss.
+  DBoW2::QueryResults::iterator query_it =
+      lower_bound(query_result.begin(),
+                  query_result.end(),
+                  DBoW2::Result(0, alpha_ * nss_factor),
+                  DBoW2::Result::geq);
+  if (query_it != query_result.end()) {
+    query_result.resize(query_it - query_result.begin());
+  }
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    if (best_result.Score >= alpha_ * nss_factor) {
-      *vertex_match = std::make_pair(my_id_, best_result.Id);
-      return true;
-    }
+    *vertex_match = std::make_pair(my_id_, best_result.Id);
+    return true;
   }
   return false;
 }
@@ -264,7 +271,7 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
     const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query,
     VertexID* vertex_match) {
   RobotID robot_query = vertex_query.first;
-  double nss_factor = db_BoW_->getVocabulary()->score(
+  double nss_factor = shared_db_BoW_->getVocabulary()->score(
       bow_vector_query, latest_bowvec_[robot_query]);
 
   if (nss_factor < min_nss_factor_) {
@@ -273,12 +280,19 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
   DBoW2::QueryResults query_result;
   shared_db_BoW_->query(bow_vector_query, query_result, max_db_results_);
 
+  // Remove low scores from the QueryResults based on nss.
+  DBoW2::QueryResults::iterator query_it =
+      lower_bound(query_result.begin(),
+                  query_result.end(),
+                  DBoW2::Result(0, alpha_ * nss_factor),
+                  DBoW2::Result::geq);
+  if (query_it != query_result.end()) {
+    query_result.resize(query_it - query_result.begin());
+  }
+
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    if (best_result.Score >= alpha_ * nss_factor) {
-      *vertex_match = shared_db_to_vertex_[best_result.Id];
-      return true;
-    }
+    return true;
   }
   return false;
 }
@@ -427,11 +441,9 @@ bool DistributedLoopClosure::geometricVerificationNister(
   match_versors.resize(i_match.size());
   for (size_t i = 0; i < i_match.size(); i++) {
     gtsam::Vector3 query_keypt_i =
-        vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
+        vlc_frames_[vertex_query].versors_.at(i_query[i]);
     gtsam::Vector3 match_keypt_i =
-        vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
-    query_versors[i] = query_keypt_i.normalized();
-    match_versors[i] = match_keypt_i.normalized();
+        vlc_frames_[vertex_match].versors_.at(i_match[i]);
   }
 
   Adapter adapter(match_versors, query_versors);
@@ -446,21 +458,19 @@ bool DistributedLoopClosure::geometricVerificationNister(
 
   // Compute transformation via RANSAC.
   bool ransac_success = ransac.computeModel();
-
+  ROS_INFO("Failed Mono RANSAC. ");
   if (ransac_success) {
     double inlier_percentage =
         static_cast<double>(ransac.inliers_.size()) / query_versors.size();
 
     if (inlier_percentage >= ransac_inlier_percentage_mono_) {
-      if (ransac.iterations_ < max_ransac_iterations_mono_) {
-        inlier_query->clear();
-        inlier_match->clear();
-        for (auto idx : ransac.inliers_) {
-          inlier_query->push_back(i_query[idx]);
-          inlier_match->push_back(i_match[idx]);
-        }
-        return true;
+      inlier_query->clear();
+      inlier_match->clear();
+      for (auto idx : ransac.inliers_) {
+        inlier_query->push_back(i_query[idx]);
+        inlier_match->push_back(i_match[idx]);
       }
+      return true;
     }
   }
   return false;

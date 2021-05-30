@@ -149,6 +149,11 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
                   << "max_db_results = " << max_db_results_ << "\n"
                   << "min_nss_factor = " << min_nss_factor_ << "\n"
                   << "lowe_ratio = " << lowe_ratio_ << "\n"
+                  << "max_nrFrames_between_queries = " << lcd_tp_params_.max_nrFrames_between_queries_ << "\n"
+                  << "max_nrFrames_between_islands = " << lcd_tp_params_.max_nrFrames_between_islands_ << "\n"
+                  << "max_intraisland_gap = " << lcd_tp_params_.max_intraisland_gap_ << "\n"
+                  << "min_matches_per_island = " << lcd_tp_params_.min_matches_per_island_ << "\n"
+                  << "min_temporal_matches = " << lcd_tp_params_.min_temporal_matches_ << "\n"
                   << "max_ransac_iterations = " << max_ransac_iterations_
                   << "\n"
                   << "mono ransac threshold = " << ransac_threshold_mono_ << "\n"

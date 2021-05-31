@@ -464,8 +464,14 @@ void DistributedLoopClosure::ComputeMatchedIndices(
   VLCFrame frame_query = vlc_frames_.find(vertex_query)->second;
   VLCFrame frame_match = vlc_frames_.find(vertex_match)->second;
 
-  orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
-                                 frame_match.descriptors_mat_, matches, 2u);
+  try {
+    orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
+                                   frame_match.descriptors_mat_,
+                                   matches,
+                                   2u);
+  } catch (cv::Exception& e) {
+    ROS_ERROR("Failed KnnMatch in ComputeMatchedIndices. ");
+  }
 
   const size_t& n_matches = matches.size();
   for (size_t i = 0; i < n_matches; i++) {

@@ -8,7 +8,7 @@ dist_local: 0
 max_db_results: 60
 min_nss_factor: 0.05 
 lowe_ratio:  0.7
-min_temporal_matches: 3
+min_temporal_matches: 1
 min_matches_per_island: 1
 max_intraisland_gap: 3
 max_nrFrames_between_islands: 3
@@ -23,4 +23,4 @@ max_ransac_iterations_mono: 500
 max_ransac_iterations: 500
 ransac_threshold: 0.1
 geometric_verification_min_inlier_count: 4
-geometric_verification_min_inlier_percentage: 0.5
+geometric_verification_min_inlier_percentage: 0.1

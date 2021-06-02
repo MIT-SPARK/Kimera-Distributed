@@ -175,7 +175,8 @@ void DistributedLoopClosure::bowCallback(
   // Add Bag-of-word vector to database
   if (robot_id == my_id_) {
     assert(pose_id == next_pose_id_);
-    assert(db_BoW_->add(bow_vec) == next_pose_id_);
+    uint32_t db_index = db_BoW_->add(bow_vec);
+    assert(db_index == next_pose_id_);
     next_pose_id_++;
   } else {
     uint32_t db_index = shared_db_BoW_->add(bow_vec);

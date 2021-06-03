@@ -55,7 +55,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz/Path
       Color: 239; 41; 41
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -73,12 +73,12 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /kimera_centralized/robot_0_optimized_path
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 245; 121; 0
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -96,12 +96,12 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /kimera_centralized/robot_1_optimized_path
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 114; 159; 207
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -119,7 +119,7 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /kimera_centralized/robot_2_optimized_path
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /kimera_centralized/posegraph_viewer/loop_edges
@@ -355,7 +355,7 @@ Visualization Manager:
         - Alpha: 1
           Buffer Length: 1
           Class: rviz/Path
-          Color: 25; 255; 0
+          Color: 245; 121; 0
           Enabled: true
           Head Diameter: 0.30000001192092896
           Head Length: 0.20000000298023224
@@ -398,7 +398,7 @@ Visualization Manager:
           Topic: /kimera2/kimera_vio_ros/optimized_trajectory
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: PGMO
   Enabled: true
   Global Options:
@@ -428,7 +428,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 325.6698303222656
+      Distance: 444.4603271484375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

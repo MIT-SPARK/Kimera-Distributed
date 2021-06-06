@@ -5,6 +5,9 @@
   <arg name="mesh_reconstruction" default="false" />
   <arg name="semantic_mesh" default="true" />
   <arg name="environment" default="camp" />
+  <arg name="use_external_odom" default="false"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
   
   <group ns="kimera0">
     <arg name="robot_id" value="0" />

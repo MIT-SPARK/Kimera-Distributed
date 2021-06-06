@@ -76,6 +76,7 @@ class DistributedLoopClosure {
   int dist_local_;
   int max_db_results_;
   float min_nss_factor_;
+  bool detect_inter_robot_only_;
 
   // Parameters for geometric verification
   int max_ransac_iterations_;

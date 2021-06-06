@@ -55,6 +55,7 @@ class DistributedPcm {
   bool use_actionlib_;
   bool b_is_frozen_;
   bool b_offline_mode_;
+  bool b_multirobot_initialization_;
   std::string log_output_path_;
   std::string offline_data_path_;
 
@@ -68,6 +69,7 @@ class DistributedPcm {
   // ROS service
   ros::ServiceServer shared_lc_server_;
   ros::ServiceServer pose_graph_request_server_;
+  ros::ServiceServer initialization_server_;
 
   // Action server
   actionlib::SimpleActionServer<kimera_distributed::SharedLoopClosureAction> lc_action_server_;
@@ -100,6 +102,10 @@ class DistributedPcm {
       kimera_distributed::requestSharedLoopClosures::Response& response);
 
   bool requestPoseGraphCallback(
+      pose_graph_tools::PoseGraphQuery::Request& request,
+      pose_graph_tools::PoseGraphQuery::Response& response);
+
+  bool requestInitializationCallback(
       pose_graph_tools::PoseGraphQuery::Request& request,
       pose_graph_tools::PoseGraphQuery::Response& response);
 

@@ -6,11 +6,15 @@
   <arg name="semantic_mesh" default="true" />
   <arg name="environment" default="camp" />
   <arg name="robot_id" default="0" />
+  <arg name="use_external_odom" default="false"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <arg name="use_lcd" value="true" />
   <arg name="visualize" value="true" />
   <arg name="use_online_cam_params" value="false" />
   <arg name="online" value="true" />
+  <arg name="should_use_sim_time" default="false"/>
   <!-- Frame IDs -->
   <arg name="base_link_frame_id" value="kimera$(arg robot_id)_base_link"/>
   <arg name="left_cam_frame_id"  value="kimera$(arg robot_id)_left_cam"/>
@@ -67,7 +71,7 @@
    </include>
 
   <!-- Launch Kimera-PGMO Voxblox Processing Node -->
-   <node name="mesh_frontend" pkg="kimera_pgmo" type="mesh_frontend_node" >
+   <node if="$(arg mesh_reconstruction)" name="mesh_frontend" pkg="kimera_pgmo" type="mesh_frontend_node" >
      <param name="horizon" value="30" />
      <param name="output_mesh_resolution" value="0.04" />
      <param name="robot_id" value="$(arg robot_id)" />

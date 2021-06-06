@@ -7,6 +7,9 @@
   <arg name="semantic_mesh" default="false" />
   <arg name="environment" default="camp" />
   <arg name="dpgmo" default="false" />
+  <arg name="use_external_odom" default="false"/>
+  <arg name="do_coarse_temporal_sync" default="false"/>
+  <arg name="do_fine_temporal_sync" default="false"/>
 
   <!-- True if multiple ROS masters are running. This turns on reliable UDP. -->
   <arg name="multi_master" default="false" />
@@ -95,9 +98,15 @@
       <arg name="agent_id"                         value="$(arg robot_id)" />
       <arg name="num_robots"                       value="$(arg num_robots)" />
       <arg name="acceleration"                     value="false" />
+      <arg name="multirobot_initialization"        value="false"/>
       <arg name="robust_cost_type"                 value="GNC_TLS" />
       <arg name="GNC_quantile"                     value="0.9" />
+      <arg name="GNC_mu_step"                      value="2.0" />
+      <arg name="GNC_init_mu"                      value="1e-5" />
       <arg name="min_converged_loop_closure_ratio" value="0.95" />
+      <arg name="weight_update_interval"           value="25" />
+      <arg name="max_iteration_number"             value="500" />
+      <arg name="relative_change_tolerance"        value="5e-3" />
       <arg name="log_directory"                    value="$(arg log_output_path)" />
     </include>
 

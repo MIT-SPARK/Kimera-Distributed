@@ -7,6 +7,8 @@
   <arg name="dataset_name" default="warty"/>
   <!-- Use service or actionlib for communication -->
   <arg name="use_actionlib" default="false"/>
+  <!-- Multirobot frame alignmnet  -->
+  <arg name="multirobot_initialization" default="true"/>
 
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
@@ -23,6 +25,7 @@
   <node name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
+    <param name="multirobot_initialization" value="$(arg multirobot_initialization)" />
     <param name="use_actionlib" value="$(arg use_actionlib)" />
     <rosparam file="$(find kimera_distributed)/params/pcm_$(arg dataset_name).yaml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>

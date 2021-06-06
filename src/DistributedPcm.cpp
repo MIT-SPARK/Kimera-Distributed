@@ -22,7 +22,10 @@ namespace kimera_distributed {
 
 DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     : nh_(n), my_id_(-1), num_robots_(-1),
-      use_actionlib_(false), b_is_frozen_(false), b_offline_mode_(false),
+      use_actionlib_(false), 
+      b_is_frozen_(false), 
+      b_offline_mode_(false),
+      b_multirobot_initialization_(false),
       lc_action_server_(nh_, "shared_lc_action",
                         boost::bind(&DistributedPcm::shareLoopClosureActionCallback, this, _1),
                         false){
@@ -63,14 +66,20 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     ros::shutdown();
   }
 
+  if (!ros::param::get("~multirobot_initialization", b_multirobot_initialization_)) {
+    ROS_ERROR("PCM failed to get required parameters! Shutting down... ");
+    ros::shutdown();
+  }
+
   // Initialize pcm
   KimeraRPGO::RobustSolverParams pgo_params;
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
   pgo_params.logOutput(log_output_path_);
   pgo_params.setIncremental();
+  if (b_multirobot_initialization_)
+    pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
   pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
       new KimeraRPGO::RobustSolver(pgo_params));
-
 
   if (b_offline_mode_) {
     // Offline initialization
@@ -102,6 +111,10 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
       "shared_lc_query", &DistributedPcm::shareLoopClosureServiceCallback, this);
   pose_graph_request_server_ = nh_.advertiseService(
       "request_pose_graph", &DistributedPcm::requestPoseGraphCallback, this);
+  if (b_multirobot_initialization_ && my_id_ == 0) {
+    initialization_server_ = nh_.advertiseService(
+      "request_initialization", &DistributedPcm::requestInitializationCallback, this);
+  }
 
   // Start actions
   lc_action_server_.start();
@@ -185,7 +198,7 @@ void DistributedPcm::odometryEdgeCallback(
   // New gtsam factors and values
   gtsam::Values new_values;
   gtsam::NonlinearFactorGraph new_factors;
-
+  bool detected_lc;
   // Iterate through nodes
   for (pose_graph_tools::PoseGraphNode pg_node : msg->nodes) {
     const gtsam::Pose3 estimate = RosPoseToGtsam(pg_node.pose);
@@ -228,12 +241,25 @@ void DistributedPcm::odometryEdgeCallback(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
 
       saveNewOdometryToLog(pg_edge);
+    } else if (robot_from == my_id_ && robot_to == my_id_ &&
+               pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
+      VLCEdge new_loop_closure;
+      VLCEdgeFromMsg(pg_edge, &new_loop_closure);
+      detected_lc = true;
+      new_factors.add(VLCEdgeToGtsam(new_loop_closure));
     }
   }
 
   pgo_->update(new_factors, new_values, false);
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();
+
+  // For debugging
+  if (detected_lc) {
+    std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
+    saveLoopClosuresToFile(loop_closures,
+                           log_output_path_ + "pcm_loop_closures.csv");
+  }
 }
 
 void DistributedPcm::loopclosureCallback(
@@ -347,7 +373,7 @@ void DistributedPcm::querySharedLoopClosures(
 
 void DistributedPcm::shareLoopClosureActionCallback(const kimera_distributed::SharedLoopClosureGoalConstPtr &goal) {
   auto request_robot_id = goal->robot_id;
-  ROS_INFO_STREAM("Received request from " << request_robot_id);
+  ROS_DEBUG_STREAM("Received request from " << request_robot_id);
   bool success = true;
   if (!use_actionlib_) {
     ROS_ERROR("Distributed PCM: Not using actionlib but received action goal.");
@@ -390,7 +416,7 @@ bool DistributedPcm::shareLoopClosureServiceCallback(
     kimera_distributed::requestSharedLoopClosures::Request& request,
     kimera_distributed::requestSharedLoopClosures::Response& response) {
   auto request_robot_id = request.robot_id;
-  ROS_INFO_STREAM("Received request from " << request_robot_id);
+  ROS_DEBUG_STREAM("Received request from " << request_robot_id);
   if (use_actionlib_) {
     ROS_ERROR("Distributed PCM: Using actionlib but received service request.");
     return false;
@@ -433,19 +459,34 @@ bool DistributedPcm::requestPoseGraphCallback(
     loop_closures_frozen_ = getInlierLoopclosures(nfg_);
     b_is_frozen_ = true;
   }
-  ROS_INFO_STREAM("Received request from " << request.robot_id);
+  ROS_DEBUG_STREAM("Received request from " << request.robot_id);
 
   std::vector<pose_graph_tools::PoseGraphEdge> interrobot_lc;
   querySharedLoopClosures(&interrobot_lc);
 
+  // Construct pose graph to be returned
   const pose_graph_tools::PoseGraph pose_graph_msg =
       GtsamGraphToRos(nfg_, values_);
-
-  // Filter out odometry set not from this robot
-  // and add interrobot loop closures
   pose_graph_tools::PoseGraph out_graph;
   out_graph.nodes = pose_graph_msg.nodes;
 
+  // If using multi-robot initialization, request trajectory from the first robot
+  if (b_multirobot_initialization_ && my_id_ != 0) {
+    std::string service_name =
+      "/kimera0/distributed_pcm/request_initialization";
+    pose_graph_tools::PoseGraphQuery query;
+    query.request.robot_id = my_id_;
+    if (!ros::service::waitForService(service_name, ros::Duration(15.0))) {
+      ROS_ERROR("Service to query initialization does not exist!");
+    }
+    if (!ros::service::call(service_name, query)) {
+      ROS_ERROR("Could not query initialization. ");
+    }
+    out_graph.nodes = query.response.pose_graph.nodes;
+  }
+
+  // Filter out odometry set not from this robot
+  // and add interrobot loop closures
   for (auto e : pose_graph_msg.edges) {
     if (e.type == pose_graph_tools::PoseGraphEdge::ODOM &&
         e.robot_from != my_id_) {
@@ -479,6 +520,35 @@ bool DistributedPcm::requestPoseGraphCallback(
   return true;
 }
 
+bool DistributedPcm::requestInitializationCallback(
+    pose_graph_tools::PoseGraphQuery::Request& request,
+    pose_graph_tools::PoseGraphQuery::Response& response) {
+  
+  if (my_id_ != 0) {
+    ROS_ERROR_STREAM("Robot " << my_id_ << " should not receive initialization request.");
+    return false;
+  }
+
+  // Retrieve poses belonging to the requesting robot
+  gtsam::Values values_out;
+  const int robot_id = request.robot_id;
+  int pose_id = 0;
+  while (true) {
+    gtsam::Symbol symb(robot_id_to_prefix.at(robot_id), pose_id);
+    if (values_.exists(symb.key())) {
+      values_out.insert(symb.key(), values_.at(symb.key()));
+    } else {
+      break;
+    }
+    pose_id++;
+  }
+
+  ROS_INFO_STREAM("Retrieved " << values_out.size() << " poses for robot " << robot_id);
+  response.pose_graph = GtsamGraphToRos(gtsam::NonlinearFactorGraph(), values_out);
+
+  return true;
+}
+
 void DistributedPcm::unlockLoopClosuresIfNeeded() {
   bool should_unlock = true;
   for (size_t id = my_id_; id < b_request_from_robot_.size(); ++id) {
@@ -491,7 +561,7 @@ void DistributedPcm::unlockLoopClosuresIfNeeded() {
   if (should_unlock) {
     b_is_frozen_ = false;
     b_request_from_robot_.assign(b_request_from_robot_.size(), false);
-    ROS_INFO("Unlock loop closures!");
+    ROS_DEBUG("Unlock loop closures!");
   }
 }
 

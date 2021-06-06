@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(kimera_distributed)
 
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 
 find_package(catkin_simple REQUIRED)
 

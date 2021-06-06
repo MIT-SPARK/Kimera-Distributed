@@ -55,7 +55,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 0; 255; 0
+      Color: 239; 41; 41
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -78,7 +78,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 239; 41; 41
+      Color: 245; 121; 0
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -126,7 +126,7 @@ Visualization Manager:
       Marker Topic: /kimera_centralized/posegraph_viewer/loop_edges
       Name: Loop Closures
       Namespaces:
-        {}
+        world: true
       Queue Size: 100
       Value: true
     - Class: rviz/Image
@@ -391,7 +391,7 @@ Visualization Manager:
           Topic: /kimera2/kimera_vio_ros/optimized_trajectory
           Unreliable: false
           Value: true
-      Enabled: true
+      Enabled: false
       Name: PGMO
   Enabled: true
   Global Options:
@@ -421,25 +421,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 15.396434783935547
+      Distance: 325.6698303222656
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.020527824759483337
-        Y: 1.804666519165039
-        Z: -0.2871982753276825
+        X: 35.401832580566406
+        Y: 3.53201961517334
+        Z: 0.47599923610687256
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4997962713241577
+      Pitch: 1.4597967863082886
       Target Frame: map
       Value: Orbit (rviz)
-      Yaw: 0.3903987407684326
+      Yaw: 1.645397663116455
     Saved: ~
 Window Geometry:
   Displays:

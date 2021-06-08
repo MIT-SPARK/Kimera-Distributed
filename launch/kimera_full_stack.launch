@@ -122,8 +122,9 @@
       <arg name="dpgmo_topic"                 default="/dev/null" unless="$(arg dpgmo)" />
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
-      <arg name="horizon"                     default="50" />
-      <arg name="output_resolution"           default="0.02" />
+      <arg name="horizon"                     default="1200" />
+      <arg name="output_resolution"           default="0.15" />
+      <arg name="d_graph_resolution"          default="10.0" />
     </include>
 
     <!-- Launch remote topic manager (reliable UDP) -->

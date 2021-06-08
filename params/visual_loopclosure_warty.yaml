@@ -8,7 +8,7 @@ dist_local: 0
 max_db_results: 60
 min_nss_factor: 0.05 
 lowe_ratio:  0.7
-min_temporal_matches: 1
+min_temporal_matches: 3
 min_matches_per_island: 1
 max_intraisland_gap: 3
 max_nrFrames_between_islands: 3

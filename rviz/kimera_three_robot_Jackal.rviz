@@ -224,9 +224,66 @@ Visualization Manager:
       Topic: /kimera1/kimera_vio_ros/odometry
       Unreliable: false
       Value: false
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: OptimizedMesh
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: false
+      Show Wireframe:
+        Value: false
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /kimera0/kimera_pgmo_node/optimized_mesh
+      Value: true
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: OptimizedMesh
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: false
+      Show Wireframe:
+        Value: false
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /kimera1/kimera_pgmo_node/optimized_mesh
+      Value: true
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: OptimizedMesh
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: false
+      Show Wireframe:
+        Value: false
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /kimera2/kimera_pgmo_node/optimized_mesh
+      Value: true
   Enabled: true
   Global Options:
-    Background Color: 0; 0; 0
+    Background Color: 255; 255; 255
     Default Light: true
     Fixed Frame: world
     Frame Rate: 30
@@ -252,25 +309,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 275.6036682128906
+      Distance: 81.41905975341797
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4.757877826690674
-        Y: 10.007976531982422
-        Z: 1.0629382133483887
+        X: 3.946190595626831
+        Y: 0.9572187066078186
+        Z: 7.198269844055176
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0647974014282227
+      Pitch: -0.8497968316078186
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 2.668163299560547
+      Yaw: 4.7563652992248535
     Saved: ~
 Window Geometry:
   Displays:

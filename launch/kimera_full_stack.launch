@@ -100,11 +100,14 @@
       <arg name="acceleration"                     value="false" />
       <arg name="multirobot_initialization"        value="false"/>
       <arg name="robust_cost_type"                 value="GNC_TLS" />
+      <arg name="GNC_use_probability"              value="true" />
       <arg name="GNC_quantile"                     value="0.9" />
+      <arg name="GNC_barc"                         value="5.0" />
       <arg name="GNC_mu_step"                      value="2.0" />
       <arg name="GNC_init_mu"                      value="1e-5" />
-      <arg name="min_converged_loop_closure_ratio" value="0.95" />
-      <arg name="weight_update_interval"           value="25" />
+      <arg name="robust_opt_warm_start"            value="true" />
+      <arg name="robust_opt_min_convergence_ratio" value="0.95" />
+      <arg name="robust_opt_inner_iters"           value="25" />
       <arg name="max_iteration_number"             value="500" />
       <arg name="relative_change_tolerance"        value="5e-3" />
       <arg name="log_directory"                    value="$(arg log_output_path)" />

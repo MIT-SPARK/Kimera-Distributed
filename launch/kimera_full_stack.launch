@@ -126,7 +126,7 @@
       <arg name="dpgmo_topic"                 default="/dev/null" unless="$(arg dpgmo)" />
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
-      <arg name="horizon"                     default="3000" />
+      <arg name="horizon"                     default="1000" />
       <arg name="output_resolution"           default="0.08" />
       <arg name="d_graph_resolution"          default="7.0" />
     </include>

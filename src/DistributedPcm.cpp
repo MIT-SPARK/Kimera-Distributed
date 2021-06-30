@@ -648,7 +648,7 @@ void DistributedPcm::saveNewOdometryToLog(const pose_graph_tools::PoseGraphEdge&
 void DistributedPcm::initializeOffline() {
   gtsam::Values poses = loadPosesOffline(offline_data_path_ + "pcm_trajectory.csv");
   gtsam::NonlinearFactorGraph odometries = loadMeasurementsOffline(offline_data_path_ + "pcm_odometry.csv", true);
-  gtsam::NonlinearFactorGraph loop_closures = loadMeasurementsOffline(offline_data_path_ + "loop_closures.csv", false);
+  gtsam::NonlinearFactorGraph loop_closures = loadMeasurementsOffline(offline_data_path_ + "pcm_loop_closures.csv", false);
 
   // Add odometry measurements
   pgo_->update(odometries, poses, false);
@@ -779,13 +779,6 @@ gtsam::NonlinearFactorGraph DistributedPcm::loadMeasurementsOffline(const std::s
     std::getline(ss, token, ',');
     tz = std::stod(token);
 
-    if (!is_odometry) {
-      // Get number of correspondences (matched keypoints) for loop closures
-      std::getline(ss, token, ',');
-      num_corr = std::stoi(token);
-    }
-
-    // ROS_INFO("(%i,%i)->(%i,%i), Quat: %f %f %f %f , Trans: %f %f %f", robot_from, pose_from, robot_to, pose_to, qx, qy, qz, qw, tx, ty, tz);
     if (is_odometry) {
       assert(robot_from == robot_to);
       assert(pose_from + 1 == pose_to);
@@ -800,18 +793,42 @@ gtsam::NonlinearFactorGraph DistributedPcm::loadMeasurementsOffline(const std::s
     static const gtsam::SharedNoiseModel& noise =
         gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
 
-    // Add to pcm 
-    bool add = true;
-    if (!is_odometry && num_corr < 7) {
-      // Filter out loop closures with small number of matched keypoints
-      add = false;
-    }
-    if (add) {
-      new_factors.add(
+    new_factors.add(
         gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
 
-      num_measurements_read++;
-    }
+    num_measurements_read++;
+
+    // Uncomment below to select loop closures based on count
+
+    // if (!is_odometry) {
+    //   // Get number of correspondences (matched keypoints) for loop closures
+    //   std::getline(ss, token, ',');
+    //   num_corr = std::stoi(token);
+    // }
+
+    // // ROS_INFO("(%i,%i)->(%i,%i), Quat: %f %f %f %f , Trans: %f %f %f", robot_from, pose_from, robot_to, pose_to, qx, qy, qz, qw, tx, ty, tz);
+
+    // gtsam::Pose3 measure;
+    // measure = gtsam::Pose3(gtsam::Rot3(qw,qx,qy,qz), gtsam::Point3(tx,ty,tz));
+    // gtsam::Symbol from_key(robot_id_to_prefix.at(robot_from), pose_from);
+    // gtsam::Symbol to_key(robot_id_to_prefix.at(robot_to), pose_to);
+
+    // // Create hard coded covariance
+    // static const gtsam::SharedNoiseModel& noise =
+    //     gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+
+    // // Add to pcm 
+    // bool add = true;
+    // if (!is_odometry && num_corr < 5) {
+    //   // Filter out loop closures with small number of matched keypoints
+    //   add = false;
+    // }
+    // if (add) {
+    //   new_factors.add(
+    //     gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
+
+    //   num_measurements_read++;
+    // }
   }
 
   infile.close();

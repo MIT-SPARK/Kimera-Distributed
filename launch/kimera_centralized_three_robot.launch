@@ -3,11 +3,12 @@
   <arg name="verbosity" default="0" />
   <arg name="num_robots" default="3" />
   <arg name="mesh_reconstruction" default="false" />
-  <arg name="semantic_mesh" default="true" />
+  <arg name="semantic_mesh" default="false" />
   <arg name="environment" default="camp" />
   <arg name="use_external_odom" default="false"/>
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>
+  <arg name="use_centralized_pgmo" default="false" />
   
   <group ns="kimera0">
     <arg name="robot_id" value="0" />
@@ -25,7 +26,7 @@
   </group>
 
   <!-- Launch Basestation -->
-  <node unless="$(arg mesh_reconstruction)" launch-prefix="xterm -e" name="kimera_centralized_node" pkg="kimera_distributed" 
+  <node unless="$(eval mesh_reconstruction and use_centralized_pgmo)" launch-prefix="xterm -e" name="kimera_centralized_node" pkg="kimera_distributed" 
     type="kimera_centralized_node" output="screen" ns="kimera_centralized">
     <param name="num_robots" value="$(arg num_robots)" />
     <rosparam file="$(find kimera_distributed)/params/centralized.yaml"/>
@@ -33,7 +34,7 @@
   </node> 
 
   <!-- Kimera-PGMO -->
-  <include if="$(arg mesh_reconstruction)" file="$(find kimera_centralized_pgmo)/launch/kimera_basestation.launch" pass_all_args="true" >
+  <include if="$(eval mesh_reconstruction and use_centralized_pgmo)" file="$(find kimera_centralized_pgmo)/launch/kimera_basestation.launch" pass_all_args="true" >
     <arg name="output_path" default="$(find kimera_distributed)/logs/basestation" />
     <arg name="dataset" value="$(arg dataset_name)" />
     <arg name="use_msg_time" value="true" />

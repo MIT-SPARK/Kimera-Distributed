@@ -69,18 +69,20 @@
        <arg name="should_use_sim_time"                 default="false" />
        <arg name="publish_point_clouds"                default="false" if="$(arg run_stereo_dense)"/>
        <arg name="publish_point_clouds"                default="true" unless="$(arg run_stereo_dense)"/>
-       <arg name="voxel_size"                          default="0.05" if="$(eval dataset_name == 'Euroc')"/>
-       <arg name="voxel_size"                          default="0.2" unless="$(eval dataset_name == 'Euroc')"/>
-       <arg name="max_ray_length_m"                    default="5" if="$(eval dataset_name == 'Euroc')"/>
-       <arg name="max_ray_length_m"                    default="40" unless="$(eval dataset_name == 'Euroc')"/>
+       <arg name="voxel_size"                          default="0.2" if="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
+       <arg name="voxel_size"                          default="0.2" unless="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
+       <arg name="max_ray_length_m"                    default="5" if="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
+       <arg name="max_ray_length_m"                    default="40" unless="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
        <arg name="sensor_frame"                        default="$(arg left_cam_frame_id)"/>
        <arg name="metric_semantic_reconstruction"      default="false" if="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
        <arg name="metric_semantic_reconstruction"      default="true" unless="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
        <arg name="semantic_pointcloud"                 default="$(arg ptcld_topic)"/>
        <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
-       <arg name="left_cam_info_topic"                 default="cam0/camera_info" />
+       <arg name="left_cam_info_topic"                 default="semantic/camera_info" if="$(eval dataset_name == 'Jackal')" />
+       <arg name="left_cam_info_topic"                 default="cam0/camera_info" unless="$(eval dataset_name == 'Jackal')" />
        <arg name="right_cam_info_topic"                default="cam1/camera_info"/>
-       <arg name="left_cam_topic"                      default="cam0/image_raw"/>
+       <arg name="left_cam_topic"                      default="cam0/semantic_image" if="$(eval dataset_name == 'Jackal')"/>
+       <arg name="left_cam_topic"                      default="cam0/image_raw" unless="$(eval dataset_name == 'Jackal')"/>
        <arg name="right_cam_topic"                     default="cam1/image_raw"/>
        <arg name="left_cam_segmentation_topic"         default="/dev/null" if="$(eval dataset_name == 'Euroc')"/>
        <arg name="left_cam_segmentation_topic"         default="cam0/semantic_image" unless="$(eval dataset_name == 'Euroc')"/>
@@ -94,11 +96,11 @@
 
     <!-- Launch dpgo_ros -->
     <include file="$(find dpgo_ros)/launch/PGOAgent.launch">
-      <arg name="verbose"                          value="true" />
       <arg name="agent_id"                         value="$(arg robot_id)" />
       <arg name="num_robots"                       value="$(arg num_robots)" />
-      <arg name="acceleration"                     value="false" />
+      <arg name="relative_change_tolerance"        value="5e-3" />
       <arg name="multirobot_initialization"        value="false"/>
+      <arg name="acceleration"                     value="false" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
       <arg name="GNC_use_probability"              value="true" />
       <arg name="GNC_quantile"                     value="0.9" />
@@ -109,8 +111,7 @@
       <arg name="robust_opt_min_convergence_ratio" value="0.95" />
       <arg name="robust_opt_inner_iters"           value="25" />
       <arg name="max_iteration_number"             value="500" />
-      <arg name="relative_change_tolerance"        value="5e-3" />
-      <arg name="log_directory"                    value="$(arg log_output_path)" />
+      <arg name="log_directory"                    value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
     </include>
 
     <!-- Launch kimera pgmo -->
@@ -125,8 +126,9 @@
       <arg name="dpgmo_topic"                 default="/dev/null" unless="$(arg dpgmo)" />
       <arg name="use_msg_time"                default="false" />
       <arg name="output_path"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/pgmo_optimized" />
-      <arg name="horizon"                     default="50" />
-      <arg name="output_resolution"           default="0.02" />
+      <arg name="horizon"                     default="1000" />
+      <arg name="output_resolution"           default="0.08" />
+      <arg name="d_graph_resolution"          default="7.0" />
     </include>
 
     <!-- Launch remote topic manager (reliable UDP) -->

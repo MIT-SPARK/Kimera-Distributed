@@ -1,6 +1,6 @@
 <launch>
 
-	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.5 -s 5 /home/yunchang/Downloads/city/warty_loop_02.bag">
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.2 -s 1 /home/yunchang/Downloads/city/warty_loop_02.bag">
 		<remap from="/warty/camera/image" to="/kimera0/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera0/cam1/image_raw"/>
 		<remap from="/warty/camera/camera_info" to="/kimera0/cam0/camera_info"/>
@@ -13,7 +13,7 @@
 		<remap from="/unity_command/ground_truth/warty/odom" to="/ground_truth/kimera0/pose"/>
 	</node>  
 
-	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.5 -s 5 /home/yunchang/Downloads/city/warty_loop_04.bag">
+	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.2 -s 1 /home/yunchang/Downloads/city/warty_loop_04.bag">
 		<remap from="/warty/camera/image" to="/kimera1/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera1/cam1/image_raw"/>
 		<remap from="/warty/camera/camera_info" to="/kimera1/cam0/camera_info"/>
@@ -26,7 +26,7 @@
 		<remap from="/unity_command/ground_truth/warty/odom" to="/ground_truth/kimera1/pose"/>
 	</node>
 
-	<node pkg="rosbag" type="play" name="player2" output="screen" args="-r 0.5 -s 5 -u 120 /home/yunchang/Downloads/city/warty_loop_03.bag">
+	<node pkg="rosbag" type="play" name="player2" output="screen" args="-r 0.2 -s 1 -u 120 /home/yunchang/Downloads/city/warty_loop_03.bag">
 		<remap from="/warty/camera/image" to="/kimera2/cam0/image_raw"/>
 		<remap from="/warty/right_camera/image" to="/kimera2/cam1/image_raw"/>
 		<remap from="/warty/camera/camera_info" to="/kimera2/cam0/camera_info"/>

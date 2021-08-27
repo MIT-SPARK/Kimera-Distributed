@@ -9,6 +9,7 @@
 #include <DBoW2/DBoW2.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
+#include <kimera_distributed/LcdThirdPartyWrapper.h>
 #include <kimera_distributed/types.h>
 #include <kimera_distributed/utils.h>
 #include <ros/ros.h>
@@ -47,6 +48,7 @@ class DistributedLoopClosure {
 
   bool log_output_;
   std::string log_output_dir_;
+  size_t total_geom_verifications_mono_;
   size_t total_geometric_verifications_;
   std::vector<size_t> received_bow_bytes_; 
   std::vector<size_t> received_vlc_bytes_;
@@ -55,10 +57,12 @@ class DistributedLoopClosure {
   std::unique_ptr<OrbDatabase> db_BoW_;
   uint32_t next_pose_id_;
   std::vector<DBoW2::BowVector> latest_bowvec_;
+  std::unique_ptr<LcdThirdPartyWrapper> lcd_tp_wrapper_;
 
   // Database of BOW vectors from other robots
   std::unique_ptr<OrbDatabase> shared_db_BoW_;
   std::map<uint32_t, VertexID> shared_db_to_vertex_;
+  std::unique_ptr<LcdThirdPartyWrapper> shared_lcd_tp_wrapper_;
 
   // ORB extraction and matching members
   cv::Ptr<cv::DescriptorMatcher> orb_feature_matcher_;
@@ -78,7 +82,14 @@ class DistributedLoopClosure {
   float min_nss_factor_;
   bool detect_inter_robot_only_;
 
+  LcdTpParams lcd_tp_params_;
+  LcdTpParams shared_lcd_tp_params_;
+
   // Parameters for geometric verification
+  double ransac_threshold_mono_;
+  double ransac_inlier_percentage_mono_;
+  int max_ransac_iterations_mono_;
+
   int max_ransac_iterations_;
   double lowe_ratio_;
   double ransac_threshold_;
@@ -125,7 +136,15 @@ class DistributedLoopClosure {
                              std::vector<unsigned int>* i_query,
                              std::vector<unsigned int>* i_match) const;
 
-  bool recoverPose(const VertexID& vertex_query, const VertexID& vertex_match,
+  bool geometricVerificationNister(const VertexID& vertex_query,
+                                   const VertexID& vertex_match,
+                                   std::vector<unsigned int>* inlier_query,
+                                   std::vector<unsigned int>* inlier_match);
+
+  bool recoverPose(const VertexID& vertex_query,
+                   const VertexID& vertex_match,
+                   const std::vector<unsigned int>& i_query,
+                   const std::vector<unsigned int>& i_match,
                    gtsam::Pose3* T_query_match);
 
   void publishLoopClosure(const VLCEdge& loop_closure_edge);

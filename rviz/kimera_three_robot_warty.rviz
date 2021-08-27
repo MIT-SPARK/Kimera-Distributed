@@ -54,7 +54,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 25; 255; 0
+      Color: 239; 41; 41
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -77,7 +77,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 239; 41; 41
+      Color: 245; 121; 0
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -247,7 +247,7 @@ Visualization Manager:
         Faces Alpha: 1
         Faces Color: 0; 255; 0
         Value: Vertex Color
-      Enabled: false
+      Enabled: true
       Mesh Buffer Size: 1
       Name: OptimizedMesh
       Show Normals:
@@ -260,13 +260,13 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera0/kimera_pgmo_node/optimized_mesh
-      Value: false
+      Value: true
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 1
         Faces Color: 0; 255; 0
         Value: Vertex Color
-      Enabled: false
+      Enabled: true
       Mesh Buffer Size: 1
       Name: OptimizedMesh
       Show Normals:
@@ -279,13 +279,13 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera1/kimera_pgmo_node/optimized_mesh
-      Value: false
+      Value: true
     - Class: rviz_mesh_plugin/TriangleMesh
       Display Type:
         Faces Alpha: 1
         Faces Color: 0; 255; 0
         Value: Vertex Color
-      Enabled: false
+      Enabled: true
       Mesh Buffer Size: 1
       Name: OptimizedMesh
       Show Normals:
@@ -298,7 +298,7 @@ Visualization Manager:
         Wireframe Alpha: 1
         Wireframe Color: 0; 0; 0
       Topic: /kimera2/kimera_pgmo_node/optimized_mesh
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -311,7 +311,7 @@ Visualization Manager:
       Color: 0; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -328,7 +328,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -341,7 +341,7 @@ Visualization Manager:
       Color: 239; 41; 41
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -358,7 +358,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -371,7 +371,7 @@ Visualization Manager:
       Color: 52; 101; 164
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -388,7 +388,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -417,7 +417,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 275.6036682128906
+      Distance: 451.7296447753906
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -432,10 +432,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0647974014282227
+      Pitch: 1.424796462059021
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 2.668163299560547
+      Yaw: 1.663159966468811
     Saved: ~
 Window Geometry:
   Displays:

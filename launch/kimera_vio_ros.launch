@@ -8,6 +8,16 @@
   <arg name="do_coarse_temporal_sync" default="false"/>
   <arg name="do_fine_temporal_sync" default="false"/>
 
+  <!-- If true, SparkVio will log output of all modules to the
+       'log_output_path' location. -->
+  <arg name="log_output" default="true"/>
+  <arg name="log_output_path"
+       default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
+  <!-- If true, log ground-truth poses to a csv file using the
+       gt_logger_node, and processing data from the gt_topic rostopic -->
+  <arg name="log_gt_data" default="true"/>
+  <arg name="gt_topic" default="ground_truth_odometry_topic"/>
+
   <!-- Set online to true if you use rosbag play or sensor stream -->
   <arg name="online" default="true" />
   <!-- Set use_sim_time to true if you use rosbag with clock argument -->
@@ -25,9 +35,9 @@
     unless="$(arg online)"/>
 
   <!-- Frame IDs -->
-  <arg name="base_link_frame_id" value="base_link"/>
-  <arg name="left_cam_frame_id"  value="cam0"/>
-  <arg name="right_cam_frame_id" value="cam1"/>
+  <arg name="base_link_frame_id" default="base_link"/>
+  <arg name="left_cam_frame_id"  default="cam0"/>
+  <arg name="right_cam_frame_id" default="cam1"/>
 
   <!-- Subscribed Topics -->
   <arg name="left_cam_topic"                    default="/cam0/image_raw"/>
@@ -40,16 +50,6 @@
   <arg name="odometry_ground_truth_topic"       default="$(arg gt_topic)"/>
   <arg name="external_odom_topic"               default="/kimera$(arg robot_id)/external_odom"/>
 
-  <!-- If true, SparkVio will log output of all modules to the
-       'log_output_path' location. -->
-  <arg name="log_output" default="true"/>
-  <arg name="log_output_path"
-       default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
-  <!-- If true, log ground-truth poses to a csv file using the
-       gt_logger_node, and processing data from the gt_topic rostopic -->
-  <arg name="log_gt_data" default="true"/>
-  <arg name="gt_topic" default="ground_truth_odometry_topic"/>
-  
   <!-- Launch actual pipeline -->
   <include file="$(find kimera_vio_ros)/launch/kimera_vio_ros.launch" pass_all_args="true"/>
 

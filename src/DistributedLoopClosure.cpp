@@ -29,6 +29,9 @@ using Adapter = opengv::relative_pose::CentralRelativeAdapter;
 using AdapterStereo = opengv::point_cloud::PointCloudAdapter;
 using RansacProblemStereo =
     opengv::sac_problems::point_cloud::PointCloudSacProblem;
+using BearingVectors =
+    std::vector<gtsam::Vector3, Eigen::aligned_allocator<gtsam::Vector3>>;
+using DMatchVec = std::vector<cv::DMatch>;
 
 namespace kimera_distributed {
 
@@ -37,7 +40,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     alpha_(0.3), dist_local_(50), max_db_results_(5), min_nss_factor_(0.05),
     max_ransac_iterations_(1000), lowe_ratio_(0.8), ransac_threshold_(0.05),
     geometric_verification_min_inlier_count_(5),
-    geometric_verification_min_inlier_percentage_(0.0)
+    geometric_verification_min_inlier_percentage_(0.0),
+    lcd_tp_wrapper_(nullptr),
+    shared_lcd_tp_wrapper_(nullptr)
     {
   int my_id_int = -1;
   int num_robots_int = -1;
@@ -56,6 +61,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     ROS_WARN("DistributedLoopClosure: using actionlib.");
 
   // Used for logging
+  total_geom_verifications_mono_ = 0;
   total_geometric_verifications_ = 0;
   received_bow_bytes_.clear();
   received_vlc_bytes_.clear();
@@ -72,7 +78,32 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ros::param::get("~max_db_results", max_db_results_);
   ros::param::get("~min_nss_factor", min_nss_factor_);
 
+  // Lcd Third Party Wrapper Params
+  ros::param::get("~max_nrFrames_between_islands",
+                  lcd_tp_params_.max_nrFrames_between_islands_);
+  ros::param::get("~max_nrFrames_between_queries",
+                  lcd_tp_params_.max_nrFrames_between_queries_);
+  ros::param::get("~max_intraisland_gap", lcd_tp_params_.max_intraisland_gap_);
+  ros::param::get("~min_matches_per_island",
+                  lcd_tp_params_.min_matches_per_island_);
+  ros::param::get("~min_temporal_matches",
+                  lcd_tp_params_.min_temporal_matches_);
+
+  ros::param::get("~max_nrFrames_between_islands",
+                  shared_lcd_tp_params_.max_nrFrames_between_islands_);
+  ros::param::get("~max_nrFrames_between_queries",
+                  shared_lcd_tp_params_.max_nrFrames_between_queries_);
+  ros::param::get("~max_intraisland_gap",
+                  shared_lcd_tp_params_.max_intraisland_gap_);
+  ros::param::get("~min_matches_per_island",
+                  shared_lcd_tp_params_.min_matches_per_island_);
+  ros::param::get("~min_temporal_matches",
+                  shared_lcd_tp_params_.min_temporal_matches_);
+
   // Geometric verification params
+  ros::param::get("~ransac_threshold_mono", ransac_threshold_mono_);
+  ros::param::get("~ransac_inlier_percentage_mono", ransac_inlier_percentage_mono_);
+  ros::param::get("~max_ransac_iterations_mono", max_ransac_iterations_mono_);
   ros::param::get("~lowe_ratio", lowe_ratio_);
   ros::param::get("~max_ransac_iterations", max_ransac_iterations_);
   ros::param::get("~ransac_threshold", ransac_threshold_);
@@ -89,6 +120,11 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   vocab.load(orb_vocab_path);
   db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
   shared_db_BoW_ = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab));
+
+  lcd_tp_wrapper_ = std::unique_ptr<LcdThirdPartyWrapper>(
+      new LcdThirdPartyWrapper(lcd_tp_params_));
+  shared_lcd_tp_wrapper_ = std::unique_ptr<LcdThirdPartyWrapper>(
+      new LcdThirdPartyWrapper(shared_lcd_tp_params_));
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
@@ -113,8 +149,16 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
                   << "max_db_results = " << max_db_results_ << "\n"
                   << "min_nss_factor = " << min_nss_factor_ << "\n"
                   << "lowe_ratio = " << lowe_ratio_ << "\n"
+                  << "max_nrFrames_between_queries = " << lcd_tp_params_.max_nrFrames_between_queries_ << "\n"
+                  << "max_nrFrames_between_islands = " << lcd_tp_params_.max_nrFrames_between_islands_ << "\n"
+                  << "max_intraisland_gap = " << lcd_tp_params_.max_intraisland_gap_ << "\n"
+                  << "min_matches_per_island = " << lcd_tp_params_.min_matches_per_island_ << "\n"
+                  << "min_temporal_matches = " << lcd_tp_params_.min_temporal_matches_ << "\n"
                   << "max_ransac_iterations = " << max_ransac_iterations_
                   << "\n"
+                  << "mono ransac threshold = " << ransac_threshold_mono_ << "\n"
+                  << "mono ransac max iterations = " << max_ransac_iterations_mono_ << "\n"
+                  << "mono ransac min inlier percentage = " << ransac_inlier_percentage_mono_ << "\n"
                   << "ransac_threshold = " << ransac_threshold_ << "\n"
                   << "geometric_verification_min_inlier_count = "
                   << geometric_verification_min_inlier_count_ << "\n"
@@ -140,11 +184,29 @@ void DistributedLoopClosure::bowCallback(
   // Detect loop closures with my trajectory
   if (!detect_inter_robot_only_ || robot_id != my_id_) {
     if (detectLoopInMyDB(vertex_query, bow_vec, &vertex_match)) {
-      gtsam::Pose3 T_query_match;
-      if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
-        VLCEdge edge(vertex_query, vertex_match, T_query_match);
-        loop_closures_.push_back(edge);
-        publishLoopClosure(edge);  // Publish to pcm node
+      ROS_INFO_STREAM(
+          "Checking loop closure between "
+          << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+          << " and "
+          << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+      if (requestVLCFrame(vertex_query) && requestVLCFrame(vertex_match)) {
+        // Find correspondences between frames.
+        std::vector<unsigned int> i_query, i_match;
+        ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+        assert(i_query.size() == i_match.size());
+        gtsam::Pose3 T_query_match;
+        if (geometricVerificationNister(
+                vertex_query, vertex_match, &i_query, &i_match)) {
+          if (recoverPose(vertex_query,
+                          vertex_match,
+                          i_query,
+                          i_match,
+                          &T_query_match)) {
+            VLCEdge edge(vertex_query, vertex_match, T_query_match);
+            loop_closures_.push_back(edge);
+            publishLoopClosure(edge);  // Publish to pcm node
+          }
+        }
       }
     }
   }
@@ -152,11 +214,30 @@ void DistributedLoopClosure::bowCallback(
   // Detect loop closures with other robots' trajectories
   if (robot_id == my_id_) {
     if (detectLoopInSharedDB(vertex_query, bow_vec, &vertex_match)) {
-      gtsam::Pose3 T_query_match;
-      if (recoverPose(vertex_query, vertex_match, &T_query_match)) {
-        VLCEdge edge(vertex_query, vertex_match, T_query_match);
-        loop_closures_.push_back(edge);
-        publishLoopClosure(edge);  // Publish to pcm node
+      ROS_INFO_STREAM(
+          "Checking loop closure between "
+          << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+          << " and "
+          << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+
+      if (requestVLCFrame(vertex_query) && requestVLCFrame(vertex_match)) {
+        // Find correspondences between frames.
+        std::vector<unsigned int> i_query, i_match;
+        ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
+        assert(i_query.size() == i_match.size());
+        gtsam::Pose3 T_query_match;
+        if (geometricVerificationNister(
+                vertex_query, vertex_match, &i_query, &i_match)) {
+          if (recoverPose(vertex_query,
+                          vertex_match,
+                          i_query,
+                          i_match,
+                          &T_query_match)) {
+            VLCEdge edge(vertex_query, vertex_match, T_query_match);
+            loop_closures_.push_back(edge);
+            publishLoopClosure(edge);  // Publish to pcm node
+          }
+        }
       }
     }
   }
@@ -201,14 +282,37 @@ bool DistributedLoopClosure::detectLoopInMyDB(
   if (max_possible_match_id < 0) max_possible_match_id = 0;
 
   DBoW2::QueryResults query_result;
-  db_BoW_->query(bow_vector_query, query_result, max_db_results_,
-                 max_possible_match_id);
+  db_BoW_->query(
+      bow_vector_query, query_result, max_db_results_, max_possible_match_id);
+  // Remove low scores from the QueryResults based on nss.
+  DBoW2::QueryResults::iterator query_it =
+      lower_bound(query_result.begin(),
+                  query_result.end(),
+                  DBoW2::Result(0, alpha_ * nss_factor),
+                  DBoW2::Result::geq);
+  if (query_it != query_result.end()) {
+    query_result.resize(query_it - query_result.begin());
+  }
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    if (best_result.Score >= alpha_ * nss_factor) {
-      *vertex_match = std::make_pair(my_id_, best_result.Id);
-      return true;
+
+    // Compute islands in the matches.
+    // An island is a group of matches with close frame_ids.
+    std::vector<MatchIsland> islands;
+    lcd_tp_wrapper_->computeIslands(&query_result, &islands);
+    if (!islands.empty()) {
+      // Find the best island grouping using MatchIsland sorting.
+      const MatchIsland& best_island =
+          *std::max_element(islands.begin(), islands.end());
+
+      // Run temporal constraint check on this best island.
+      bool pass_temporal_constraint = lcd_tp_wrapper_->checkTemporalConstraint(
+          vertex_query.second, best_island);
+      if (pass_temporal_constraint) {
+        *vertex_match = std::make_pair(my_id_, best_result.Id);
+        return true;
+      }
     }
   }
   return false;
@@ -218,7 +322,7 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
     const VertexID& vertex_query, const DBoW2::BowVector bow_vector_query,
     VertexID* vertex_match) {
   RobotID robot_query = vertex_query.first;
-  double nss_factor = db_BoW_->getVocabulary()->score(
+  double nss_factor = shared_db_BoW_->getVocabulary()->score(
       bow_vector_query, latest_bowvec_[robot_query]);
 
   if (nss_factor < min_nss_factor_) {
@@ -227,9 +331,24 @@ bool DistributedLoopClosure::detectLoopInSharedDB(
   DBoW2::QueryResults query_result;
   shared_db_BoW_->query(bow_vector_query, query_result, max_db_results_);
 
+  // Remove low scores from the QueryResults based on nss.
+  DBoW2::QueryResults::iterator query_it =
+      lower_bound(query_result.begin(),
+                  query_result.end(),
+                  DBoW2::Result(0, alpha_ * nss_factor),
+                  DBoW2::Result::geq);
+  if (query_it != query_result.end()) {
+    query_result.resize(query_it - query_result.begin());
+  }
+
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-    if (best_result.Score >= alpha_ * nss_factor) {
+
+    // Compute islands in the matches.
+    // An island is a group of matches with close frame_ids.
+    std::vector<MatchIsland> islands;
+    shared_lcd_tp_wrapper_->computeIslands(&query_result, &islands);
+    if (!islands.empty()) {
       *vertex_match = shared_db_to_vertex_[best_result.Id];
       return true;
     }
@@ -335,41 +454,98 @@ void DistributedLoopClosure::ComputeMatchedIndices(
     const VertexID& vertex_query, const VertexID& vertex_match,
     std::vector<unsigned int>* i_query,
     std::vector<unsigned int>* i_match) const {
+  assert(i_query != NULL);
+  assert(i_match != NULL);
+  i_query->clear();
+  i_match->clear();
+
   // Get two best matches between frame descriptors.
-  std::vector<std::vector<cv::DMatch>> matches;
+  std::vector<DMatchVec> matches;
 
   VLCFrame frame_query = vlc_frames_.find(vertex_query)->second;
   VLCFrame frame_match = vlc_frames_.find(vertex_match)->second;
 
-  orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
-                                 frame_match.descriptors_mat_, matches, 2u);
+  try {
+    orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
+                                   frame_match.descriptors_mat_,
+                                   matches,
+                                   2u);
+  } catch (cv::Exception& e) {
+    ROS_ERROR("Failed KnnMatch in ComputeMatchedIndices. ");
+  }
 
-  for (const std::vector<cv::DMatch>& match : matches) {
-    if (match.at(0).distance < lowe_ratio_ * match.at(1).distance) {
+  const size_t& n_matches = matches.size();
+  for (size_t i = 0; i < n_matches; i++) {
+    const DMatchVec& match = matches[i];
+    if (match.size() < 2) continue;
+    if (match[0].distance < lowe_ratio_ * match[1].distance) {
       i_query->push_back(match[0].queryIdx);
       i_match->push_back(match[0].trainIdx);
     }
   }
 }
 
-bool DistributedLoopClosure::recoverPose(const VertexID& vertex_query,
-                                         const VertexID& vertex_match,
-                                         gtsam::Pose3* T_query_match) {
-  ROS_INFO_STREAM(
-      "Checking loop closure between "
-      << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-      << " and "
-      << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-
+bool DistributedLoopClosure::geometricVerificationNister(
+    const VertexID& vertex_query,
+    const VertexID& vertex_match,
+    std::vector<unsigned int>* inlier_query,
+    std::vector<unsigned int>* inlier_match) {
   if (!requestVLCFrame(vertex_query)) return false;
   if (!requestVLCFrame(vertex_match)) return false;
+  assert(NULL != inlier_query);
+  assert(NULL != inlier_match);
+
+  total_geom_verifications_mono_++;
+
+  std::vector<unsigned int> i_query = *inlier_query;
+  std::vector<unsigned int> i_match = *inlier_match;
+
+  BearingVectors query_versors, match_versors;
+
+  query_versors.resize(i_query.size());
+  match_versors.resize(i_match.size());
+  for (size_t i = 0; i < i_match.size(); i++) {
+    query_versors[i] = vlc_frames_[vertex_query].versors_.at(i_query[i]);
+    match_versors[i] = vlc_frames_[vertex_match].versors_.at(i_match[i]);
+  }
+
+  Adapter adapter(match_versors, query_versors);
+
+  // Use RANSAC to solve the central-relative-pose problem.
+  opengv::sac::Ransac<RansacProblem> ransac;
+
+  ransac.sac_model_ = std::make_shared<RansacProblem>(
+      adapter, RansacProblem::Algorithm::NISTER, true);
+  ransac.max_iterations_ = max_ransac_iterations_mono_;
+  ransac.threshold_ = ransac_threshold_mono_;
+
+  // Compute transformation via RANSAC.
+  bool ransac_success = ransac.computeModel();
+  if (ransac_success) {
+    double inlier_percentage =
+        static_cast<double>(ransac.inliers_.size()) / query_versors.size();
+
+    if (inlier_percentage >= ransac_inlier_percentage_mono_) {
+      inlier_query->clear();
+      inlier_match->clear();
+      for (auto idx : ransac.inliers_) {
+        inlier_query->push_back(i_query[idx]);
+        inlier_match->push_back(i_match[idx]);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DistributedLoopClosure::recoverPose(
+    const VertexID& vertex_query,
+    const VertexID& vertex_match,
+    const std::vector<unsigned int>& i_query,
+    const std::vector<unsigned int>& i_match,
+    gtsam::Pose3* T_query_match) {
 
   total_geometric_verifications_++;
-
-  // Find correspondences between frames.
-  std::vector<unsigned int> i_query, i_match;
-  ComputeMatchedIndices(vertex_query, vertex_match, &i_query, &i_match);
-  assert(i_query.size() == i_match.size());
 
   opengv::points_t f_match, f_query;
   for (size_t i = 0; i < i_match.size(); i++) {
@@ -496,8 +672,9 @@ void DistributedLoopClosure::logCommStat(const std::string& filename) {
     return;
   }
   // Header
-  file << "total_verifications, successful_verifications, total_bow_bytes, "
+  file << "total_verifications_mono, total_verifications, successful_verifications, total_bow_bytes, "
           "total_vlc_bytes\n";
+  file << total_geom_verifications_mono_ << ",";
   file << total_geometric_verifications_ << ",";
   file << loop_closures_.size() << ",";
   file << std::accumulate(received_bow_bytes_.begin(),

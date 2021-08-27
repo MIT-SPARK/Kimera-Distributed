@@ -100,6 +100,7 @@ void KimeraCentralized::timerCallback(const ros::TimerEvent&) {
 
   // Add and update rpgo
   pgo_->update(nfg_new, values_new);
+  if (nfg_new.size() == 0) pgo_->forceUpdate(nfg_new, values_new);
   // Get the new factor graph and estimates
   nfg_ = pgo_->getFactorsUnsafe();
   values_ = pgo_->calculateBestEstimate();
@@ -280,7 +281,9 @@ bool KimeraCentralized::requestRobotPoseGraph(
 
 void KimeraCentralized::publishPoseGraph() const {
   if (pose_graph_pub_.getNumSubscribers() == 0) return;
-  pose_graph_tools::PoseGraph pose_graph_msg = GtsamGraphToRos(nfg_, values_);
+  gtsam::Vector gnc_weights = pgo_->getGncWeights();
+  pose_graph_tools::PoseGraph pose_graph_msg =
+      GtsamGraphToRos(nfg_, values_, gnc_weights);
   pose_graph_msg.header.frame_id = "world";
   pose_graph_msg.header.stamp = ros::Time::now();
 

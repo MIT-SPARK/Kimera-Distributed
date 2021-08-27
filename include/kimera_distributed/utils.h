@@ -45,7 +45,8 @@ geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform);
 // Convert gtsam posegaph to PoseGraph msg
 pose_graph_tools::PoseGraph GtsamGraphToRos(
     const gtsam::NonlinearFactorGraph& factors,
-    const gtsam::Values& values);
+    const gtsam::Values& values,
+    const gtsam::Vector& gnc_weights = Eigen::VectorXd::Zero(0));
 
 // Convert vector of gtsam poses to path msg
 nav_msgs::Path GtsamPoseTrajectoryToPath(

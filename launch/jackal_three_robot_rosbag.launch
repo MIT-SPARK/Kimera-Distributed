@@ -1,6 +1,6 @@
 <launch>
 
-	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.3 /home/yunchang/Downloads/Medfield_red.bag">
+	<node pkg="rosbag" type="play" name="player0" output="screen" args="-r 0.1 /home/yunchang/Downloads/Medfield_red.bag">
 		<remap from="/acl_jackal/d435i/infra1/image_rect_raw" to="/kimera0/cam0/image_raw"/>
 		<remap from="/acl_jackal/d435i/infra2/image_rect_raw" to="/kimera0/cam1/image_raw"/>
 		<remap from="/acl_jackal/d435i/infra1/camera_info" to="/kimera0/cam0/camera_info"/>
@@ -8,10 +8,12 @@
 		<remap from="/acl_jackal/d435i/imu" to="/kimera0/imu0"/>
 		<remap from="/acl_jackal/d435i/depth/image_rect_raw" to="/kimera0/depth/image_raw" />
 		<remap from="/acl_jackal/d435i/depth/camera_info" to="/kimera0/depth/camera_info" />
+		<remap from="/acl_jackal/d435i/color/image_raw" to="/kimera0/cam0/semantic_image" />
+		<remap from="/acl_jackal/d435i/color/camera_info" to="/kimera0/semantic/camera_info" />
 		<remap from="/acl_jackal/jackal_velocity_controller/odom" to="/kimera0/external_odom" />
 	</node>  
 
-	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.3 /home/yunchang/Downloads/Medfield_orange.bag">
+	<node pkg="rosbag" type="play" name="player1" output="screen" args="-r 0.1 /home/yunchang/Downloads/Medfield_orange.bag">
 		<remap from="/acl_jackal/d435i/infra1/image_rect_raw" to="/kimera1/cam0/image_raw"/>
 		<remap from="/acl_jackal/d435i/infra2/image_rect_raw" to="/kimera1/cam1/image_raw"/>
 		<remap from="/acl_jackal/d435i/infra1/camera_info" to="/kimera1/cam0/camera_info"/>
@@ -19,10 +21,12 @@
 		<remap from="/acl_jackal/d435i/imu" to="/kimera1/imu0"/>
 		<remap from="/acl_jackal/d435i/depth/image_rect_raw" to="/kimera1/depth/image_raw" />
 		<remap from="/acl_jackal/d435i/depth/camera_info" to="/kimera1/depth/camera_info" />
+		<remap from="/acl_jackal/d435i/color/image_raw" to="/kimera1/cam0/semantic_image" />
+		<remap from="/acl_jackal/d435i/color/camera_info" to="/kimera1/semantic/camera_info" />
 		<remap from="/acl_jackal/jackal_velocity_controller/odom" to="/kimera1/external_odom" />
 	</node>
 
-	<node pkg="rosbag" type="play" name="player2" output="screen" args="-r 0.3 /home/yunchang/Downloads/Medfield_blue.bag">
+	<node pkg="rosbag" type="play" name="player2" output="screen" args="-r 0.1 /home/yunchang/Downloads/Medfield_blue.bag">
 		<remap from="/acl_jackal/d435i/infra1/image_rect_raw" to="/kimera2/cam0/image_raw"/>
 		<remap from="/acl_jackal/d435i/infra2/image_rect_raw" to="/kimera2/cam1/image_raw"/>
 		<remap from="/acl_jackal/d435i/infra1/camera_info" to="/kimera2/cam0/camera_info"/>
@@ -30,6 +34,8 @@
 		<remap from="/acl_jackal/d435i/imu" to="/kimera2/imu0"/>
 		<remap from="/acl_jackal/d435i/depth/image_rect_raw" to="/kimera2/depth/image_raw" />
 		<remap from="/acl_jackal/d435i/depth/camera_info" to="/kimera2/depth/camera_info" />
+		<remap from="/acl_jackal/d435i/color/image_raw" to="/kimera2/cam0/semantic_image" />
+		<remap from="/acl_jackal/d435i/color/camera_info" to="/kimera2/semantic/camera_info" />
 		<remap from="/acl_jackal/jackal_velocity_controller/odom" to="/kimera2/external_odom" />
 	</node>
 

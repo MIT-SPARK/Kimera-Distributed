@@ -2,7 +2,7 @@
 
 This is the work-in-progress repository for distributed multirobot [Kimera](https://github.com/MIT-SPARK/Kimera). This package implements a fully distributed architecture where individual robots use peer-to-peer communication to perform inter-robot place recognition, loop closure detection, and outlier loop closure rejection. The resulting pose graph is sent to [DPGO](https://gitlab.com/mit-acl/dpgo/dpgo) to initiate distributed pose graph optimization.  
 
-To use this package, use the `feature/kimera_distributed` branch in `Kimera-VIO`, `feature/kimera_distributed` in `Kimera-VIO-ROS`, `feature/gnc` in `Kimera-RPGO`, `master` branch in `Kimera-PGMO`, and `feature/kimera_pgmo` branch in `Kimera-Semantics`. 
+To use this package, use the `feature/kimera_distributed` branch in `Kimera-VIO`, `feature/kimera_distributed` in `Kimera-VIO-ROS`, `feature/multirobot_initialization` in `Kimera-RPGO`, `master` branch in `Kimera-PGMO`, and `feature/kimera_pgmo` branch in `Kimera-Semantics`. 
 
 Note that we are also using a forked version of the [image-pipeline package](https://github.com/yunzc/image_pipeline/tree/feature/kimera_distributed).
 Clone and checkout the `feature/kimera_distributed` branch.
@@ -29,7 +29,7 @@ roslaunch kimera_distributed kimera_two_robot_euroc_rosbag.launch
 ```
 
 ### DCIST simulator datasets
-Recorded datasets can be downloaded from this [dropbox folder](https://www.dropbox.com/sh/nmwray6w82c0g3n/AABgssaFPIiDW6AyD3CC7gCya?dl=0).
+Recorded datasets can be downloaded from this [folder](https://drive.google.com/drive/folders/1WBEidZuQsKUxPYG-hcQAQe6fNH7j146M?usp=sharing).
 
 Launch two robots: 
 ```

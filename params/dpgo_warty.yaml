@@ -1,5 +1,0 @@
-# Parameters for DPGO
-relative_change_tolerance: 0.0001
-function_decrease_tolerance: 0.0005
-early_stop_iteration: 50
-max_iteration_number: 500

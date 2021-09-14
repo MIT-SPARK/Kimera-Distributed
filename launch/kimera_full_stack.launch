@@ -61,6 +61,7 @@
       <arg name="robot_id" value="$(arg robot_id)" />
       <arg name="num_robots" value="$(arg num_robots)" />
       <arg name="dataset_name" value="$(arg dataset_name)" />
+      <arg name="multirobot_initialization" value="false" />
       <arg name="use_actionlib" value="$(arg use_actionlib)" />
     </include>
 
@@ -99,7 +100,7 @@
       <arg name="agent_id"                         value="$(arg robot_id)" />
       <arg name="num_robots"                       value="$(arg num_robots)" />
       <arg name="relative_change_tolerance"        value="5e-3" />
-      <arg name="multirobot_initialization"        value="false"/>
+      <arg name="multirobot_initialization"        value="true"/>
       <arg name="acceleration"                     value="false" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
       <arg name="GNC_use_probability"              value="true" />

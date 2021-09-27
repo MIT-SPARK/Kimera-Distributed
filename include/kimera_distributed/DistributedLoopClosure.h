@@ -56,6 +56,7 @@ class DistributedLoopClosure {
 
   // Loop closure detector
   lcd::LoopClosureDetector lcd_;
+  lcd::LoopClosureDetector shared_lcd_;
   lcd::LcdParams lcd_params_;
 
   // Loop closures
@@ -80,21 +81,24 @@ class DistributedLoopClosure {
                             const DBoW2::BowVector bow_vector_query,
                             lcd::RobotPoseId* vertex_match);
 
-  bool requestVLCFrame(const lcd::RobotPoseId& vertex_id);
+  bool requestVLCFrame(const lcd::RobotPoseId& vertex_id,
+                       lcd::LoopClosureDetector* lcd);
 
   /**
    * @brief Request a VLC frame using ROS service
    * @param vertex_id
    * @return
    */
-  bool requestVLCFrameService(const lcd::RobotPoseId& vertex_id);
+  bool requestVLCFrameService(const lcd::RobotPoseId& vertex_id,
+                              lcd::LoopClosureDetector* lcd);
 
   /**
    * @brief Request a VLC frame using actionlib
    * @param vertex_id
    * @return
    */
-  bool requestVLCFrameAction(const lcd::RobotPoseId& vertex_id);
+  bool requestVLCFrameAction(const lcd::RobotPoseId& vertex_id,
+                             lcd::LoopClosureDetector* lcd);
 
   void publishLoopClosure(const lcd::VLCEdge& loop_closure_edge);
 

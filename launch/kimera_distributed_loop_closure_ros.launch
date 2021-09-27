@@ -12,7 +12,7 @@
 
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
-  <node name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
+  <node launch-prefix="xterm -e gdb --args" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
     <param name="use_actionlib" value="$(arg use_actionlib)" />

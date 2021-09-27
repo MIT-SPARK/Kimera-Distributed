@@ -89,6 +89,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   // Initialize LCD
   lcd_.loadAndInitialize(lcd_params_);
+  shared_lcd_.loadAndInitialize(lcd_params_);
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
@@ -153,35 +154,80 @@ void DistributedLoopClosure::bowCallback(
   last_callback_time_ = ros::Time::now();
 
   std::vector<lcd::RobotPoseId> vertex_matches;
-  // Detect loop closures with my trajectory
-  if (lcd_.detectLoop(vertex_query, bow_vec, &vertex_matches)) {
-    for (const auto& vertex_match : vertex_matches) {
-      ROS_INFO_STREAM(
-          "Checking loop closure between "
-          << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-          << " and "
-          << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-      if (requestVLCFrame(vertex_query) && requestVLCFrame(vertex_match)) {
-        // Find correspondences between frames.
-        std::vector<unsigned int> i_query, i_match;
-        lcd_.computeMatchedIndices(
-            vertex_query, vertex_match, &i_query, &i_match);
-        assert(i_query.size() == i_match.size());
-        gtsam::Pose3 T_query_match;
-        if (lcd_.geometricVerificationNister(
-                vertex_query, vertex_match, &i_query, &i_match)) {
-          if (lcd_.recoverPose(vertex_query,
-                               vertex_match,
-                               i_query,
-                               i_match,
-                               &T_query_match)) {
-            lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
-            loop_closures_.push_back(edge);
-            publishLoopClosure(edge);  // Publish to pcm node
+  if (robot_id == my_id_) {
+    // Detect loop closures with my trajectory against others
+    // (and also my own if inter_robot_only is set to false)
+    if (shared_lcd_.detectLoop(vertex_query, bow_vec, &vertex_matches)) {
+      for (const auto& vertex_match : vertex_matches) {
+        ROS_INFO_STREAM(
+            "Checking loop closure between "
+            << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+            << " and "
+            << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+        if (requestVLCFrame(vertex_query, &shared_lcd_) &&
+            requestVLCFrame(vertex_match, &shared_lcd_)) {
+          // Find correspondences between frames.
+          std::vector<unsigned int> i_query, i_match;
+          shared_lcd_.computeMatchedIndices(
+              vertex_query, vertex_match, &i_query, &i_match);
+          assert(i_query.size() == i_match.size());
+          gtsam::Pose3 T_query_match;
+          if (shared_lcd_.geometricVerificationNister(
+                  vertex_query, vertex_match, &i_query, &i_match)) {
+            if (shared_lcd_.recoverPose(vertex_query,
+                                        vertex_match,
+                                        i_query,
+                                        i_match,
+                                        &T_query_match)) {
+              lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
+              loop_closures_.push_back(edge);
+              publishLoopClosure(edge);  // Publish to pcm node
+            }
           }
         }
       }
     }
+    if (!lcd_params_.inter_robot_only_) {
+      // shared_lcd_ mostly consists of bow vectors from other trajectories
+      shared_lcd_.addBowVector(vertex_query, bow_vec);
+    }
+    // lcd)consistes of bow vectors from my trajectory
+    lcd_.addBowVector(vertex_query, bow_vec);
+  }
+
+  if (robot_id != my_id_) {
+    // Detect loop closures from other trajectory against mines
+    if (lcd_.detectLoop(vertex_query, bow_vec, &vertex_matches)) {
+      for (const auto& vertex_match : vertex_matches) {
+        ROS_INFO_STREAM(
+            "Checking loop closure between "
+            << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+            << " and "
+            << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+        if (requestVLCFrame(vertex_query, &lcd_) &&
+            requestVLCFrame(vertex_match, &lcd_)) {
+          // Find correspondences between frames.
+          std::vector<unsigned int> i_query, i_match;
+          lcd_.computeMatchedIndices(
+              vertex_query, vertex_match, &i_query, &i_match);
+          assert(i_query.size() == i_match.size());
+          gtsam::Pose3 T_query_match;
+          if (lcd_.geometricVerificationNister(
+                  vertex_query, vertex_match, &i_query, &i_match)) {
+            if (lcd_.recoverPose(vertex_query,
+                                 vertex_match,
+                                 i_query,
+                                 i_match,
+                                 &T_query_match)) {
+              lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
+              loop_closures_.push_back(edge);
+              publishLoopClosure(edge);  // Publish to pcm node
+            }
+          }
+        }
+      }
+    }
+    shared_lcd_.addBowVector(vertex_query, bow_vec);
   }
 
   // Inter-robot queries will count as communication payloads
@@ -194,12 +240,11 @@ void DistributedLoopClosure::bowCallback(
     saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
     logCommStat(log_output_dir_ + "lcd_log.csv");
   }
-
-  lcd_.addBowVector(vertex_query, bow_vec);
 }
 
 bool DistributedLoopClosure::requestVLCFrameService(
-    const lcd::RobotPoseId& vertex_id) {
+    const lcd::RobotPoseId& vertex_id,
+    lcd::LoopClosureDetector* lcd) {
   if (lcd_.frameExists(vertex_id)) {
     // Return if this frame already exists locally
     return true;
@@ -226,7 +271,7 @@ bool DistributedLoopClosure::requestVLCFrameService(
   assert(frame.robot_id_ == robot_id);
   assert(frame.pose_id_ == pose_id);
 
-  lcd_.addVLCFrame(vertex_id, frame);
+  lcd->addVLCFrame(vertex_id, frame);
 
   // Inter-robot requests will incur communication payloads
   if (robot_id != my_id_) {
@@ -238,7 +283,8 @@ bool DistributedLoopClosure::requestVLCFrameService(
 }
 
 bool DistributedLoopClosure::requestVLCFrameAction(
-    const lcd::RobotPoseId& vertex_id) {
+    const lcd::RobotPoseId& vertex_id,
+    lcd::LoopClosureDetector* lcd) {
   if (lcd_.frameExists(vertex_id)) {
     // Return if this frame already exists locally
     return true;
@@ -267,7 +313,7 @@ bool DistributedLoopClosure::requestVLCFrameAction(
         VLCFrameFromMsg(action_result->frame, &frame);
         assert(frame.robot_id_ == robot_id);
         assert(frame.pose_id_ == pose_id);
-        lcd_.addVLCFrame(vertex_id, frame);
+        lcd->addVLCFrame(vertex_id, frame);
         // Inter-robot requests will incur communication payloads
         if (robot_id != my_id_) {
           received_vlc_bytes_.push_back(
@@ -286,12 +332,12 @@ bool DistributedLoopClosure::requestVLCFrameAction(
   return false;
 }
 
-bool DistributedLoopClosure::requestVLCFrame(
-    const lcd::RobotPoseId& vertex_id) {
+bool DistributedLoopClosure::requestVLCFrame(const lcd::RobotPoseId& vertex_id,
+                                             lcd::LoopClosureDetector* lcd) {
   if (use_actionlib_) {
-    return requestVLCFrameAction(vertex_id);
+    return requestVLCFrameAction(vertex_id, lcd);
   } else {
-    return requestVLCFrameService(vertex_id);
+    return requestVLCFrameService(vertex_id, lcd);
   }
 }
 

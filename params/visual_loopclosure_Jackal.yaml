@@ -4,8 +4,8 @@ detect_interrobot_only: true
 
 # Matcher parameters (DBoW2)
 alpha: 0.1
-dist_local: 0
-max_db_results: 60
+dist_local: 90
+max_db_results: 20
 min_nss_factor: 0.05 
 lowe_ratio:  0.7
 min_temporal_matches: 1

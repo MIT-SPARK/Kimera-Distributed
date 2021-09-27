@@ -33,7 +33,8 @@ void BowVectorFromMsg(const kimera_vio_ros::BowVector& msg,
   }
 }
 
-void VLCFrameToMsg(const VLCFrame& frame, kimera_vio_ros::VLCFrameMsg* msg) {
+void VLCFrameToMsg(const lcd::VLCFrame& frame,
+                   kimera_vio_ros::VLCFrameMsg* msg) {
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
@@ -61,7 +62,8 @@ void VLCFrameToMsg(const VLCFrame& frame, kimera_vio_ros::VLCFrameMsg* msg) {
   cv_img.toImageMsg(msg->descriptors_mat);
 }
 
-void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg, VLCFrame* frame) {
+void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg,
+                     lcd::VLCFrame* frame) {
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
 
@@ -88,7 +90,8 @@ void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg, VLCFrame* frame) {
   frame->initializeDescriptorsVector();
 }
 
-gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(const VLCEdge& vlc_edge) {
+gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(
+    const lcd::VLCEdge& vlc_edge) {
   // TODO: Currently covariance is hard coded
   uint32_t robot_src = vlc_edge.vertex_src_.first;
   uint32_t frame_src = vlc_edge.vertex_src_.second;
@@ -139,7 +142,8 @@ geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform) {
   return pose;
 }
 
-void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg) {
+void VLCEdgeToMsg(const lcd::VLCEdge& edge,
+                  pose_graph_tools::PoseGraphEdge* msg) {
   // Yulun: this function currently does not assign covariance!
 
   msg->robot_from = edge.vertex_src_.first;
@@ -162,7 +166,8 @@ void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg) {
   msg->pose.position.z = position.z();
 }
 
-void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge) {
+void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg,
+                    lcd::VLCEdge* edge) {
   edge->vertex_src_ = std::make_pair(msg.robot_from, msg.key_from);
   edge->vertex_dst_ = std::make_pair(msg.robot_to, msg.key_to);
 

@@ -13,6 +13,7 @@
   <buildtool_depend>catkin_simple</buildtool_depend>
 
   <depend>kimera_rpgo</depend>
+  <depend>kimera_multi_lcd</depend>
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
   <depend>DBoW2</depend>

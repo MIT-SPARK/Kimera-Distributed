@@ -7,7 +7,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <kimera_distributed/DistributedPcm.h>
 #include <kimera_distributed/prefix.h>
-#include <kimera_distributed/types.h>
+#include <kimera_multi_lcd/types.h>
 #include <pose_graph_tools/utils.h>
 
 #include <actionlib/client/simple_action_client.h>
@@ -135,7 +135,7 @@ DistributedPcm::~DistributedPcm() {
 }
 
 void DistributedPcm::addLoopClosures(
-    const std::vector<VLCEdge>& loop_closure_edges) {
+    const std::vector<lcd::VLCEdge>& loop_closure_edges) {
   gtsam::NonlinearFactorGraph new_factors;
   gtsam::Values new_values;
 
@@ -150,7 +150,7 @@ void DistributedPcm::addLoopClosures(
   values_ = pgo_->calculateBestEstimate();
 }
 
-void DistributedPcm::addLoopClosure(const VLCEdge& loop_closure) {
+void DistributedPcm::addLoopClosure(const lcd::VLCEdge& loop_closure) {
   gtsam::NonlinearFactorGraph new_factors;
   gtsam::Values new_values;
 
@@ -164,9 +164,9 @@ void DistributedPcm::addLoopClosure(const VLCEdge& loop_closure) {
   values_ = pgo_->calculateBestEstimate();
 }
 
-std::vector<VLCEdge> DistributedPcm::getInlierLoopclosures(
+std::vector<lcd::VLCEdge> DistributedPcm::getInlierLoopclosures(
     const gtsam::NonlinearFactorGraph& nfg) const {
-  std::vector<VLCEdge> loop_closures;
+  std::vector<lcd::VLCEdge> loop_closures;
   // Extract loop closures from the last filtered pose graph
   for (auto factor : nfg) {
     if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
@@ -179,9 +179,11 @@ std::vector<VLCEdge> DistributedPcm::getInlierLoopclosures(
 
         gtsam::Symbol src_key(lc_edge.front());
         gtsam::Symbol dst_key(lc_edge.back());
-        VertexID src(robot_prefix_to_id.at(src_key.chr()), src_key.index());
-        VertexID dst(robot_prefix_to_id.at(dst_key.chr()), dst_key.index());
-        VLCEdge vlc_edge(src, dst, lc_edge.measured());
+        lcd::RobotPoseId src(robot_prefix_to_id.at(src_key.chr()),
+                             src_key.index());
+        lcd::RobotPoseId dst(robot_prefix_to_id.at(dst_key.chr()),
+                             dst_key.index());
+        lcd::VLCEdge vlc_edge(src, dst, lc_edge.measured());
         if (std::find(loop_closures.begin(), loop_closures.end(), vlc_edge) ==
             loop_closures.end()) {
           loop_closures.push_back(vlc_edge);
@@ -243,7 +245,7 @@ void DistributedPcm::odometryEdgeCallback(
       saveNewOdometryToLog(pg_edge);
     } else if (robot_from == my_id_ && robot_to == my_id_ &&
                pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
-      VLCEdge new_loop_closure;
+      lcd::VLCEdge new_loop_closure;
       VLCEdgeFromMsg(pg_edge, &new_loop_closure);
       detected_lc = true;
       new_factors.add(VLCEdgeToGtsam(new_loop_closure));
@@ -256,7 +258,7 @@ void DistributedPcm::odometryEdgeCallback(
 
   // For debugging
   if (detected_lc) {
-    std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
+    std::vector<lcd::VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
     saveLoopClosuresToFile(loop_closures,
                            log_output_path_ + "pcm_loop_closures.csv");
   }
@@ -264,19 +266,20 @@ void DistributedPcm::odometryEdgeCallback(
 
 void DistributedPcm::loopclosureCallback(
     const pose_graph_tools::PoseGraphEdge::ConstPtr& msg) {
-  VLCEdge new_loop_closure;
+  lcd::VLCEdge new_loop_closure;
   VLCEdgeFromMsg(*msg, &new_loop_closure);
 
   addLoopClosure(new_loop_closure);
 
   // For debugging
-  std::vector<VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
+  std::vector<lcd::VLCEdge> loop_closures = getInlierLoopclosures(nfg_);
   saveLoopClosuresToFile(loop_closures,
                          log_output_path_ + "pcm_loop_closures.csv");
 }
 
 void DistributedPcm::saveLoopClosuresToFile(
-    const std::vector<VLCEdge>& loop_closures, const std::string& filename) {
+    const std::vector<lcd::VLCEdge>& loop_closures,
+    const std::string& filename) {
   // ROS_INFO_STREAM("Saving pcm processed loop closures to " << filename);
   std::ofstream file;
   file.open(filename);
@@ -285,7 +288,7 @@ void DistributedPcm::saveLoopClosuresToFile(
   file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
 
   for (size_t i = 0; i < loop_closures.size(); ++i) {
-    VLCEdge edge = loop_closures[i];
+    lcd::VLCEdge edge = loop_closures[i];
     file << edge.vertex_src_.first << ",";
     file << edge.vertex_src_.second << ",";
     file << edge.vertex_dst_.first << ",";
@@ -497,12 +500,12 @@ bool DistributedPcm::requestPoseGraphCallback(
   }
 
   // For debugging
-  std::vector<VLCEdge> output_loopclosures = loop_closures_frozen_;
+  std::vector<lcd::VLCEdge> output_loopclosures = loop_closures_frozen_;
 
   // Push the interrobot loop closures
   for (auto e : interrobot_lc) {
     out_graph.edges.push_back(e);
-    VLCEdge edge;
+    lcd::VLCEdge edge;
     VLCEdgeFromMsg(e, &edge);
     output_loopclosures.push_back(edge);
   }

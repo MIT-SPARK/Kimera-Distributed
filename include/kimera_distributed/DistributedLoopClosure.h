@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <map>
+#include <memory>
 #include <opencv/cv.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -55,8 +56,8 @@ class DistributedLoopClosure {
   std::vector<size_t> received_vlc_bytes_;
 
   // Loop closure detector
-  lcd::LoopClosureDetector lcd_;
-  lcd::LoopClosureDetector shared_lcd_;
+  std::shared_ptr<lcd::LoopClosureDetector> lcd_;
+  std::shared_ptr<lcd::LoopClosureDetector> shared_lcd_;
   lcd::LcdParams lcd_params_;
 
   // Loop closures
@@ -82,7 +83,7 @@ class DistributedLoopClosure {
                             lcd::RobotPoseId* vertex_match);
 
   bool requestVLCFrame(const lcd::RobotPoseId& vertex_id,
-                       lcd::LoopClosureDetector* lcd);
+                       std::shared_ptr<lcd::LoopClosureDetector> lcd);
 
   /**
    * @brief Request a VLC frame using ROS service
@@ -90,7 +91,7 @@ class DistributedLoopClosure {
    * @return
    */
   bool requestVLCFrameService(const lcd::RobotPoseId& vertex_id,
-                              lcd::LoopClosureDetector* lcd);
+                              std::shared_ptr<lcd::LoopClosureDetector> lcd);
 
   /**
    * @brief Request a VLC frame using actionlib
@@ -98,7 +99,7 @@ class DistributedLoopClosure {
    * @return
    */
   bool requestVLCFrameAction(const lcd::RobotPoseId& vertex_id,
-                             lcd::LoopClosureDetector* lcd);
+                             std::shared_ptr<lcd::LoopClosureDetector> lcd);
 
   void publishLoopClosure(const lcd::VLCEdge& loop_closure_edge);
 

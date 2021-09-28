@@ -188,11 +188,10 @@ void DistributedLoopClosure::bowCallback(
         }
       }
     }
-    if (!lcd_params_.inter_robot_only_) {
-      // shared_lcd_ mostly consists of bow vectors from other trajectories
-      shared_lcd_->addBowVector(vertex_query, bow_vec);
-    }
-    // lcd)consistes of bow vectors from my trajectory
+    // shared_lcd_ mostly consists of bow vectors from other trajectories
+    // we still need to add vertex_query to share_lcd_, as it's needed to compute nss_factor
+    shared_lcd_->addBowVector(vertex_query, bow_vec);
+    // lcd_ consists of bow vectors from my trajectory
     lcd_->addBowVector(vertex_query, bow_vec);
   }
 

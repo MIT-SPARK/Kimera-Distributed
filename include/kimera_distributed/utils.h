@@ -14,7 +14,7 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/BetweenFactor.h>
-#include <kimera_distributed/types.h>
+#include <kimera_multi_lcd/types.h>
 #include <kimera_vio_ros/BowQuery.h>
 #include <kimera_vio_ros/BowVector.h>
 #include <kimera_vio_ros/VLCFrameMsg.h>
@@ -26,19 +26,25 @@
 #include <map>
 #include <string>
 
+namespace lcd = kimera_multi_lcd;
+
 namespace kimera_distributed {
 void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
                     kimera_vio_ros::BowVector* msg);
 void BowVectorFromMsg(const kimera_vio_ros::BowVector& msg,
                       DBoW2::BowVector* bow_vec);
 
-void VLCFrameToMsg(const VLCFrame& frame, kimera_vio_ros::VLCFrameMsg* msg);
-void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg, VLCFrame* frame);
+void VLCFrameToMsg(const lcd::VLCFrame& frame,
+                   kimera_vio_ros::VLCFrameMsg* msg);
+void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg,
+                     lcd::VLCFrame* frame);
 
-void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg);
-void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge);
+void VLCEdgeToMsg(const lcd::VLCEdge& edge,
+                  pose_graph_tools::PoseGraphEdge* msg);
+void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg,
+                    lcd::VLCEdge* edge);
 
-gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(const VLCEdge& vlc_edge);
+gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(const lcd::VLCEdge& vlc_edge);
 gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform);
 geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform);
 
@@ -57,4 +63,6 @@ size_t computeBowQueryPayloadBytes(const kimera_vio_ros::BowQuery& msg);
 
 // Compute the payload size of a VLC frame
 size_t computeVLCFramePayloadBytes(const kimera_vio_ros::VLCFrameMsg& msg);
+
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 }  // namespace kimera_distributed

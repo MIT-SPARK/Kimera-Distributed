@@ -6,7 +6,6 @@
 
 #include <kimera_distributed/DistributedLoopClosure.h>
 #include <kimera_distributed/DistributedPcm.h>
-#include <kimera_distributed/types.h>
 #include <ros/ros.h>
 
 using namespace kimera_distributed;

@@ -8,7 +8,6 @@
 
 #include <kimera_distributed/requestSharedLoopClosures.h>
 #include <kimera_distributed/SharedLoopClosureAction.h>
-#include <kimera_distributed/types.h>
 #include <kimera_distributed/utils.h>
 #include <ros/ros.h>
 #include <ros/time.h>
@@ -35,22 +34,22 @@ class DistributedPcm {
   DistributedPcm(const ros::NodeHandle& n);
   ~DistributedPcm();
 
-  void addLoopClosures(const std::vector<VLCEdge>& loop_closure_edges);
+  void addLoopClosures(const std::vector<lcd::VLCEdge>& loop_closure_edges);
 
-  void addLoopClosure(const VLCEdge& loop_closure);
+  void addLoopClosure(const lcd::VLCEdge& loop_closure);
 
-  std::vector<VLCEdge> getInlierLoopclosures(
+  std::vector<lcd::VLCEdge> getInlierLoopclosures(
       const gtsam::NonlinearFactorGraph& nfg) const;
 
   void publishPoseGraph() const;
 
   // For debugging purpose
-  void saveLoopClosuresToFile(const std::vector<VLCEdge>& loop_closures,
+  void saveLoopClosuresToFile(const std::vector<lcd::VLCEdge>& loop_closures,
                               const std::string& filename);
 
  private:
   ros::NodeHandle nh_;
-  RobotID my_id_;
+  size_t my_id_;
   int num_robots_;
   bool use_actionlib_;
   bool b_is_frozen_;
@@ -109,7 +108,7 @@ class DistributedPcm {
       pose_graph_tools::PoseGraphQuery::Request& request,
       pose_graph_tools::PoseGraphQuery::Response& response);
 
-  std::vector<VLCEdge> loop_closures_frozen_;
+  std::vector<lcd::VLCEdge> loop_closures_frozen_;
   std::vector<bool> b_request_from_robot_;
   void unlockLoopClosuresIfNeeded();
 

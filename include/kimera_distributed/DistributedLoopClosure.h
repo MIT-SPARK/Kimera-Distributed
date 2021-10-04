@@ -9,20 +9,22 @@
 #include <DBoW2/DBoW2.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
-#include <kimera_distributed/LcdThirdPartyWrapper.h>
-#include <kimera_distributed/types.h>
 #include <kimera_distributed/utils.h>
+#include <kimera_multi_lcd/LoopClosureDetector.h>
 #include <ros/ros.h>
 #include <ros/time.h>
 
 #include <iostream>
 #include <map>
+#include <memory>
 #include <opencv/cv.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
 #include <opengv/relative_pose/methods.hpp>
 #include <vector>
+
+namespace lcd = kimera_multi_lcd;
 
 namespace kimera_distributed {
 
@@ -31,70 +33,34 @@ class DistributedLoopClosure {
   DistributedLoopClosure(const ros::NodeHandle& n);
   ~DistributedLoopClosure();
 
-  void getLoopClosures(std::vector<VLCEdge>* loop_closures);
+  inline void getLoopClosures(std::vector<lcd::VLCEdge>* loop_closures) {
+    *loop_closures = loop_closures_;
+  }
 
   inline ros::Time getLastCallbackTime() const { return last_callback_time_; }
 
-  inline RobotID getRobotId() const { return my_id_; }
+  inline size_t getRobotId() const { return my_id_; }
 
   // For debugging purpose
   void saveLoopClosuresToFile(const std::string filename);
 
  private:
   ros::NodeHandle nh_;
-  RobotID my_id_;
-  uint32_t num_robots_;
+  size_t my_id_;
+  size_t num_robots_;
   bool use_actionlib_;
 
   bool log_output_;
   std::string log_output_dir_;
-  size_t total_geom_verifications_mono_;
-  size_t total_geometric_verifications_;
-  std::vector<size_t> received_bow_bytes_; 
+  std::vector<size_t> received_bow_bytes_;
   std::vector<size_t> received_vlc_bytes_;
 
-  // Database of BOW vectors from my trajectory
-  std::unique_ptr<OrbDatabase> db_BoW_;
-  uint32_t next_pose_id_;
-  std::vector<DBoW2::BowVector> latest_bowvec_;
-  std::unique_ptr<LcdThirdPartyWrapper> lcd_tp_wrapper_;
+  // Loop closure detector
+  std::shared_ptr<lcd::LoopClosureDetector> lcd_;
+  lcd::LcdParams lcd_params_;
 
-  // Database of BOW vectors from other robots
-  std::unique_ptr<OrbDatabase> shared_db_BoW_;
-  std::map<uint32_t, VertexID> shared_db_to_vertex_;
-  std::unique_ptr<LcdThirdPartyWrapper> shared_lcd_tp_wrapper_;
-
-  // ORB extraction and matching members
-  cv::Ptr<cv::DescriptorMatcher> orb_feature_matcher_;
-
-  // Dictionary of VLC frames
-  VLCFrameDict vlc_frames_;
-
-  // List of discovered loop closures
-  std::vector<VLCEdge> loop_closures_;
-  std::vector<size_t> inlier_count_;
-  std::vector<double> inlier_percentage_;
-
-  // Parameters for visual loop closure detection
-  float alpha_;
-  int dist_local_;
-  int max_db_results_;
-  float min_nss_factor_;
-  bool detect_inter_robot_only_;
-
-  LcdTpParams lcd_tp_params_;
-  LcdTpParams shared_lcd_tp_params_;
-
-  // Parameters for geometric verification
-  double ransac_threshold_mono_;
-  double ransac_inlier_percentage_mono_;
-  int max_ransac_iterations_mono_;
-
-  int max_ransac_iterations_;
-  double lowe_ratio_;
-  double ransac_threshold_;
-  double geometric_verification_min_inlier_count_;
-  double geometric_verification_min_inlier_percentage_;
+  // Loop closures
+  std::vector<lcd::VLCEdge> loop_closures_;
 
   // Last msg time
   ros::Time last_callback_time_;
@@ -107,47 +73,34 @@ class DistributedLoopClosure {
 
   void bowCallback(const kimera_vio_ros::BowQueryConstPtr& msg);
 
-  bool detectLoopInMyDB(const VertexID& vertex_query,
+  bool detectLoopInMyDB(const lcd::RobotPoseId& vertex_query,
                         const DBoW2::BowVector bow_vector_query,
-                        VertexID* vertex_match);
+                        lcd::RobotPoseId* vertex_match);
 
-  bool detectLoopInSharedDB(const VertexID& vertex_query,
+  bool detectLoopInSharedDB(const lcd::RobotPoseId& vertex_query,
                             const DBoW2::BowVector bow_vector_query,
-                            VertexID* vertex_match);
+                            lcd::RobotPoseId* vertex_match);
 
-  bool requestVLCFrame(const VertexID& vertex_id);
+  bool requestVLCFrame(const lcd::RobotPoseId& vertex_id,
+                       std::shared_ptr<lcd::LoopClosureDetector> lcd);
 
   /**
    * @brief Request a VLC frame using ROS service
    * @param vertex_id
    * @return
    */
-  bool requestVLCFrameService(const VertexID& vertex_id);
+  bool requestVLCFrameService(const lcd::RobotPoseId& vertex_id,
+                              std::shared_ptr<lcd::LoopClosureDetector> lcd);
 
   /**
    * @brief Request a VLC frame using actionlib
    * @param vertex_id
    * @return
    */
-  bool requestVLCFrameAction(const VertexID& vertex_id);
+  bool requestVLCFrameAction(const lcd::RobotPoseId& vertex_id,
+                             std::shared_ptr<lcd::LoopClosureDetector> lcd);
 
-  void ComputeMatchedIndices(const VertexID& vertex_query,
-                             const VertexID& vertex_match,
-                             std::vector<unsigned int>* i_query,
-                             std::vector<unsigned int>* i_match) const;
-
-  bool geometricVerificationNister(const VertexID& vertex_query,
-                                   const VertexID& vertex_match,
-                                   std::vector<unsigned int>* inlier_query,
-                                   std::vector<unsigned int>* inlier_match);
-
-  bool recoverPose(const VertexID& vertex_query,
-                   const VertexID& vertex_match,
-                   const std::vector<unsigned int>& i_query,
-                   const std::vector<unsigned int>& i_match,
-                   gtsam::Pose3* T_query_match);
-
-  void publishLoopClosure(const VLCEdge& loop_closure_edge);
+  void publishLoopClosure(const lcd::VLCEdge& loop_closure_edge);
 
   void logCommStat(const std::string& filename);
 };

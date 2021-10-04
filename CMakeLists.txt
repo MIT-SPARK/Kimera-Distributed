@@ -32,9 +32,6 @@ catkin_simple()
 cs_add_library(${PROJECT_NAME} 
   src/DistributedLoopClosure.cpp
   src/DistributedPcm.cpp
-  src/KimeraCentralized.cpp
-  src/LcdThirdPartyWrapper.cpp
-  src/types.cpp
   src/utils.cpp
 )
 
@@ -59,10 +56,6 @@ target_link_libraries(kimera_distributed_pcm_node ${PROJECT_NAME})
 cs_add_executable(publish_initial_rel_pose_node
   src/PublishInitialRelPoseNode.cpp)
 target_link_libraries(publish_initial_rel_pose_node ${PROJECT_NAME})
-
-cs_add_executable(kimera_centralized_node
-  src/KimeraCentralizedNode.cpp)
-target_link_libraries(kimera_centralized_node ${PROJECT_NAME})
 
 catkin_add_gtest(test_utils test/test_utils.cpp)
 target_link_libraries(test_utils ${PROJECT_NAME} -ltbb)

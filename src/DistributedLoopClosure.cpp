@@ -31,8 +31,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       num_robots_(1),
       use_actionlib_(false),
       log_output_(false),
-      lcd_(new lcd::LoopClosureDetector),
-      shared_lcd_(new lcd::LoopClosureDetector) {
+      lcd_(new lcd::LoopClosureDetector) {
   int my_id_int = -1;
   int num_robots_int = -1;
   ros::param::get("~robot_id", my_id_int);
@@ -90,7 +89,6 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   // Initialize LCD
   lcd_->loadAndInitialize(lcd_params_);
-  shared_lcd_->loadAndInitialize(lcd_params_);
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
@@ -155,27 +153,29 @@ void DistributedLoopClosure::bowCallback(
   last_callback_time_ = ros::Time::now();
 
   std::vector<lcd::RobotPoseId> vertex_matches;
+
+  // Incoming bow vector is from my trajectory
+  // Detect loop closures with all robots in the database
+  // (including myself if inter_robot_only is set to false)
   if (robot_id == my_id_) {
-    // Detect loop closures with my trajectory against others
-    // (and also my own if inter_robot_only is set to false)
-    if (shared_lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
+    if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
       for (const auto& vertex_match : vertex_matches) {
         ROS_INFO_STREAM(
             "Checking loop closure between "
             << "(" << vertex_query.first << ", " << vertex_query.second << ")"
             << " and "
             << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-        if (requestVLCFrame(vertex_query, shared_lcd_) &&
-            requestVLCFrame(vertex_match, shared_lcd_)) {
+        if (requestVLCFrame(vertex_query, lcd_) &&
+            requestVLCFrame(vertex_match, lcd_)) {
           // Find correspondences between frames.
           std::vector<unsigned int> i_query, i_match;
-          shared_lcd_->computeMatchedIndices(
+          lcd_->computeMatchedIndices(
               vertex_query, vertex_match, &i_query, &i_match);
           assert(i_query.size() == i_match.size());
           gtsam::Pose3 T_query_match;
-          if (shared_lcd_->geometricVerificationNister(
+          if (lcd_->geometricVerificationNister(
                   vertex_query, vertex_match, &i_query, &i_match)) {
-            if (shared_lcd_->recoverPose(vertex_query,
+            if (lcd_->recoverPose(vertex_query,
                                          vertex_match,
                                          i_query,
                                          i_match,
@@ -188,16 +188,12 @@ void DistributedLoopClosure::bowCallback(
         }
       }
     }
-    // shared_lcd_ mostly consists of bow vectors from other trajectories
-    // we still need to add vertex_query to share_lcd_, as it's needed to compute nss_factor
-    shared_lcd_->addBowVector(vertex_query, bow_vec);
-    // lcd_ consists of bow vectors from my trajectory
-    lcd_->addBowVector(vertex_query, bow_vec);
   }
 
+  // Incoming bow vector is from another robot
+  // Detect loop closures ONLY with my trajectory
   if (robot_id != my_id_) {
-    // Detect loop closures from other trajectory against mines
-    if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
+    if (lcd_->detectLoopWithRobot(my_id_, vertex_query, bow_vec, &vertex_matches)) {
       for (const auto& vertex_match : vertex_matches) {
         ROS_INFO_STREAM(
             "Checking loop closure between "
@@ -227,9 +223,10 @@ void DistributedLoopClosure::bowCallback(
         }
       }
     }
-    // shared_lcd_ mostly consists of bow vectors from other trajectories
-    shared_lcd_->addBowVector(vertex_query, bow_vec);
   }
+
+  // Add bow vector to database 
+  lcd_->addBowVector(vertex_query, bow_vec);
 
   // Inter-robot queries will count as communication payloads
   if (robot_id != my_id_) {

@@ -57,7 +57,6 @@ class DistributedLoopClosure {
 
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
-  std::shared_ptr<lcd::LoopClosureDetector> shared_lcd_;
   lcd::LcdParams lcd_params_;
 
   // Loop closures

@@ -12,6 +12,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
 
+  <depend>kimera_vio_ros</depend>
   <depend>kimera_rpgo</depend>
   <depend>kimera_multi_lcd</depend>
   <depend>actionlib</depend>

@@ -210,7 +210,7 @@ void DistributedPcm::odometryEdgeCallback(
 
     if (!values_.exists(key)) new_values.insert(key, estimate);
 
-    saveNewPosesToLog(pg_node);
+    saveNewPoseToLog(pg_node);
   }
 
   // Iterate through edge
@@ -242,13 +242,14 @@ void DistributedPcm::odometryEdgeCallback(
       new_factors.add(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
 
-      saveNewOdometryToLog(pg_edge);
+      saveNewEdgeToLog(pg_edge);
     } else if (robot_from == my_id_ && robot_to == my_id_ &&
                pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
       lcd::VLCEdge new_loop_closure;
       VLCEdgeFromMsg(pg_edge, &new_loop_closure);
       detected_lc = true;
       new_factors.add(VLCEdgeToGtsam(new_loop_closure));
+      saveNewEdgeToLog(pg_edge);
     }
   }
 
@@ -266,6 +267,8 @@ void DistributedPcm::odometryEdgeCallback(
 
 void DistributedPcm::loopclosureCallback(
     const pose_graph_tools::PoseGraphEdge::ConstPtr& msg) {
+  saveNewEdgeToLog(*msg);
+
   lcd::VLCEdge new_loop_closure;
   VLCEdgeFromMsg(*msg, &new_loop_closure);
 
@@ -285,6 +288,7 @@ void DistributedPcm::saveLoopClosuresToFile(
   file.open(filename);
 
   // file format
+  file << std::fixed << std::setprecision(15); 
   file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
 
   for (size_t i = 0; i < loop_closures.size(); ++i) {
@@ -570,26 +574,36 @@ void DistributedPcm::unlockLoopClosuresIfNeeded() {
 
 
 void DistributedPcm::createLogs() {
-  std::string pose_file_path = log_output_path_ + "pcm_trajectory.csv";
+  std::string pose_file_path = log_output_path_ + "pcm_poses.csv";
   std::string odom_file_path = log_output_path_ + "pcm_odometry.csv";
+  std::string lc_file_path = log_output_path_ + "pcm_input_loop_closures.csv";
 
   pose_file_.open(pose_file_path);
   if (!pose_file_.is_open()) ROS_ERROR_STREAM("Error opening log file: " << pose_file_path);
+  pose_file_ << std::fixed << std::setprecision(15); 
   pose_file_ << "robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
   pose_file_.flush();
 
   odom_file_.open(odom_file_path);
   if (!odom_file_.is_open()) ROS_ERROR_STREAM("Error opening log file: " << odom_file_path);
+  odom_file_ << std::fixed << std::setprecision(15); 
   odom_file_ << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
   odom_file_.flush();
+
+  input_lc_file_.open(lc_file_path);
+  if (!input_lc_file_.is_open()) ROS_ERROR_STREAM("Error opening log file: " << lc_file_path);
+  input_lc_file_ << std::fixed << std::setprecision(15); 
+  input_lc_file_ << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+  input_lc_file_.flush();
 }
 
 void DistributedPcm::closeLogs() {
   pose_file_.close();
   odom_file_.close();
+  input_lc_file_.close();
 }
 
-void DistributedPcm::saveNewPosesToLog(const pose_graph_tools::PoseGraphNode& node) {
+void DistributedPcm::saveNewPoseToLog(const pose_graph_tools::PoseGraphNode& node) {
   if (!pose_file_.is_open()) {
     ROS_ERROR("Pcm cannot log new pose!");
     return;
@@ -615,12 +629,7 @@ void DistributedPcm::saveNewPosesToLog(const pose_graph_tools::PoseGraphNode& no
 
 }
 
-void DistributedPcm::saveNewOdometryToLog(const pose_graph_tools::PoseGraphEdge& edge) {
-
-  if (!odom_file_.is_open()) {
-    ROS_ERROR("Pcm cannot log new odometry!");
-    return;
-  }
+void DistributedPcm::saveNewEdgeToLog(const pose_graph_tools::PoseGraphEdge& edge) {
 
   const gtsam::Pose3 measure = RosPoseToGtsam(edge.pose);
   gtsam::Quaternion quat = measure.rotation().toQuaternion();
@@ -630,28 +639,39 @@ void DistributedPcm::saveNewOdometryToLog(const pose_graph_tools::PoseGraphEdge&
   const uint32_t robot_from = edge.robot_from;
   const uint32_t robot_to = edge.robot_to;
 
-  assert(robot_from == robot_to && current_node == prev_node + 1);
+  // Save edge to different logs, depending on 
+  // if it is odometry or loop closure
+  std::ofstream *output_file_ptr;
+  if (robot_from == robot_to && current_node == prev_node + 1) {
+    output_file_ptr = &odom_file_;
+  } else {
+    output_file_ptr = &input_lc_file_;
+  }
 
-  odom_file_ << robot_from << ",";
-  odom_file_ << prev_node << ",";
-  odom_file_ << robot_to << ",";
-  odom_file_ << current_node << ",";
-  odom_file_ << quat.x() << ",";
-  odom_file_ << quat.y() << ",";
-  odom_file_ << quat.z() << ",";
-  odom_file_ << quat.w() << ",";
-  odom_file_ << point.x() << ",";
-  odom_file_ << point.y() << ",";
-  odom_file_ << point.z() << "\n";
+  if (!output_file_ptr->is_open()) {
+    ROS_ERROR("Cannot log new edge. Output file is not open.");
+    return;
+  }
 
-  odom_file_.flush();
+  *output_file_ptr << robot_from << ",";
+  *output_file_ptr << prev_node << ",";
+  *output_file_ptr << robot_to << ",";
+  *output_file_ptr << current_node << ",";
+  *output_file_ptr << quat.x() << ",";
+  *output_file_ptr << quat.y() << ",";
+  *output_file_ptr << quat.z() << ",";
+  *output_file_ptr << quat.w() << ",";
+  *output_file_ptr << point.x() << ",";
+  *output_file_ptr << point.y() << ",";
+  *output_file_ptr << point.z() << "\n";
 
+  output_file_ptr->flush();
 }
 
 void DistributedPcm::initializeOffline() {
-  gtsam::Values poses = loadPosesOffline(offline_data_path_ + "pcm_trajectory.csv");
+  gtsam::Values poses = loadPosesOffline(offline_data_path_ + "pcm_poses.csv");
   gtsam::NonlinearFactorGraph odometries = loadMeasurementsOffline(offline_data_path_ + "pcm_odometry.csv", true);
-  gtsam::NonlinearFactorGraph loop_closures = loadMeasurementsOffline(offline_data_path_ + "pcm_loop_closures.csv", false);
+  gtsam::NonlinearFactorGraph loop_closures = loadMeasurementsOffline(offline_data_path_ + "pcm_input_loop_closures.csv", false);
 
   // Add odometry measurements
   pgo_->update(odometries, poses, false);

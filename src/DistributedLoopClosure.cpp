@@ -263,8 +263,7 @@ void DistributedLoopClosure::verifyLoopCallback(const ros::TimerEvent &event) {
     return;
 
   // Attempt to detect a single loop closure
-  const auto &potential_edge = potential_lcs_ready_.front();
-  potential_lcs_ready_.erase(potential_lcs_ready_.begin());
+  lcd::PotentialVLCEdge potential_edge = potential_lcs_ready_.front();
   const auto &vertex_query = potential_edge.vertex_src_;
   const auto &vertex_match = potential_edge.vertex_dst_;
 
@@ -291,6 +290,9 @@ void DistributedLoopClosure::verifyLoopCallback(const ros::TimerEvent &event) {
       publishLoopClosure(edge);  // Publish to pcm node
     }
   }
+
+  // Remove this potential loop closure as it's already verified
+  potential_lcs_ready_.erase(potential_lcs_ready_.begin());
 }
 
 bool DistributedLoopClosure::requestVLCFrameService(

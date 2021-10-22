@@ -177,11 +177,11 @@ void DistributedLoopClosure::bowCallback(
   if (robot_id == my_id_) {
     if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
       for (const auto& vertex_match : vertex_matches) {
-        ROS_INFO_STREAM(
-            "Detected potential loop closure between "
-            << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-            << " and "
-            << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+        // ROS_INFO_STREAM(
+        //     "Detected potential loop closure between "
+        //     << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+        //     << " and "
+        //     << "(" << vertex_match.first << ", " << vertex_match.second << ")");
         lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
         potential_lcs_.push_back(potential_edge);
       }
@@ -193,11 +193,11 @@ void DistributedLoopClosure::bowCallback(
   if (robot_id != my_id_) {
     if (lcd_->detectLoopWithRobot(my_id_, vertex_query, bow_vec, &vertex_matches)) {
       for (const auto& vertex_match : vertex_matches) {
-        ROS_INFO_STREAM(
-            "Detected potential loop closure between "
-            << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-            << " and "
-            << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+        // ROS_INFO_STREAM(
+        //     "Detected potential loop closure between "
+        //     << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+        //     << " and "
+        //     << "(" << vertex_match.first << ", " << vertex_match.second << ")");
         lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
         potential_lcs_.push_back(potential_edge);
       }
@@ -252,7 +252,8 @@ void DistributedLoopClosure::requestFramesCallback(const ros::TimerEvent &event)
     }
   }
   potential_lcs_ = potential_lcs_new;
-
+  ROS_INFO_STREAM("Number of potential edges that need to request frames: " 
+                  << potential_lcs_.size());
   ROS_INFO_STREAM("Number of potential edges ready for geometric verification: " 
                   << potential_lcs_ready_.size());
 }
@@ -389,11 +390,13 @@ bool DistributedLoopClosure::requestVLCFrameAction(
     for (const auto &vertex_id: vertex_ids_group) {
       assert(robot_id == vertex_id.first);
       goal.pose_ids.push_back(vertex_id.second);
+      if (goal.pose_ids.size() > 25) break;
     }
 
     // Attempt to call actionlib server
     double wait_time = 0.5;
-    for (size_t action_attempts = 0; action_attempts < 5; ++action_attempts) {
+    size_t action_attempts;
+    for (action_attempts = 0; action_attempts < 5; ++action_attempts) {
       ac.sendGoal(goal);
       bool finished_before_timeout = ac.waitForResult(ros::Duration(wait_time));
       if (finished_before_timeout) {
@@ -420,6 +423,9 @@ bool DistributedLoopClosure::requestVLCFrameAction(
       } else {
         wait_time += 0.5;
       }
+    }
+    if (action_attempts == 5) {
+      ROS_ERROR("Failed to get vlc frames from robot %d", goal.robot_id);
     }
   }
   return true;

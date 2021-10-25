@@ -88,6 +88,10 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   ros::param::get("~vocabulary_path", lcd_params_.vocab_path_);
 
+  // Load VLC frame batch size
+  vlc_batch_size_ = 25;
+  ros::param::get("~vlc_batch_size", vlc_batch_size_);
+
   // Set frequency of timers
   request_sleeptime_ = 10;  
   ros::param::get("~request_sleeptime", request_sleeptime_);
@@ -153,6 +157,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "geometric_verification_min_inlier_percentage = "
       << lcd_params_.geometric_verification_min_inlier_percentage_ << "\n"
       << "interrobot loop closure only = " << lcd_params_.inter_robot_only_ << "\n"
+      << "maximum batch size to request VLC frames = " << vlc_batch_size_ << "\n"
       << "timer sleep to request VLC frames = " << request_sleeptime_ << "\n"
       << "timer sleep to verify potential LC = " << verify_sleeptime_ << "\n");
 }
@@ -326,6 +331,8 @@ bool DistributedLoopClosure::requestVLCFrameService(
     for (const auto &vertex_id: vertex_ids_group) {
       assert(robot_id == vertex_id.first);
       query.request.pose_ids.push_back(vertex_id.second);
+      if (query.request.pose_ids.size() > vlc_batch_size_) 
+        break;
     }
 
     // Call ROS service
@@ -390,7 +397,7 @@ bool DistributedLoopClosure::requestVLCFrameAction(
     for (const auto &vertex_id: vertex_ids_group) {
       assert(robot_id == vertex_id.first);
       goal.pose_ids.push_back(vertex_id.second);
-      if (goal.pose_ids.size() > 25) break;
+      if (goal.pose_ids.size() > vlc_batch_size_) break;
     }
 
     // Attempt to call actionlib server

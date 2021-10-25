@@ -122,6 +122,9 @@ class DistributedLoopClosure {
   // that are ready for local geometric verification
   std::vector<lcd::PotentialVLCEdge> potential_lcs_ready_;
 
+  // Maximum number of VLC frames to request in one batch
+  int vlc_batch_size_;
+
   // Timer to request VLC frames
   double request_sleeptime_;
   ros::Timer request_timer_;

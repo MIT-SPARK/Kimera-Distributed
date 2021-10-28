@@ -3,7 +3,7 @@
 detect_interrobot_only: true
 
 # Matcher parameters (DBoW2)
-alpha: 0.1
+alpha: 0.3
 dist_local: 90
 max_db_results: 5
 min_nss_factor: 0.05 
@@ -15,7 +15,7 @@ max_nrFrames_between_islands: 3
 max_nrFrames_between_queries: 2
 
 # Mono RANSAC 
-ransac_threshold_mono: 0.000001
+ransac_threshold_mono: 0.00001
 ransac_inlier_percentage_mono: 0.01
 max_ransac_iterations_mono: 1000
 

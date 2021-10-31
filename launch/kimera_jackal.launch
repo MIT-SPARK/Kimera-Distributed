@@ -1,0 +1,19 @@
+<launch>
+	<arg name="robot_name" default="jackal" />
+	<arg name="robot_id" default="0" />
+	<arg name="camera_name" default="forward" />
+	<arg name="num_robots" default="2" />
+	<arg name="use_d455" default="false" />
+	<arg name="should_use_sim_time" default="false" />
+	<arg name="multirobot" default="true" />
+	<arg name="use_actionlib" default="true" />
+	<arg name="multi_master" default="true" />
+
+	<include unless="$(arg use_d455)" file="$(find kimera_vio_ros)/launch/kimera_vio_ros_jackal.launch" pass_all_args="true" />
+	<include if="$(arg use_d455)" file="$(find kimera_vio_ros)/launch/kimera_vio_ros_d455.launch" pass_all_args="true" />
+
+	<include file="$(find kimera_distributed)/launch/kimera_distributed.launch" pass_all_args="true" >
+		<arg name="prefix" value="kimera$(arg robot_id)" />
+		<arg name="dataset_name" value="Jackal" />
+	</include>
+</launch>

@@ -57,6 +57,13 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     }
   }
 
+  // Load robot names
+  for (size_t id = 0; id < num_robots_; id++) {
+    std::string robot_name = "kimera" + std::to_string(id);
+    ros::param::get("~robot" + std::to_string(id) + "_name", robot_name);
+    robot_names_[id] = robot_name;
+  }
+
   // Pcm parameters
   double pcm_trans_threshold, pcm_rot_threshold;
   if (!ros::param::get("~log_output_path", log_output_path_) ||
@@ -88,7 +95,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   else {
     // Start odometry edge subscribers
     for (size_t id = 0; id < num_robots_; ++id) {
-      std::string topic = "/kimera" + std::to_string(id) +
+      std::string topic = "/" + robot_names_[id] +
                           "/kimera_vio_ros/pose_graph_incremental";
       ros::Subscriber sub =
           nh_.subscribe(topic, 1000, &DistributedPcm::odometryEdgeCallback, this);
@@ -97,7 +104,7 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
 
     // Start loop closure edge subscribers
     std::string loop_closure_topic =
-        "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+        "/" + robot_names_[my_id_] + "/kimera_distributed/loop_closure";
     loop_closure_edge_subscriber_ = nh_.subscribe(
         loop_closure_topic, 1000, &DistributedPcm::loopclosureCallback, this);
   }
@@ -319,7 +326,7 @@ void DistributedPcm::querySharedLoopClosuresAction(size_t robot_id,
     ROS_ERROR("Attempt to query shared loop closures from the same robot.");
     return;
   }
-  std::string action_name = "/kimera" + std::to_string(robot_id) + "/distributed_pcm/shared_lc_action";
+  std::string action_name = "/" + robot_names_.at(robot_id) + "/distributed_pcm/shared_lc_action";
   actionlib::SimpleActionClient<kimera_distributed::SharedLoopClosureAction> ac(action_name, true);
   double wait_time = 0.5;
   for (size_t action_attempts = 0; action_attempts < 5; ++ action_attempts){
@@ -350,7 +357,7 @@ void DistributedPcm::querySharedLoopClosuresService(size_t robot_id,
     return;
   }
   std::string service_name =
-      "/kimera" + std::to_string(robot_id) + "/distributed_pcm/shared_lc_query";
+      "/" + robot_names_.at(robot_id) + "/distributed_pcm/shared_lc_query";
   requestSharedLoopClosures query;
   query.request.robot_id = my_id_;
   if (!ros::service::waitForService(service_name, ros::Duration(15.0))) {
@@ -476,7 +483,7 @@ bool DistributedPcm::requestPoseGraphCallback(
   // If using multi-robot initialization, request trajectory from the first robot
   if (b_multirobot_initialization_ && my_id_ != 0) {
     std::string service_name =
-      "/kimera0/distributed_pcm/request_initialization";
+      "/" + robot_names_[0]+ "/distributed_pcm/request_initialization";
     pose_graph_tools::PoseGraphQuery query;
     query.request.robot_id = my_id_;
     if (!ros::service::waitForService(service_name, ros::Duration(15.0))) {

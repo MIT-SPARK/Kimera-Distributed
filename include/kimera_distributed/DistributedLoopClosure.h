@@ -125,6 +125,9 @@ class DistributedLoopClosure {
   // Maximum number of VLC frames to request in one batch
   int vlc_batch_size_;
 
+  // Map from robot ID to name
+  std::map<size_t, std::string> robot_names_;
+
   // Timer to request VLC frames
   double request_sleeptime_;
   ros::Timer request_timer_;

@@ -1,7 +1,6 @@
-session_name: kimera-centralized-jackal
+session_name: kimera-distributed-jackal
 
 environment:
-  DEBUG: "true"
   ROSBAG0: "/home/yunchang/Downloads/kimera_test_j1-2021-10-13-decomp.bag"
   ROSBAG1: "/home/yunchang/Downloads/kimera_test_2021-10-13-decomp.bag"
   RATE: "1.0"
@@ -10,7 +9,7 @@ options:
   default-command: /bin/bash
 
 windows:
-- window_name: centralized-test
+- window_name: distributed-test
   focus: true  
   layout: tiled  
   shell_command_before:

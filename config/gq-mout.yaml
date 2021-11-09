@@ -5,7 +5,7 @@ environment:
   REPLAY: "true"
   SOBEK_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/mout_kimera_multi03_2021-11-05-15-58-12.bag"
   THOTH_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/mout_kimera_multi03_2021-11-05-15-58-24.bag"
-  RATE: "0.1"
+  RATE: "0.3"
   WS: "~/git/kimera_ws"
 
 options:
@@ -21,9 +21,9 @@ windows:
   panes:
     - roscore
     - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=sobek robot_id:=0 replay:=$REPLAY
-    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=2 dataset_name:=Jackal use_actionlib:=true multi_master:=false
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=2 dataset_name:=Jackal use_actionlib:=false multi_master:=false
     - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=thoth robot_id:=1 replay:=$REPLAY
-    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=thoth robot_id:=1 num_robots:=2 dataset_name:=Jackal use_actionlib:=true multi_master:=false
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=thoth robot_id:=1 num_robots:=2 dataset_name:=Jackal use_actionlib:=false multi_master:=false
     - sleep 5; rviz -d $(rospack find kimera_distributed)/rviz/gq_mout.rviz
     - sleep 5; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 0 world map
     

@@ -1,9 +1,10 @@
 <launch>
-  <arg name="robot_name"   default="sobek" />
-  <arg name="dataset_name" default="Euroc" />
-  <arg name="verbosity"    default="0" />
-  <arg name="robot_id"     default="0" />
-  <arg name="num_robots"   default="1" />
+  <arg name="robot_name"              default="sobek" />
+  <arg name="dataset_name"            default="Euroc" />
+  <arg name="verbosity"               default="0" />
+  <arg name="robot_id"                default="0" />
+  <arg name="num_robots"              default="1" />
+  <arg name="should_use_sim_time"     default="false"/>
 
   <!-- True if multiple ROS masters are running. This turns on reliable UDP. -->
   <arg name="multi_master" default="false" />

@@ -20,11 +20,12 @@
   <group ns="$(arg robot_name)">
     <!-- Launch Kimera-Distributed -->
     <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch">
-      <arg name="robot_id" value="$(arg robot_id)" />
-      <arg name="num_robots" value="$(arg num_robots)" />
-      <arg name="dataset_name" value="$(arg dataset_name)" />
+      <arg name="robot_id"                  value="$(arg robot_id)" />
+      <arg name="num_robots"                value="$(arg num_robots)" />
+      <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="multirobot_initialization" value="false" />
-      <arg name="use_actionlib" value="$(arg use_actionlib)" />
+      <arg name="use_actionlib"             value="$(arg use_actionlib)" />
+      <arg name="debug"                     value="false" />
     </include>
 
     <!-- Launch dpgo_ros -->

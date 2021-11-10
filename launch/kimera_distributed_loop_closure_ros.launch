@@ -9,10 +9,13 @@
   <arg name="use_actionlib" default="false"/>
   <!-- Multirobot frame alignmnet  -->
   <arg name="multirobot_initialization" default="true"/>
-
+  <!-- Debug -->
+  <arg name="debug"              default="false" />
+  <arg name="launch_prefix"      value="xterm -e gdb --args" if="$(arg debug)"/>
+  <arg name="launch_prefix"      value=""    unless="$(arg debug)"/>
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
-  <node launch-prefix="" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
+  <node launch-prefix="$(arg launch_prefix)" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
     <param name="use_actionlib" value="$(arg use_actionlib)" />

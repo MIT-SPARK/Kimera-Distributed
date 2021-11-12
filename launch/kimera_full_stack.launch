@@ -73,8 +73,8 @@
        <arg name="publish_point_clouds"                default="false" if="$(arg run_stereo_dense)"/>
        <arg name="publish_point_clouds"                default="true" unless="$(arg run_stereo_dense)"/>
        <arg name="voxel_size"                          default="0.2" />
-       <arg name="max_ray_length_m"                    default="5" if="$(eval dataset_name == 'warty')"/>
-       <arg name="max_ray_length_m"                    default="40" unless="$(eval dataset_name == 'warty')"/>
+       <arg name="max_ray_length_m"                    default="40" if="$(eval dataset_name == 'warty')"/>
+       <arg name="max_ray_length_m"                    default="6" unless="$(eval dataset_name == 'warty')"/>
        <arg name="sensor_frame"                        default="$(arg left_cam_frame_id)"/>
        <arg name="world_frame"                         default="$(arg odom_frame_id)" />
        <arg name="metric_semantic_reconstruction"      default="false" if="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>

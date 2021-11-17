@@ -58,6 +58,9 @@ class DistributedPcm {
   std::string log_output_path_;
   std::string offline_data_path_;
 
+  // Map from robot ID to names
+  std::map<size_t, std::string> robot_names_;
+
   // ROS subscriber
   std::vector<ros::Subscriber> odom_edge_subscribers_;
   ros::Subscriber loop_closure_edge_subscriber_;

@@ -1,8 +1,10 @@
 <launch>
-  <arg name="dataset_name" default="Euroc" />
-  <arg name="verbosity" default="0" />
-  <arg name="robot_id" default="0" />
-  <arg name="num_robots" default="1" />
+  <arg name="robot_name"              default="sobek" />
+  <arg name="dataset_name"            default="Euroc" />
+  <arg name="verbosity"               default="0" />
+  <arg name="robot_id"                default="0" />
+  <arg name="num_robots"              default="1" />
+  <arg name="should_use_sim_time"     default="false"/>
 
   <!-- True if multiple ROS masters are running. This turns on reliable UDP. -->
   <arg name="multi_master" default="false" />
@@ -15,14 +17,15 @@
   <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
 
   <!-- Launch robot in its unique namespace -->
-  <group ns="kimera$(arg robot_id)">
+  <group ns="$(arg robot_name)">
     <!-- Launch Kimera-Distributed -->
     <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch">
-      <arg name="robot_id" value="$(arg robot_id)" />
-      <arg name="num_robots" value="$(arg num_robots)" />
-      <arg name="dataset_name" value="$(arg dataset_name)" />
+      <arg name="robot_id"                  value="$(arg robot_id)" />
+      <arg name="num_robots"                value="$(arg num_robots)" />
+      <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="multirobot_initialization" value="false" />
-      <arg name="use_actionlib" value="$(arg use_actionlib)" />
+      <arg name="use_actionlib"             value="$(arg use_actionlib)" />
+      <arg name="debug"                     value="false" />
     </include>
 
     <!-- Launch dpgo_ros -->
@@ -43,7 +46,7 @@
       <arg name="robust_opt_inner_iters"           value="25" />
       <arg name="max_iteration_number"             value="500" />
       <arg name="log_directory"                    value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
-    </include>
+    </include> 
 
     <!-- Launch remote topic manager (reliable UDP) -->
     <include if="$(arg multi_master)" file="$(find kimera_distributed)/launch/remote_topic_manager.launch">

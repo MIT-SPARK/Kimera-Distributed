@@ -98,13 +98,20 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   verify_sleeptime_ = 0.1;  
   ros::param::get("~verify_sleeptime", verify_sleeptime_);
 
+  // Load robot names
+  for (size_t id = 0; id < num_robots_; id++) {
+    std::string robot_name = "kimera" + std::to_string(id);
+    ros::param::get("~robot" + std::to_string(id) + "_name", robot_name);
+    robot_names_[id] = robot_name;
+  }
+
   // Initialize LCD
   lcd_->loadAndInitialize(lcd_params_);
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
     std::string topic =
-        "/kimera" + std::to_string(id) + "/kimera_vio_ros/bow_query";
+        "/" + robot_names_[id] + "/kimera_vio_ros/bow_query";
     ros::Subscriber sub =
         nh_.subscribe(topic, 1000, &DistributedLoopClosure::bowCallback, this);
     bow_subscribers.push_back(sub);
@@ -112,7 +119,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   // Publisher
   std::string loop_closure_topic =
-      "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+      "/" + robot_names_[my_id_] + "/kimera_distributed/loop_closure";
   loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(
       loop_closure_topic, 1000, false);
 
@@ -323,7 +330,7 @@ bool DistributedLoopClosure::requestVLCFrameService(
     if (vertex_ids_group.empty())
       continue;
     std::string service_name =
-      "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_query";
+      "/" + robot_names_[robot_id] + "/kimera_vio_ros/vlc_frame_query";
     
     // Populate requested pose ids in ROS message 
     kimera_vio_ros::VLCFrameListQuery query;
@@ -387,7 +394,7 @@ bool DistributedLoopClosure::requestVLCFrameAction(
     
     // Initialize actionlib client
     std::string action_name =
-      "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_action";
+      "/" + robot_names_[robot_id] + "/kimera_vio_ros/vlc_frame_action";
     actionlib::SimpleActionClient<kimera_vio_ros::VLCFrameListAction> ac(action_name,
                                                                          true);
 

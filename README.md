@@ -14,31 +14,27 @@ catkin build kimera_vio_ros depth_image_proc image_undistort kimera_semantics_ro
 
 ### Euroc datasets
 
-Launch two robots: 
+Launch stack on three robots: 
 ```
-roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc
-```
-Note: If you do not want to build the mesh, do instead:
-```
-roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc mesh_reconstruction:=false
+roslaunch kimera_distributed kimera_three_robot.launch dataset_name:=Euroc
 ```
 
 Play the rosbags for Euroc sequences:
 ```
-roslaunch kimera_distributed kimera_two_robot_euroc_rosbag.launch
+roslaunch kimera_distributed euroc_three_robot_rosbag.launch
 ```
 
 ### DCIST simulator datasets
 Recorded datasets can be downloaded from this [folder](https://drive.google.com/drive/folders/1WBEidZuQsKUxPYG-hcQAQe6fNH7j146M?usp=sharing).
 
-Launch two robots: 
+Launch stack on three robots: 
 ```
-roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=warty
+roslaunch kimera_distributed kimera_three_robot.launch dataset_name:=warty
 ```
 
-Play the rosbags:
+Play the rosbags (substitue city for camp or medfield_sim)
 ```
-roslaunch kimera_distributed kimera_two_robot_dcist_rosbag.launch
+roslaunch kimera_distributed city_three_robot_rosbag.launch
 ```
 
 ### Logging and Debugging 
@@ -52,23 +48,10 @@ rosservice call /kimera0/kimera_pgmo_node/save_mesh
 And substitue `kimera0` for your robot name. 
 
 
-### Running Centralized 
+### Running Pre-Set Configurations
+To test Kimera-Distributed on the dataset from the DCIST integration exercise in GQ in November 2021, simply update the rosbag paths and do
 ```
-roslaunch kimera_distributed kimera_centralized_three_robot.launch mesh_reconstruction:=true dataset_name:=warty environment:=camp
-```
-
-Play the rosbags: 
-```
-roslaunch kimera_distributed camp_three_robot_rosbag.launch
-```
-
-Loop closure information will still be logged to the `logs/kimerax` folder while basestation trajectory and other basestation data 
-will be logged to the `logs/basestation` folder. 
-
-To save the meshes and trajectories in pgmo, do: 
-```
-rosservice call /kimera_pgmo/save_mesh
-rosservice call /kimera_pgmo/save_trajectory
+tmuxp load gq-mout.yaml
 ```
 
 ## Notes

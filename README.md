@@ -48,6 +48,7 @@ roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_i
 - *multi_master*: set to true to launch reliable UDP node to relay inter-robot messages. For additional information about reliable UDP, refer to this [online wiki page](https://github.mit.edu/SPARK/Kimera-Distributed/wiki/Running-on-multiple-multiple-ROS-Masters-with-Reliable-UDP) .
 
 **Example used in Nov 2021 GQ tests**
+
 A complete example is provided in `config/gt-mout-three-robot.yaml`, which is used for post processing of Graces Quater experiments (Nov 2021). To run the example:
 
 ```

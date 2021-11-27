@@ -1,15 +1,58 @@
 # Kimera-Distributed
 
-This is the work-in-progress repository for distributed multirobot [Kimera](https://github.com/MIT-SPARK/Kimera). This package implements a fully distributed architecture where individual robots use peer-to-peer communication to perform inter-robot place recognition, loop closure detection, and outlier loop closure rejection. The resulting pose graph is sent to [DPGO](https://gitlab.com/mit-acl/dpgo/dpgo) to initiate distributed pose graph optimization.  
+## Introduction
+**Kimera-Distributed** is a part of [Kimera-Multi](https://arxiv.org/abs/2106.14386) that implements the following two modules: 
+1. Distributed loop closure detection 
+2. Pairwise consistency maximization (PCM)
 
-To use this package, use the `feature/kimera_distributed` branch in `Kimera-VIO`, `feature/kimera_distributed` in `Kimera-VIO-ROS`, `feature/multirobot_initialization` in `Kimera-RPGO`, `master` branch in `Kimera-PGMO`, and `feature/kimera_pgmo` branch in `Kimera-Semantics`. 
+** References **
+Refer to the following publications for more information
 
-Note that we are also using a forked version of the [image-pipeline package](https://github.com/yunzc/image_pipeline/tree/feature/kimera_distributed).
-Clone and checkout the `feature/kimera_distributed` branch.
+ - Y. Chang, Y. Tian, J. P. How and L. Carlone, "Kimera-Multi: a System for Distributed Multi-Robot Metric-Semantic Simultaneous Localization and Mapping," IEEE International Conference on Robotics and Automation (ICRA), 2021.
+ 
+ - Y. Tian, Y. Chang, F. Herrera Arias, C.Nieto-Granda, J. P. How, L. Carlone,  "Kimera-Multi: Robust, Distributed, Dense Metric-Semantic SLAM for Multi-Robot Systems," IEEE Transactions on Robotics (T-RO), conditionally accepted, 2021.
 
-Note: doing a full `catkin build` might cause problems with some of the dependencies of Kimera-Semantics, so it is recommended to build the modules one by one. 
-```bash
-catkin build kimera_vio_ros depth_image_proc image_undistort kimera_semantics_ros kimera_pgmo dpgo_ros
+## Dependencies 
+Currently using the private (mit.edu) repo of the following repositories:
+
+[Kimera-VIO](https://github.mit.edu/SPARK/Kimera-VIO) branch: feature/kimera_distributed
+
+[Kimera-VIO-ROS](https://github.mit.edu/SPARK/Kimera-VIO-ROS) branch: feature/kimera_distributed
+
+[Kimera-RPGO](https://github.com/MIT-SPARK/Kimera-RPGO) branch: feature/multirobot_initialization
+
+[pose_graph_tools](https://github.mit.edu/SPARK/pose_graph_tools) branch: master
+
+[Kimera-Semantics](https://github.mit.edu/SPARK/Kimera-Semantics) branch: master
+
+[Kimera-PGMO](https://github.mit.edu/SPARK/Kimera-PGMO) branch: master
+
+[Kimera-Multi-LCD](https://github.mit.edu/SPARK/Kimera-Multi-LCD) branch: master
+
+[dpgo](https://gitlab.com/mit-acl/dpgo/dpgo) branch: master
+
+[dpgo_ros](https://gitlab.com/mit-acl/dpgo/dpgo_ros) branch: master
+
+## Recommended Usage
+
+On each robot, first launch Kimera-VIO-ROS. Then, use the `kimera_distributed.launch` provided in this repo to launch distributed loop closure, PCM, and dpgo:
+```
+roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+```
+
+**Explaination of launch file args**
+- *robot_id*: unique integer ID associated with this robot
+- *num_robots*: total number of robots in the team
+- *robot_name*: unique ROS namespace associated with this robot
+- *dataset_name*: parameter settings (e.g., "Euroc" for EuRoc dataset, "Jackal" for MIT jackals)
+- *use_actionlib*: set to true to use actionlib for inter-robot communication (otherwise, use ROS service)
+- *multi_master*: set to true to launch reliable UDP node to relay inter-robot messages. For additional information about reliable UDP, refer to this [online wiki page](https://github.mit.edu/SPARK/Kimera-Distributed/wiki/Running-on-multiple-multiple-ROS-Masters-with-Reliable-UDP) .
+
+**Example**
+A complete example is provided in `config/gt-mout-three-robot.yaml`, which is used for post processing of Graces Quater experiments (Nov 2021). To run the example:
+
+```
+tmuxp load config/gq-mout-three-robot.yaml
 ```
 
 ### Euroc datasets

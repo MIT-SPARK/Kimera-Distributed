@@ -1,9 +1,10 @@
 # Kimera-Distributed
 
 ## Introduction
-**Kimera-Distributed** is a currently private repository of [Kimera-Multi](https://arxiv.org/abs/2106.14386) that implements the following two modules: 
+**Kimera-Distributed** is a currently private repository of [Kimera-Multi](https://arxiv.org/abs/2106.14386) that contains the following modules: 
 1. Distributed loop closure detection 
 2. Pairwise consistency maximization (PCM)
+3. Config and launch files to launch the entire Kimera-Multi stack
 
 Refer to the following publications for more information:
 

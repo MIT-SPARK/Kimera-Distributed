@@ -71,38 +71,70 @@ class DistributedLoopClosure {
   // ROS publisher
   ros::Publisher loop_closure_publisher_;
 
+  /**
+   * Callback to process bag of word vectors received from robots
+   */
   void bowCallback(const kimera_vio_ros::BowQueryConstPtr& msg);
 
-  bool detectLoopInMyDB(const lcd::RobotPoseId& vertex_query,
-                        const DBoW2::BowVector bow_vector_query,
-                        lcd::RobotPoseId* vertex_match);
-
-  bool detectLoopInSharedDB(const lcd::RobotPoseId& vertex_query,
-                            const DBoW2::BowVector bow_vector_query,
-                            lcd::RobotPoseId* vertex_match);
-
-  bool requestVLCFrame(const lcd::RobotPoseId& vertex_id,
-                       std::shared_ptr<lcd::LoopClosureDetector> lcd);
+  /*! \brief Request multiple full visual loop closure frames 
+   * (including the 3d keypoints)
+   *  - vertex_ids: ids of vertices of VLC frame in question
+   */
+  bool requestVLCFrame(const lcd::RobotPoseIdSet& vertex_ids);
 
   /**
-   * @brief Request a VLC frame using ROS service
-   * @param vertex_id
+   * @brief Request multiple VLC frames using ROS service
+   * @param vertex_ids
    * @return
    */
-  bool requestVLCFrameService(const lcd::RobotPoseId& vertex_id,
-                              std::shared_ptr<lcd::LoopClosureDetector> lcd);
+  bool requestVLCFrameService(const lcd::RobotPoseIdSet& vertex_ids);
 
   /**
-   * @brief Request a VLC frame using actionlib
-   * @param vertex_id
+   * @brief Request multiple VLC frames using actionlib
+   * @param vertex_ids
    * @return
    */
-  bool requestVLCFrameAction(const lcd::RobotPoseId& vertex_id,
-                             std::shared_ptr<lcd::LoopClosureDetector> lcd);
+  bool requestVLCFrameAction(const lcd::RobotPoseIdSet& vertex_ids);
 
+  // Publish detected loop closure
   void publishLoopClosure(const lcd::VLCEdge& loop_closure_edge);
+  
+  /**
+   * Callback to request VLC frames in batch
+   */
+  void requestFramesCallback(const ros::TimerEvent &event);
 
+  /**
+   * Callback for goemetric verification of potential loop closures
+   */
+  void verifyLoopCallback(const ros::TimerEvent &event);
+
+  /**
+   * Log communication stats to file
+   */ 
   void logCommStat(const std::string& filename);
+
+  // List of potential loop closures 
+  // that require to request VLC frames
+  std::vector<lcd::PotentialVLCEdge> potential_lcs_;
+  
+  // List of potential loop closures 
+  // that are ready for local geometric verification
+  std::vector<lcd::PotentialVLCEdge> potential_lcs_ready_;
+
+  // Maximum number of VLC frames to request in one batch
+  int vlc_batch_size_;
+
+  // Map from robot ID to name
+  std::map<size_t, std::string> robot_names_;
+
+  // Timer to request VLC frames
+  double request_sleeptime_;
+  ros::Timer request_timer_;
+
+  // Timer to perform geometric verification
+  double verify_sleeptime_;
+  ros::Timer verify_timer_;
 };
 
 }  // namespace kimera_distributed

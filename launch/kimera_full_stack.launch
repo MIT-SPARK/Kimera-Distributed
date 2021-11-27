@@ -49,6 +49,8 @@
   <!-- Launch robot in its unique namespace -->
   <group ns="kimera$(arg robot_id)">
     <!-- Frame IDs -->
+    <arg name="map_frame_id"       value="kimera$(arg robot_id)_map" />
+    <arg name="odom_frame_id"      value="kimera$(arg robot_id)_odom" />
     <arg name="base_link_frame_id" value="kimera$(arg robot_id)_base_link"/>
     <arg name="left_cam_frame_id"  value="kimera$(arg robot_id)_left_cam"/>
     <arg name="right_cam_frame_id" value="kimera$(arg robot_id)_right_cam"/>
@@ -70,20 +72,20 @@
        <arg name="should_use_sim_time"                 default="false" />
        <arg name="publish_point_clouds"                default="false" if="$(arg run_stereo_dense)"/>
        <arg name="publish_point_clouds"                default="true" unless="$(arg run_stereo_dense)"/>
-       <arg name="voxel_size"                          default="0.2" if="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
-       <arg name="voxel_size"                          default="0.2" unless="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
-       <arg name="max_ray_length_m"                    default="5" if="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
-       <arg name="max_ray_length_m"                    default="40" unless="$(eval dataset_name == 'Euroc' or dataset_name == 'Jackal')"/>
+       <arg name="voxel_size"                          default="0.2" />
+       <arg name="max_ray_length_m"                    default="40" if="$(eval dataset_name == 'warty')"/>
+       <arg name="max_ray_length_m"                    default="6" unless="$(eval dataset_name == 'warty')"/>
        <arg name="sensor_frame"                        default="$(arg left_cam_frame_id)"/>
+       <arg name="world_frame"                         default="$(arg odom_frame_id)" />
        <arg name="metric_semantic_reconstruction"      default="false" if="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
        <arg name="metric_semantic_reconstruction"      default="true" unless="$(eval dataset_name == 'Euroc' or not semantic_mesh)"/>
        <arg name="semantic_pointcloud"                 default="$(arg ptcld_topic)"/>
        <!-- Only used for dense stereo depth, but we do that in Kimera VIO ROS -->
-       <arg name="left_cam_info_topic"                 default="semantic/camera_info" if="$(eval dataset_name == 'Jackal')" />
-       <arg name="left_cam_info_topic"                 default="cam0/camera_info" unless="$(eval dataset_name == 'Jackal')" />
+       <arg name="left_cam_info_topic"                 default="semantic/camera_info" if="$(eval dataset_name == 'Jackal' or dataset_name == 'JackalMedfield')" />
+       <arg name="left_cam_info_topic"                 default="cam0/camera_info" unless="$(eval dataset_name == 'Jackal' or dataset_name == 'JackalMedfield')" />
        <arg name="right_cam_info_topic"                default="cam1/camera_info"/>
-       <arg name="left_cam_topic"                      default="cam0/semantic_image" if="$(eval dataset_name == 'Jackal')"/>
-       <arg name="left_cam_topic"                      default="cam0/image_raw" unless="$(eval dataset_name == 'Jackal')"/>
+       <arg name="left_cam_topic"                      default="cam0/semantic_image" if="$(eval dataset_name == 'Jackal' or dataset_name == 'JackalMedfield')"/>
+       <arg name="left_cam_topic"                      default="cam0/image_raw" unless="$(eval dataset_name == 'Jackal' or dataset_name == 'JackalMedfield')"/>
        <arg name="right_cam_topic"                     default="cam1/image_raw"/>
        <arg name="left_cam_segmentation_topic"         default="/dev/null" if="$(eval dataset_name == 'Euroc')"/>
        <arg name="left_cam_segmentation_topic"         default="cam0/semantic_image" unless="$(eval dataset_name == 'Euroc')"/>

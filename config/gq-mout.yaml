@@ -1,0 +1,38 @@
+session_name: kimera-distributed-gq
+
+environment:
+  DEBUG: "true"
+  REPLAY: "true"
+  SOBEK_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/mout_kimera_multi03_2021-11-05-15-58-12.bag"
+  THOTH_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/mout_kimera_multi03_2021-11-05-15-58-24.bag"
+  RATE: "0.3"
+  WS: "~/git/kimera_ws"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: distributed-test
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source $WS/devel/setup.bash
+
+  panes:
+    - roscore
+    - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=sobek robot_id:=0 replay:=$REPLAY
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=2 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=thoth robot_id:=1 replay:=$REPLAY
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=thoth robot_id:=1 num_robots:=2 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 5; rviz -d $(rospack find kimera_distributed)/rviz/gq_mout.rviz
+    - sleep 5; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 0 world map
+    
+- window_name: rosbags
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source $WS/devel/setup.bash
+
+  panes:
+    - sleep 15; rosbag play $SOBEK_ROSBAG -r$RATE --pause -s0.1 --topics /sobek/forward/infra1/image_rect_raw/compressed /sobek/forward/infra2/image_rect_raw/compressed /sobek/forward/imu /sobek/jackal_velocity_controller/odom
+    - sleep 15; rosbag play $THOTH_ROSBAG -r$RATE --pause -s0.1 --topics /thoth/forward/infra1/image_rect_raw/compressed /thoth/forward/infra2/image_rect_raw/compressed /thoth/forward/imu /thoth/jackal_velocity_controller/odom

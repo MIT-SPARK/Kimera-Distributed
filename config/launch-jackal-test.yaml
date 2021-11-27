@@ -1,0 +1,34 @@
+session_name: kimera-distributed-jackal
+
+environment:
+  ROSBAG0: "/home/yunchang/Downloads/kimera_test_j1-2021-10-13-decomp.bag"
+  ROSBAG1: "/home/yunchang/Downloads/kimera_test_2021-10-13-decomp.bag"
+  RATE: "1.0"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: distributed-test
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source ~/catkin_ws/devel/setup.bash
+
+  panes:
+    - roscore
+    - sleep 20; roslaunch -p 11311 kimera_vio_ros kimera_vio_ros_jackal.launch robot_name:=acl_jackal camera_name:=forward robot_id:=0 multirobot:=true log_gt_data:=false log_imu_data:=false should_use_sim_time:=false
+    - sleep 1; roslaunch -p 11311 kimera_distributed kimera_distributed.launch robot_id:=0 num_robots:=2 dataset_name:=Jackal use_actionlib:=true multi_master:=true
+    - sleep 5; export ROS_MASTER_URI=http://localhost:11311; rviz -d $(rospack find kimera_distributed)/rviz/kimera_three_robot_Jackal.rviz
+    - sleep 20; roslaunch -p 11312 kimera_vio_ros kimera_vio_ros_jackal.launch robot_name:=acl_jackal2 camera_name:=forward robot_id:=1 multirobot:=true log_gt_data:=false log_imu_data:=false should_use_sim_time:=false
+    - sleep 1; roslaunch -p 11312 kimera_distributed kimera_distributed.launch robot_id:=1 num_robots:=2 dataset_name:=Jackal use_actionlib:=true multi_master:=true
+
+- window_name: rosbags
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source ~/catkin_ws/devel/setup.bash
+
+  panes:
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11311; rosbag play $ROSBAG0 -r$RATE --pause
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11312; rosbag play $ROSBAG1 -r$RATE --pause

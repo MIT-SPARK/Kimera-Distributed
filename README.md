@@ -1,47 +1,101 @@
 # Kimera-Distributed
 
-This is the work-in-progress repository for distributed multirobot [Kimera](https://github.com/MIT-SPARK/Kimera). This package implements a fully distributed architecture where individual robots use peer-to-peer communication to perform inter-robot place recognition, loop closure detection, and outlier loop closure rejection. The resulting pose graph is sent to [DPGO](https://gitlab.com/mit-acl/dpgo/dpgo) to initiate distributed pose graph optimization.  
+## Introduction
+**Kimera-Distributed** is a currently private repository of [Kimera-Multi](https://arxiv.org/abs/2106.14386) that contains the following modules: 
+1. Distributed loop closure detection 
+2. Pairwise consistency maximization (PCM)
+3. Config and launch files to launch the entire Kimera-Multi stack
 
-To use this package, use the `feature/kimera_distributed` branch in `Kimera-VIO`, `feature/kimera_distributed` in `Kimera-VIO-ROS`, `feature/multirobot_initialization` in `Kimera-RPGO`, `master` branch in `Kimera-PGMO`, and `feature/kimera_pgmo` branch in `Kimera-Semantics`. 
+Refer to the following publications for more information:
 
-Note that we are also using a forked version of the [image-pipeline package](https://github.com/yunzc/image_pipeline/tree/feature/kimera_distributed).
-Clone and checkout the `feature/kimera_distributed` branch.
+ - Y. Chang, Y. Tian, J. P. How and L. Carlone, "Kimera-Multi: a System for Distributed Multi-Robot Metric-Semantic Simultaneous Localization and Mapping," IEEE International Conference on Robotics and Automation (ICRA), 2021.
+ 
+ - Y. Tian, Y. Chang, F. Herrera Arias, C.Nieto-Granda, J. P. How, L. Carlone,  "Kimera-Multi: Robust, Distributed, Dense Metric-Semantic SLAM for Multi-Robot Systems," IEEE Transactions on Robotics (T-RO), conditionally accepted, 2021.
 
-Note: doing a full `catkin build` might cause problems with some of the dependencies of Kimera-Semantics, so it is recommended to build the modules one by one. 
-```bash
-catkin build kimera_vio_ros depth_image_proc image_undistort kimera_semantics_ros kimera_pgmo dpgo_ros
+## Dependencies 
+Currently using the private (mit.edu) repo of the following repositories:
+
+[Kimera-VIO](https://github.mit.edu/SPARK/Kimera-VIO) branch: feature/kimera_distributed
+
+[Kimera-VIO-ROS](https://github.mit.edu/SPARK/Kimera-VIO-ROS) branch: feature/kimera_distributed
+
+[Kimera-RPGO](https://github.com/MIT-SPARK/Kimera-RPGO) branch: feature/multirobot_initialization
+
+[pose_graph_tools](https://github.mit.edu/SPARK/pose_graph_tools) branch: master
+
+[Kimera-Semantics](https://github.mit.edu/SPARK/Kimera-Semantics) branch: master
+
+[Kimera-PGMO](https://github.mit.edu/SPARK/Kimera-PGMO) branch: master
+
+[Kimera-Multi-LCD](https://github.mit.edu/SPARK/Kimera-Multi-LCD) branch: master
+
+[dpgo](https://gitlab.com/mit-acl/dpgo/dpgo) branch: master
+
+[dpgo_ros](https://gitlab.com/mit-acl/dpgo/dpgo_ros) branch: master
+
+## Recommended Usage
+
+On each robot, first launch Kimera-VIO-ROS. Then, use the `kimera_distributed.launch` provided in this repo to launch distributed loop closure, PCM, and dpgo:
+```
+roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
 ```
 
-### Euroc datasets
+**Explaination of launch file args**
+- *robot_id*: unique integer ID associated with this robot
+- *num_robots*: total number of robots in the team
+- *robot_name*: unique ROS namespace associated with this robot
+- *dataset_name*: parameter settings (e.g., "Euroc" for EuRoc dataset, "Jackal" for MIT jackals)
+- *use_actionlib*: set to true to use actionlib for inter-robot communication (otherwise, use ROS service)
+- *multi_master*: set to true to launch reliable UDP node to relay inter-robot messages. For additional information about reliable UDP, refer to this [online wiki page](https://github.mit.edu/SPARK/Kimera-Distributed/wiki/Running-on-multiple-multiple-ROS-Masters-with-Reliable-UDP) .
 
-Launch two robots: 
+**Example used in Nov 2021 GQ tests**
+
+A complete example is provided in `config/gt-mout-three-robot.yaml`, which is used for post processing of Graces Quater experiments (Nov 2021). To run the example:
+
 ```
-roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc
+tmuxp load config/gq-mout-three-robot.yaml
 ```
-Note: If you do not want to build the mesh, do instead:
+
+## Running on Datasets
+The following contains instructions for running on benchmark datasets, custom datasets, and simulated datasets. 
+
+#### Euroc datasets
+
+Launch stack on three robots: 
 ```
-roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=Euroc mesh_reconstruction:=false
+roslaunch kimera_distributed kimera_three_robot.launch dataset_name:=Euroc
 ```
 
 Play the rosbags for Euroc sequences:
 ```
-roslaunch kimera_distributed kimera_two_robot_euroc_rosbag.launch
+roslaunch kimera_distributed euroc_three_robot_rosbag.launch
 ```
 
-### DCIST simulator datasets
+#### Medfield Datasets
+Launch stack on three robots: 
+```
+roslaunch kimera_distributed kimera_three_robot.launch dataset_name:=JackalMedfield
+```
+
+Play the rosbags for Euroc sequences:
+```
+roslaunch kimera_distributed rosbag_medfield.launch
+```
+
+#### DCIST simulator datasets
 Recorded datasets can be downloaded from this [folder](https://drive.google.com/drive/folders/1WBEidZuQsKUxPYG-hcQAQe6fNH7j146M?usp=sharing).
 
-Launch two robots: 
+Launch stack on three robots: 
 ```
-roslaunch kimera_distributed kimera_two_robot.launch dataset_name:=warty
-```
-
-Play the rosbags:
-```
-roslaunch kimera_distributed kimera_two_robot_dcist_rosbag.launch
+roslaunch kimera_distributed kimera_three_robot.launch dataset_name:=warty
 ```
 
-### Logging and Debugging 
+Play the rosbags (substitue city for camp or medfield_sim)
+```
+roslaunch kimera_distributed city_three_robot_rosbag.launch
+```
+
+#### Logging and Debugging 
 Loop closure and trajectory information will be saved in the `logs` folder. You might have to create folders with the robot names (ex. `kimera0`, `kimera1`) before 
 running. 
 
@@ -50,26 +104,6 @@ To save the optimized mesh:
 rosservice call /kimera0/kimera_pgmo_node/save_mesh
 ```
 And substitue `kimera0` for your robot name. 
-
-
-### Running Centralized 
-```
-roslaunch kimera_distributed kimera_centralized_three_robot.launch mesh_reconstruction:=true dataset_name:=warty environment:=camp
-```
-
-Play the rosbags: 
-```
-roslaunch kimera_distributed camp_three_robot_rosbag.launch
-```
-
-Loop closure information will still be logged to the `logs/kimerax` folder while basestation trajectory and other basestation data 
-will be logged to the `logs/basestation` folder. 
-
-To save the meshes and trajectories in pgmo, do: 
-```
-rosservice call /kimera_pgmo/save_mesh
-rosservice call /kimera_pgmo/save_trajectory
-```
 
 ## Notes
 1. When running stereo dense reconstruction (see `kimera_vio_ros.launch`), you might get an error like `[ERROR] [1538875392.391423846]: Image P matrices must match (excluding x offset)`. A fix for this is to [downgrade to gcc 6](https://tuxamito.com/wiki/index.php/Installing_newer_GCC_versions_in_Ubuntu). 

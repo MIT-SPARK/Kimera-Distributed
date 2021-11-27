@@ -7,7 +7,8 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include <kimera_distributed/DistributedLoopClosure.h>
-#include <kimera_vio_ros/VLCFrameAction.h>
+#include <kimera_vio_ros/VLCFrameListAction.h>
+#include <kimera_vio_ros/VLCFrameListQuery.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
 #include <ros/ros.h>
@@ -87,13 +88,30 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   ros::param::get("~vocabulary_path", lcd_params_.vocab_path_);
 
+  // Load VLC frame batch size
+  vlc_batch_size_ = 25;
+  ros::param::get("~vlc_batch_size", vlc_batch_size_);
+
+  // Set frequency of timers
+  request_sleeptime_ = 10;  
+  ros::param::get("~request_sleeptime", request_sleeptime_);
+  verify_sleeptime_ = 0.1;  
+  ros::param::get("~verify_sleeptime", verify_sleeptime_);
+
+  // Load robot names
+  for (size_t id = 0; id < num_robots_; id++) {
+    std::string robot_name = "kimera" + std::to_string(id);
+    ros::param::get("~robot" + std::to_string(id) + "_name", robot_name);
+    robot_names_[id] = robot_name;
+  }
+
   // Initialize LCD
   lcd_->loadAndInitialize(lcd_params_);
 
   // Subscriber
   for (size_t id = my_id_; id < num_robots_; ++id) {
     std::string topic =
-        "/kimera" + std::to_string(id) + "/kimera_vio_ros/bow_query";
+        "/" + robot_names_[id] + "/kimera_vio_ros/bow_query";
     ros::Subscriber sub =
         nh_.subscribe(topic, 1000, &DistributedLoopClosure::bowCallback, this);
     bow_subscribers.push_back(sub);
@@ -101,9 +119,17 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   // Publisher
   std::string loop_closure_topic =
-      "/kimera" + std::to_string(my_id_) + "/kimera_distributed/loop_closure";
+      "/" + robot_names_[my_id_] + "/kimera_distributed/loop_closure";
   loop_closure_publisher_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(
       loop_closure_topic, 1000, false);
+
+  // Timer
+  request_timer_ = nh_.createTimer(ros::Duration(request_sleeptime_), 
+                                  &DistributedLoopClosure::requestFramesCallback, 
+                                  this);
+  verify_timer_ = nh_.createTimer(ros::Duration(verify_sleeptime_), 
+                                 &DistributedLoopClosure::verifyLoopCallback, 
+                                 this);
 
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
@@ -137,7 +163,10 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << lcd_params_.geometric_verification_min_inlier_count_ << "\n"
       << "geometric_verification_min_inlier_percentage = "
       << lcd_params_.geometric_verification_min_inlier_percentage_ << "\n"
-      << "interrobot loop closure only = " << lcd_params_.inter_robot_only_);
+      << "interrobot loop closure only = " << lcd_params_.inter_robot_only_ << "\n"
+      << "maximum batch size to request VLC frames = " << vlc_batch_size_ << "\n"
+      << "timer sleep to request VLC frames = " << request_sleeptime_ << "\n"
+      << "timer sleep to verify potential LC = " << verify_sleeptime_ << "\n");
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {}
@@ -160,32 +189,13 @@ void DistributedLoopClosure::bowCallback(
   if (robot_id == my_id_) {
     if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
       for (const auto& vertex_match : vertex_matches) {
-        ROS_INFO_STREAM(
-            "Checking loop closure between "
-            << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-            << " and "
-            << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-        if (requestVLCFrame(vertex_query, lcd_) &&
-            requestVLCFrame(vertex_match, lcd_)) {
-          // Find correspondences between frames.
-          std::vector<unsigned int> i_query, i_match;
-          lcd_->computeMatchedIndices(
-              vertex_query, vertex_match, &i_query, &i_match);
-          assert(i_query.size() == i_match.size());
-          gtsam::Pose3 T_query_match;
-          if (lcd_->geometricVerificationNister(
-                  vertex_query, vertex_match, &i_query, &i_match)) {
-            if (lcd_->recoverPose(vertex_query,
-                                         vertex_match,
-                                         i_query,
-                                         i_match,
-                                         &T_query_match)) {
-              lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
-              loop_closures_.push_back(edge);
-              publishLoopClosure(edge);  // Publish to pcm node
-            }
-          }
-        }
+        // ROS_INFO_STREAM(
+        //     "Detected potential loop closure between "
+        //     << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+        //     << " and "
+        //     << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+        lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
+        potential_lcs_.push_back(potential_edge);
       }
     }
   }
@@ -195,32 +205,13 @@ void DistributedLoopClosure::bowCallback(
   if (robot_id != my_id_) {
     if (lcd_->detectLoopWithRobot(my_id_, vertex_query, bow_vec, &vertex_matches)) {
       for (const auto& vertex_match : vertex_matches) {
-        ROS_INFO_STREAM(
-            "Checking loop closure between "
-            << "(" << vertex_query.first << ", " << vertex_query.second << ")"
-            << " and "
-            << "(" << vertex_match.first << ", " << vertex_match.second << ")");
-        if (requestVLCFrame(vertex_query, lcd_) &&
-            requestVLCFrame(vertex_match, lcd_)) {
-          // Find correspondences between frames.
-          std::vector<unsigned int> i_query, i_match;
-          lcd_->computeMatchedIndices(
-              vertex_query, vertex_match, &i_query, &i_match);
-          assert(i_query.size() == i_match.size());
-          gtsam::Pose3 T_query_match;
-          if (lcd_->geometricVerificationNister(
-                  vertex_query, vertex_match, &i_query, &i_match)) {
-            if (lcd_->recoverPose(vertex_query,
-                                  vertex_match,
-                                  i_query,
-                                  i_match,
-                                  &T_query_match)) {
-              lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
-              loop_closures_.push_back(edge);
-              publishLoopClosure(edge);  // Publish to pcm node
-            }
-          }
-        }
+        // ROS_INFO_STREAM(
+        //     "Detected potential loop closure between "
+        //     << "(" << vertex_query.first << ", " << vertex_query.second << ")"
+        //     << " and "
+        //     << "(" << vertex_match.first << ", " << vertex_match.second << ")");
+        lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
+        potential_lcs_.push_back(potential_edge);
       }
     }
   }
@@ -240,106 +231,229 @@ void DistributedLoopClosure::bowCallback(
   }
 }
 
+void DistributedLoopClosure::requestFramesCallback(const ros::TimerEvent &event) {
+  // Form list of vertex ids that needs to be requested
+  std::set<lcd::RobotPoseId> vertex_ids;
+  for (const auto &potential_edge: potential_lcs_) {
+    if (!lcd_->frameExists(potential_edge.vertex_src_)) {
+      vertex_ids.emplace(potential_edge.vertex_src_);
+    }
+    if (!lcd_->frameExists(potential_edge.vertex_dst_)) {
+      vertex_ids.emplace(potential_edge.vertex_dst_);
+    }
+  }
+
+  // Request the set of VLC frames
+  ROS_INFO_STREAM("Requesting " << vertex_ids.size() << " frames.");
+  ros::Time request_begin = ros::Time::now();
+  requestVLCFrame(vertex_ids);
+  ros::Duration request_time = ros::Time::now() - request_begin;
+  ROS_INFO_STREAM("Request VLC frame uses " 
+                  << request_time.toSec()
+                  << " seconds.");
+
+  // Update the list of potential LCs 
+  // that are ready for geometric verification
+  std::vector<lcd::PotentialVLCEdge> potential_lcs_new;
+  for (const auto &potential_edge: potential_lcs_) {
+    if (lcd_->frameExists(potential_edge.vertex_src_) &&
+        lcd_->frameExists(potential_edge.vertex_dst_)) {
+      potential_lcs_ready_.push_back(potential_edge);
+    } else {
+      potential_lcs_new.push_back(potential_edge);
+    }
+  }
+  potential_lcs_ = potential_lcs_new;
+  ROS_INFO_STREAM("Number of potential edges that need to request frames: " 
+                  << potential_lcs_.size());
+  ROS_INFO_STREAM("Number of potential edges ready for geometric verification: " 
+                  << potential_lcs_ready_.size());
+}
+
+void DistributedLoopClosure::verifyLoopCallback(const ros::TimerEvent &event) {
+  // Do nothing if no potential loop closure is ready to be checked
+  if (potential_lcs_ready_.empty())
+    return;
+
+  // Attempt to detect a single loop closure
+  lcd::PotentialVLCEdge potential_edge = potential_lcs_ready_.front();
+  const auto &vertex_query = potential_edge.vertex_src_;
+  const auto &vertex_match = potential_edge.vertex_dst_;
+
+  // Both frames should already exist locally
+  assert(lcd_->frameExists(vertex_query) && lcd_->frameExists(vertex_match));
+
+  // Find correspondences between frames.
+  std::vector<unsigned int> i_query, i_match;
+  lcd_->computeMatchedIndices(
+      vertex_query, vertex_match, &i_query, &i_match);
+  assert(i_query.size() == i_match.size());
+  
+  // Geometric verificaton
+  gtsam::Pose3 T_query_match;
+  if (lcd_->geometricVerificationNister(
+          vertex_query, vertex_match, &i_query, &i_match)) {
+    if (lcd_->recoverPose(vertex_query,
+                          vertex_match,
+                          i_query,
+                          i_match,
+                          &T_query_match)) {
+      lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
+      loop_closures_.push_back(edge);
+      publishLoopClosure(edge);  // Publish to pcm node
+    }
+  }
+
+  // Remove this potential loop closure as it's already verified
+  potential_lcs_ready_.erase(potential_lcs_ready_.begin());
+}
+
 bool DistributedLoopClosure::requestVLCFrameService(
-    const lcd::RobotPoseId& vertex_id,
-    std::shared_ptr<lcd::LoopClosureDetector> lcd) {
-  if (lcd->frameExists(vertex_id)) {
-    // Return if this frame already exists locally
-    return true;
-  }
-  size_t robot_id = vertex_id.first;
-  size_t pose_id = vertex_id.second;
-  std::string service_name =
-      "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_query";
-
-  kimera_vio_ros::VLCFrameQuery query;
-  query.request.robot_id = robot_id;
-  query.request.pose_id = pose_id;
-  if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {
-    ROS_ERROR_STREAM("ROS service " << service_name << " does not exist!");
-    return false;
-  }
-  if (!ros::service::call(service_name, query)) {
-    ROS_ERROR_STREAM("Could not query VLC frame!");
-    return false;
+    const lcd::RobotPoseIdSet& vertex_ids) {
+  // Group requested vertex_ids based on robot
+  std::unordered_map<size_t, lcd::RobotPoseIdSet> vertex_ids_map;
+  for (const auto &vertex_id: vertex_ids) {
+    // Do not request frame that already exists locally
+    if (lcd_->frameExists(vertex_id))
+      continue;
+    const auto robot_id = vertex_id.first;
+    // Initialize this group if needed
+    if (vertex_ids_map.find(robot_id) == vertex_ids_map.end())
+      vertex_ids_map.emplace(robot_id, lcd::RobotPoseIdSet());
+    vertex_ids_map[robot_id].emplace(vertex_id);
   }
 
-  lcd::VLCFrame frame;
-  VLCFrameFromMsg(query.response.frame, &frame);
-  assert(frame.robot_id_ == robot_id);
-  assert(frame.pose_id_ == pose_id);
+  // Loop over robot to send the request
+  for (const auto &it: vertex_ids_map) {
+    const auto &robot_id = it.first;
+    const auto &vertex_ids_group = it.second;
+    if (vertex_ids_group.empty())
+      continue;
+    std::string service_name =
+      "/" + robot_names_[robot_id] + "/kimera_vio_ros/vlc_frame_query";
+    
+    // Populate requested pose ids in ROS message 
+    kimera_vio_ros::VLCFrameListQuery query;
+    query.request.robot_id = robot_id;
+    for (const auto &vertex_id: vertex_ids_group) {
+      assert(robot_id == vertex_id.first);
+      query.request.pose_ids.push_back(vertex_id.second);
+      if (query.request.pose_ids.size() > vlc_batch_size_) 
+        break;
+    }
 
-  lcd->addVLCFrame(vertex_id, frame);
+    // Call ROS service
+    if (!ros::service::waitForService(service_name, ros::Duration(5.0))) {
+      ROS_ERROR_STREAM("ROS service " << service_name << " does not exist!");
+      return false;
+    }
+    if (!ros::service::call(service_name, query)) {
+      ROS_ERROR_STREAM("Could not query VLC frame!");
+      return false;
+    }
 
-  // Inter-robot requests will incur communication payloads
-  if (robot_id != my_id_) {
-    received_vlc_bytes_.push_back(
-        computeVLCFramePayloadBytes(query.response.frame));
+    // Parse response
+    for (const auto& frame_msg: query.response.frames) {
+      lcd::VLCFrame frame;
+      VLCFrameFromMsg(frame_msg, &frame);
+      assert(frame.robot_id_ == robot_id);
+      lcd::RobotPoseId vertex_id(frame.robot_id_, frame.pose_id_);
+      lcd_->addVLCFrame(vertex_id, frame);
+      // Inter-robot request will be counted as communication
+      if (robot_id != my_id_) {
+        received_vlc_bytes_.push_back(
+          computeVLCFramePayloadBytes(frame_msg));
+      }
+    }
   }
 
   return true;
 }
 
 bool DistributedLoopClosure::requestVLCFrameAction(
-    const lcd::RobotPoseId& vertex_id,
-    std::shared_ptr<lcd::LoopClosureDetector> lcd) {
-  if (lcd->frameExists(vertex_id)) {
-    // Return if this frame already exists locally
-    return true;
+    const lcd::RobotPoseIdSet& vertex_ids) {
+  // Group requested vertex_ids based on robot
+  std::unordered_map<size_t, lcd::RobotPoseIdSet> vertex_ids_map;
+  for (const auto &vertex_id: vertex_ids) {
+    // Do not request frame that already exists locally
+    if (lcd_->frameExists(vertex_id))
+      continue;
+    const auto robot_id = vertex_id.first;
+    // Initialize this group if needed
+    if (vertex_ids_map.find(robot_id) == vertex_ids_map.end())
+      vertex_ids_map.emplace(robot_id, lcd::RobotPoseIdSet());
+    vertex_ids_map[robot_id].emplace(vertex_id);
   }
-  size_t robot_id = vertex_id.first;
-  size_t pose_id = vertex_id.second;
 
-  std::string action_name =
-      "/kimera" + std::to_string(robot_id) + "/kimera_vio_ros/vlc_frame_action";
-  actionlib::SimpleActionClient<kimera_vio_ros::VLCFrameAction> ac(action_name,
-                                                                   true);
+  // Loop over robot to send the request
+  for (const auto &it: vertex_ids_map) {
+    const auto &robot_id = it.first;
+    const auto &vertex_ids_group = it.second;
+    if (vertex_ids_group.empty())
+      continue;
+    
+    // Initialize actionlib client
+    std::string action_name =
+      "/" + robot_names_[robot_id] + "/kimera_vio_ros/vlc_frame_action";
+    actionlib::SimpleActionClient<kimera_vio_ros::VLCFrameListAction> ac(action_name,
+                                                                         true);
 
-  double wait_time = 0.5;
-  for (size_t action_attempts = 0; action_attempts < 5; ++action_attempts) {
-    ROS_INFO_STREAM("Calling action server:" << action_name);
-    kimera_vio_ros::VLCFrameGoal goal;
+    // Populate actionlib goal
+    kimera_vio_ros::VLCFrameListGoal goal;
     goal.robot_id = robot_id;
-    goal.pose_id = pose_id;
-    ac.sendGoal(goal);
-    bool finished_before_timeout = ac.waitForResult(ros::Duration(wait_time));
-    if (finished_before_timeout) {
-      if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-        ROS_INFO("Action succeeded.");
-        // Process the received frame
-        const auto action_result = ac.getResult();
-        lcd::VLCFrame frame;
-        VLCFrameFromMsg(action_result->frame, &frame);
-        assert(frame.robot_id_ == robot_id);
-        assert(frame.pose_id_ == pose_id);
-        lcd->addVLCFrame(vertex_id, frame);
-        // Inter-robot requests will incur communication payloads
-        if (robot_id != my_id_) {
-          received_vlc_bytes_.push_back(
-              computeVLCFramePayloadBytes(action_result->frame));
+    for (const auto &vertex_id: vertex_ids_group) {
+      assert(robot_id == vertex_id.first);
+      goal.pose_ids.push_back(vertex_id.second);
+      if (goal.pose_ids.size() > vlc_batch_size_) break;
+    }
+
+    // Attempt to call actionlib server
+    double wait_time = 0.5;
+    size_t action_attempts;
+    for (action_attempts = 0; action_attempts < 5; ++action_attempts) {
+      ac.sendGoal(goal);
+      bool finished_before_timeout = ac.waitForResult(ros::Duration(wait_time));
+      if (finished_before_timeout) {
+        if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+          // Process the received frames
+          const auto action_result = ac.getResult();
+          for (const auto& frame_msg: action_result->frames) {
+            lcd::VLCFrame frame;
+            VLCFrameFromMsg(frame_msg, &frame);
+            assert(frame.robot_id_ == robot_id);
+            lcd::RobotPoseId vertex_id(frame.robot_id_, frame.pose_id_);
+            lcd_->addVLCFrame(vertex_id, frame);
+            // Inter-robot request will be counted as communication
+            if (robot_id != my_id_) {
+              received_vlc_bytes_.push_back(
+                computeVLCFramePayloadBytes(frame_msg));
+            }
+          }
         }
-        return true;
+        ROS_INFO_STREAM("Request frames from robot " << robot_id 
+                        << " succeeded with " << action_attempts + 1 
+                        << " attempts.");
+        break;
       } else {
-        return false;
+        wait_time += 0.5;
       }
-    } else {
-      ROS_WARN("Action server timeout.");
-      wait_time += 0.5;
+    }
+    if (action_attempts == 5) {
+      ROS_ERROR("Failed to get vlc frames from robot %d", goal.robot_id);
     }
   }
-  // Program reaches here only if all action requests have timed out.
-  return false;
+  return true;
 }
 
 bool DistributedLoopClosure::requestVLCFrame(
-    const lcd::RobotPoseId& vertex_id,
-    std::shared_ptr<lcd::LoopClosureDetector> lcd) {
+    const lcd::RobotPoseIdSet& vertex_ids) {
   if (use_actionlib_) {
-    return requestVLCFrameAction(vertex_id, lcd);
+    return requestVLCFrameAction(vertex_ids);
   } else {
-    return requestVLCFrameService(vertex_id, lcd);
+    return requestVLCFrameService(vertex_ids);
   }
 }
+
 
 void DistributedLoopClosure::publishLoopClosure(
     const lcd::VLCEdge& loop_closure_edge) {

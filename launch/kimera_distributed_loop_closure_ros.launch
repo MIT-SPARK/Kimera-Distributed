@@ -9,25 +9,30 @@
   <arg name="use_actionlib" default="false"/>
   <!-- Multirobot frame alignmnet  -->
   <arg name="multirobot_initialization" default="true"/>
-
+  <!-- Debug -->
+  <arg name="debug"              default="false" />
+  <arg name="launch_prefix"      value="xterm -e gdb --args" if="$(arg debug)"/>
+  <arg name="launch_prefix"      value=""    unless="$(arg debug)"/>
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
-  <node launch-prefix="xterm -e" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
+  <node launch-prefix="$(arg launch_prefix)" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
     <param name="use_actionlib" value="$(arg use_actionlib)" />
-    <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
+    <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
+    <rosparam file="$(find kimera_distributed)/params/robot_names.yaml" />
   </node>    
 
   <!-- Launch Kimera Distributed PCM Node -->
-  <node name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
+  <node launch-prefix="" name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
     <param name="robot_id"   value="$(arg robot_id)"/>
     <param name="num_robots" value="$(arg num_robots)" />
     <param name="multirobot_initialization" value="$(arg multirobot_initialization)" />
     <param name="use_actionlib" value="$(arg use_actionlib)" />
-    <rosparam file="$(find kimera_distributed)/params/pcm_$(arg dataset_name).yaml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
+    <rosparam file="$(find kimera_distributed)/params/pcm_$(arg dataset_name).yaml"/>
+    <rosparam file="$(find kimera_distributed)/params/robot_names.yaml" />
   </node>
 </launch>

@@ -1,0 +1,42 @@
+session_name: kimera-distributed-gq
+
+environment:
+  DEBUG: "true"
+  REPLAY: "true"
+  SOBEK_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/sobek/mout_kimera_multi03_2021-11-05-15-58-12.bag"
+  THOTH_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/thoth/mout_kimera_multi03_2021-11-05-15-58-24.bag"
+  SODPU_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/thoth/mout_kimera_multi02_2021-11-05-15-31-40.bag"
+  RATE: "0.3"
+  WS: "~/git/arl_ws"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: distributed-test
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source $WS/devel/setup.bash
+
+  panes:
+    - roscore
+    - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=sobek robot_id:=0 replay:=$REPLAY
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=thoth robot_id:=1 replay:=$REPLAY
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=thoth robot_id:=1 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=sodpu robot_id:=2 replay:=$REPLAY
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sodpu robot_id:=2 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 5; rviz -d $(rospack find kimera_distributed)/rviz/gq_mout.rviz
+    - sleep 5; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 0 world map
+    
+- window_name: rosbags
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source $WS/devel/setup.bash
+
+  panes:
+    - sleep 15; roslaunch kimera_centralized_pgmo gq_rosbag.launch bagfile:=$SOBEK_ROSBAG input_ns:=sobek output_ns:=sobek rate:=$RATE
+    - sleep 15; roslaunch kimera_centralized_pgmo gq_rosbag.launch bagfile:=$THOTH_ROSBAG input_ns:=thoth output_ns:=thoth rate:=$RATE
+    - sleep 15; roslaunch kimera_centralized_pgmo gq_rosbag.launch bagfile:=$SODPU_ROSBAG input_ns:=thoth output_ns:=sodpu rate:=$RATE

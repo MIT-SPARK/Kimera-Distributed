@@ -87,6 +87,7 @@ class DistributedPcm {
   // Handle to log files
   std::ofstream pose_file_;        // log received poses
   std::ofstream odom_file_;        // log received odometry
+  std::ofstream input_lc_file_;          // log received loop closures
 
   void odometryEdgeCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
 
@@ -118,8 +119,8 @@ class DistributedPcm {
   // Logging 
   void createLogs();
   void closeLogs();
-  void saveNewPosesToLog(const pose_graph_tools::PoseGraphNode& node);
-  void saveNewOdometryToLog(const pose_graph_tools::PoseGraphEdge& edge);
+  void saveNewPoseToLog(const pose_graph_tools::PoseGraphNode& node);
+  void saveNewEdgeToLog(const pose_graph_tools::PoseGraphEdge& edge);
 
   // Offline data loading
   void initializeOffline();

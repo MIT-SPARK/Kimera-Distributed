@@ -11,7 +11,7 @@
   <arg name="multirobot_initialization" default="true"/>
   <!-- Debug -->
   <arg name="debug"              default="false" />
-  <arg name="launch_prefix"      value="xterm -e gdb --args" if="$(arg debug)"/>
+  <arg name="launch_prefix"      value="xterm -e gdb -ex run \-\-args" if="$(arg debug)"/>
   <arg name="launch_prefix"      value=""    unless="$(arg debug)"/>
 
   <!-- Launch Kimera Distributed Loop Closure Node -->

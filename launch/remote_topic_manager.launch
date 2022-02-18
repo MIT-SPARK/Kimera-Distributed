@@ -2,6 +2,7 @@
   <arg name="robot_id" default="0"/>
   <arg name="service_discovery" default="true"/>
   <arg name="simulation" default="false"/>
+  <arg name="monitor_bw" default="true"/>
 
 <!--  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/>-->
 
@@ -24,4 +25,9 @@
     <param name="status_pub_period" value="1.0"/>
   </node>
 
+  <node if="$(arg monitor_bw)" pkg="panoptes" type="row_bw_monitor.py" name="bw_motinor" output="screen">
+    <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics$(arg robot_id).yaml"/>
+    <param name="log" value="true"/>
+    <param name="log_dir" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
+  </node>
 </launch>

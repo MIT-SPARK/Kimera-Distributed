@@ -21,6 +21,7 @@
     <param name="use_actionlib" value="$(arg use_actionlib)" />
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
+    <param name="vlc_batch_size" value="10"/>
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
     <rosparam file="$(find kimera_distributed)/params/robot_names.yaml" />
   </node>    

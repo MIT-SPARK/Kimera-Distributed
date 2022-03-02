@@ -332,7 +332,7 @@ void DistributedPcm::querySharedLoopClosuresAction(size_t robot_id,
   }
   std::string action_name = "/" + robot_names_.at(robot_id) + "/distributed_pcm/shared_lc_action";
   actionlib::SimpleActionClient<kimera_distributed::SharedLoopClosureAction> ac(action_name, true);
-  double wait_time = 0.5;
+  double wait_time = 2.0;
   for (size_t action_attempts = 0; action_attempts < 5; ++ action_attempts){
     ROS_INFO_STREAM("Calling action server:" <<  action_name);
     kimera_distributed::SharedLoopClosureGoal goal;
@@ -348,8 +348,8 @@ void DistributedPcm::querySharedLoopClosuresAction(size_t robot_id,
         break;
       }
     } else {
-      ROS_WARN("Action server timeout.");
-      wait_time += 0.5;
+      wait_time += 5.0;
+      ROS_WARN_STREAM("Action server timeout. Increasing wait time to " << wait_time);
     }
   }
 }
@@ -387,7 +387,7 @@ void DistributedPcm::querySharedLoopClosures(
 
 void DistributedPcm::shareLoopClosureActionCallback(const kimera_distributed::SharedLoopClosureGoalConstPtr &goal) {
   auto request_robot_id = goal->robot_id;
-  ROS_DEBUG_STREAM("Received request from " << request_robot_id);
+  ROS_INFO_STREAM("Received shared LC request from " << request_robot_id);
   bool success = true;
   if (!use_actionlib_) {
     ROS_ERROR("Distributed PCM: Not using actionlib but received action goal.");

@@ -244,7 +244,7 @@ void DistributedLoopClosure::requestFramesCallback(const ros::TimerEvent &event)
   }
 
   // Request the set of VLC frames
-  ROS_INFO_STREAM("Requesting " << vertex_ids.size() << " frames.");
+  ROS_INFO_STREAM("Number of remote frames needed: " << vertex_ids.size());
   ros::Time request_begin = ros::Time::now();
   requestVLCFrame(vertex_ids);
   ros::Duration request_time = ros::Time::now() - request_begin;
@@ -430,7 +430,8 @@ bool DistributedLoopClosure::requestVLCFrameAction(
             }
           }
         }
-        ROS_INFO_STREAM("Request frames from robot " << robot_id 
+        ROS_INFO_STREAM("Request " << goal.pose_ids.size() 
+                        << " frames from robot " << robot_id 
                         << " succeeded with " << action_attempts + 1 
                         << " attempts.");
         break;

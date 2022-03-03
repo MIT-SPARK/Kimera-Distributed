@@ -78,6 +78,11 @@ class DistributedPcm {
   kimera_distributed::SharedLoopClosureFeedback action_feedback_;
   kimera_distributed::SharedLoopClosureResult action_result_;
 
+  // New pose graph components since last PCM update
+  gtsam::Values new_values_;
+  gtsam::NonlinearFactorGraph new_factors_;
+  std::vector<lcd::VLCEdge> new_inter_lcs_;
+
   // Latest pcm processed pose graph
   gtsam::Values values_;
   gtsam::NonlinearFactorGraph nfg_;
@@ -111,6 +116,10 @@ class DistributedPcm {
   bool requestInitializationCallback(
       pose_graph_tools::PoseGraphQuery::Request& request,
       pose_graph_tools::PoseGraphQuery::Response& response);
+
+  double pcm_update_sleeptime_;
+  ros::Timer pcm_update_timer_;
+  void pcmUpdateCallback(const ros::TimerEvent &event);
 
   std::vector<lcd::VLCEdge> loop_closures_frozen_;
   std::vector<bool> b_request_from_robot_;

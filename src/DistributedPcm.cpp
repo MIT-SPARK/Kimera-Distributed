@@ -123,6 +123,13 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
       "request_initialization", &DistributedPcm::requestInitializationCallback, this);
   }
 
+  // Start timer for periodic pcm update
+  pcm_update_sleeptime_ = 5.0;
+  ros::param::get("~pcm_update_sleeptime", pcm_update_sleeptime_);
+  pcm_update_timer_ = nh_.createTimer(ros::Duration(pcm_update_sleeptime_), 
+                                      &DistributedPcm::pcmUpdateCallback, 
+                                      this);
+
   // Start actions
   lc_action_server_.start();
 
@@ -139,6 +146,25 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
 
 DistributedPcm::~DistributedPcm() {
   closeLogs();
+}
+
+void DistributedPcm::pcmUpdateCallback(const ros::TimerEvent &event) {
+  ros::Time update_begin = ros::Time::now();
+
+  // Add new pose graph components since the last PCM update
+  pgo_->update(new_factors_, new_values_, false);
+  nfg_ = pgo_->getFactorsUnsafe();
+  values_ = pgo_->calculateBestEstimate();
+
+  // Add new inter-robot loop closures since the last PCM update
+  addLoopClosures(new_inter_lcs_);
+
+  new_values_.clear();
+  new_factors_ = gtsam::NonlinearFactorGraph();
+  new_inter_lcs_.clear();
+
+  ros::Duration update_time = ros::Time::now() - update_begin;
+  ROS_INFO_STREAM("PCM update elapsed time: " << update_time.toSec() << " sec.");
 }
 
 void DistributedPcm::addLoopClosures(
@@ -204,9 +230,6 @@ std::vector<lcd::VLCEdge> DistributedPcm::getInlierLoopclosures(
 
 void DistributedPcm::odometryEdgeCallback(
     const pose_graph_tools::PoseGraph::ConstPtr& msg) {
-  // New gtsam factors and values
-  gtsam::Values new_values;
-  gtsam::NonlinearFactorGraph new_factors;
   bool detected_lc;
   // Iterate through nodes
   for (pose_graph_tools::PoseGraphNode pg_node : msg->nodes) {
@@ -215,7 +238,8 @@ void DistributedPcm::odometryEdgeCallback(
     const uint32_t frame_id = pg_node.key;
     gtsam::Symbol key(robot_id_to_prefix.at(robot_id), frame_id);
 
-    if (!values_.exists(key)) new_values.insert(key, estimate);
+    if (!values_.exists(key) && !new_values_.exists(key)) 
+      new_values_.insert(key, estimate);
 
     saveNewPoseToLog(pg_node);
   }
@@ -246,7 +270,7 @@ void DistributedPcm::odometryEdgeCallback(
           gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
 
       // Add to pcm TODO: covariance hard coded for now
-      new_factors.add(
+      new_factors_.add(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, measure, noise));
 
       saveNewEdgeToLog(pg_edge);
@@ -255,14 +279,10 @@ void DistributedPcm::odometryEdgeCallback(
       lcd::VLCEdge new_loop_closure;
       VLCEdgeFromMsg(pg_edge, &new_loop_closure);
       detected_lc = true;
-      new_factors.add(VLCEdgeToGtsam(new_loop_closure));
+      new_factors_.add(VLCEdgeToGtsam(new_loop_closure));
       saveNewEdgeToLog(pg_edge);
     }
   }
-
-  pgo_->update(new_factors, new_values, false);
-  nfg_ = pgo_->getFactorsUnsafe();
-  values_ = pgo_->calculateBestEstimate();
 
   // For debugging
   if (detected_lc) {
@@ -279,7 +299,7 @@ void DistributedPcm::loopclosureCallback(
   lcd::VLCEdge new_loop_closure;
   VLCEdgeFromMsg(*msg, &new_loop_closure);
 
-  addLoopClosure(new_loop_closure);
+  new_inter_lcs_.push_back(new_loop_closure);
 
   // For debugging
   std::vector<lcd::VLCEdge> loop_closures = getInlierLoopclosures(nfg_);

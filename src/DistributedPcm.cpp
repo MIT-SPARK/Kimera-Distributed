@@ -483,12 +483,9 @@ bool DistributedPcm::requestPoseGraphCallback(
   pose_graph_tools::PoseGraph out_graph;
   out_graph.nodes = pose_graph_msg.nodes;
 
-  // Filter out odometry set not from this robot
+  // Only include edges that involve this robot
   for (const auto& e : pose_graph_msg.edges) {
-    if (e.type == pose_graph_tools::PoseGraphEdge::ODOM &&
-        e.robot_from != my_id_) {
-      // pass odometry edges without requested robot id
-    } else {
+    if (e.robot_from == my_id_ || e.robot_to == my_id_) {
       out_graph.edges.push_back(e);
     }
   }

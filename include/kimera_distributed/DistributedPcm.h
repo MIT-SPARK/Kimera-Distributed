@@ -54,7 +54,6 @@ class DistributedPcm {
   bool use_actionlib_;
   bool b_is_frozen_;
   bool b_offline_mode_;
-  bool b_multirobot_initialization_;
   std::string log_output_path_;
   std::string offline_data_path_;
 

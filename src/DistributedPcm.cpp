@@ -15,6 +15,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <cassert>
 
@@ -25,7 +26,6 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
       use_actionlib_(false), 
       b_is_frozen_(false), 
       b_offline_mode_(false),
-      b_multirobot_initialization_(false),
       lc_action_server_(nh_, "shared_lc_action",
                         boost::bind(&DistributedPcm::shareLoopClosureActionCallback, this, _1),
                         false){
@@ -73,20 +73,12 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
     ros::shutdown();
   }
 
-  if (!ros::param::get("~multirobot_initialization", b_multirobot_initialization_)) {
-    ROS_ERROR("PCM failed to get required parameters! Shutting down... ");
-    ros::shutdown();
-  }
-
   // Initialize pcm
   KimeraRPGO::RobustSolverParams pgo_params;
   pgo_params.setPcmSimple3DParams(pcm_trans_threshold, pcm_rot_threshold);
   pgo_params.logOutput(log_output_path_);
   pgo_params.setIncremental();
-  if (b_multirobot_initialization_)
-    pgo_params.setMultiRobotAlignMethod(KimeraRPGO::MultiRobotAlignMethod::GNC);
-  pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(
-      new KimeraRPGO::RobustSolver(pgo_params));
+  pgo_ = std::unique_ptr<KimeraRPGO::RobustSolver>(new KimeraRPGO::RobustSolver(pgo_params));
 
   if (b_offline_mode_) {
     // Offline initialization
@@ -113,15 +105,9 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
   pose_graph_pub_ =
       nh_.advertise<pose_graph_tools::PoseGraph>("pose_graph", 1, false);
 
-  // Initialize service
-  shared_lc_server_ = nh_.advertiseService(
-      "shared_lc_query", &DistributedPcm::shareLoopClosureServiceCallback, this);
+  // ROS service to send pose graph to PGO
   pose_graph_request_server_ = nh_.advertiseService(
       "request_pose_graph", &DistributedPcm::requestPoseGraphCallback, this);
-  if (b_multirobot_initialization_ && my_id_ == 0) {
-    initialization_server_ = nh_.advertiseService(
-      "request_initialization", &DistributedPcm::requestInitializationCallback, this);
-  }
 
   // Start timer for periodic pcm update
   pcm_update_sleeptime_ = 5.0;
@@ -130,8 +116,10 @@ DistributedPcm::DistributedPcm(const ros::NodeHandle& n)
                                       &DistributedPcm::pcmUpdateCallback, 
                                       this);
 
-  // Start actions
-  lc_action_server_.start();
+  // ROS service / actionlib to send inter-robot inlier edges
+  // shared_lc_server_ = nh_.advertiseService(
+  //    "shared_lc_query", &DistributedPcm::shareLoopClosureServiceCallback, this);
+  // lc_action_server_.start();
 
   // Create logs
   createLogs();
@@ -487,16 +475,7 @@ bool DistributedPcm::requestPoseGraphCallback(
     pose_graph_tools::PoseGraphQuery::Response& response) {
   // Check that id is from robot
   assert(request.robot_id == my_id_);
-  b_request_from_robot_[request.robot_id] = true;
-  // freeze set of loop closures
-  if (!b_is_frozen_) {
-    loop_closures_frozen_ = getInlierLoopclosures(nfg_);
-    b_is_frozen_ = true;
-  }
   ROS_DEBUG_STREAM("Received request from " << request.robot_id);
-
-  std::vector<pose_graph_tools::PoseGraphEdge> interrobot_lc;
-  querySharedLoopClosures(&interrobot_lc);
 
   // Construct pose graph to be returned
   const pose_graph_tools::PoseGraph pose_graph_msg =
@@ -504,41 +483,11 @@ bool DistributedPcm::requestPoseGraphCallback(
   pose_graph_tools::PoseGraph out_graph;
   out_graph.nodes = pose_graph_msg.nodes;
 
-  // If using multi-robot initialization, request trajectory from the first robot
-  if (b_multirobot_initialization_ && my_id_ != 0) {
-    std::string service_name =
-      "/" + robot_names_[0]+ "/distributed_pcm/request_initialization";
-    pose_graph_tools::PoseGraphQuery query;
-    query.request.robot_id = my_id_;
-    if (!ros::service::waitForService(service_name, ros::Duration(15.0))) {
-      ROS_ERROR("Service to query initialization does not exist!");
-    }
-    if (!ros::service::call(service_name, query)) {
-      ROS_ERROR("Could not query initialization. ");
-    }
-    out_graph.nodes = query.response.pose_graph.nodes;
-  }
-
-  // Filter out odometry set not from this robot
-  // and add interrobot loop closures
-  for (auto e : pose_graph_msg.edges) {
-    if (e.type == pose_graph_tools::PoseGraphEdge::ODOM &&
-        e.robot_from != my_id_) {
-      // pass odometry edges without requested robot id
-    } else {
+  // Only include edges that involve this robot
+  for (const auto& e : pose_graph_msg.edges) {
+    if (e.robot_from == my_id_ || e.robot_to == my_id_) {
       out_graph.edges.push_back(e);
     }
-  }
-
-  // For debugging
-  std::vector<lcd::VLCEdge> output_loopclosures = loop_closures_frozen_;
-
-  // Push the interrobot loop closures
-  for (auto e : interrobot_lc) {
-    out_graph.edges.push_back(e);
-    lcd::VLCEdge edge;
-    VLCEdgeFromMsg(e, &edge);
-    output_loopclosures.push_back(edge);
   }
 
   // Filter duplicate edges from pose graph
@@ -548,8 +497,6 @@ bool DistributedPcm::requestPoseGraphCallback(
   // Debug: save final graph to file
   std::string filename = log_output_path_ + "pcm_pose_graph_edges.csv";
   pose_graph_tools::savePoseGraphEdgesToFile(out_graph, filename);
-
-  unlockLoopClosuresIfNeeded();
 
   return true;
 }

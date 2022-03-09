@@ -17,17 +17,17 @@
 
   <!-- Launch robot in its unique namespace -->
   <group ns="$(arg robot_name)">
-    <!-- Launch Kimera-Distributed -->
+    <!-- Launch distributed loop closure detection and PCM -->
     <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch">
       <arg name="robot_id"                  value="$(arg robot_id)" />
       <arg name="num_robots"                value="$(arg num_robots)" />
       <arg name="dataset_name"              value="$(arg dataset_name)" />
-      <arg name="multirobot_initialization" value="false" />
       <arg name="debug"                     value="$(arg debug)" />
     </include>
 
     <!-- Launch dpgo_ros -->
     <include file="$(find dpgo_ros)/launch/PGOAgent.launch">
+      <arg name="debug"                            value="$(arg debug)" />
       <arg name="verbose"                          value="true" />
       <arg name="agent_id"                         value="$(arg robot_id)" />
       <arg name="num_robots"                       value="$(arg num_robots)" />

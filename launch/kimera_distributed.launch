@@ -50,6 +50,7 @@
     <!-- Launch remote topic manager (reliable UDP) -->
     <include if="$(arg multi_master)" file="$(find kimera_distributed)/launch/remote_topic_manager.launch">
       <arg name="robot_id" value="$(arg robot_id)" />
+      <arg name="robot_name" value="$(arg robot_name)" />
     </include>
 
   </group>

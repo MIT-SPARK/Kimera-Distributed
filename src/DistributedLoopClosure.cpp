@@ -100,7 +100,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       std::string req_topic =
           "/" + robot_names_[id] + "/kimera_distributed/vlc_requests";
       ros::Subscriber req_sub = nh_.subscribe(
-          req_topic, 10, &DistributedLoopClosure::vlcRequestsCallback, this);
+          req_topic, 1, &DistributedLoopClosure::vlcRequestsCallback, this);
       vlc_requests_sub_.push_back(req_sub);
     }
 
@@ -291,11 +291,10 @@ void DistributedLoopClosure::runComms() {
   ros::WallRate r(1);
   while (ros::ok() && !should_shutdown_) {
     size_t total_candidates = updateCandidateList();
-    if (total_candidates == 0) {
-      r.sleep();
-    } else {
+    if (total_candidates > 0) {
       requestFrames();
     }
+    r.sleep();
   }
 }
 

@@ -9,6 +9,7 @@
 - /acl_jackal/dpgo_ros_node/command
 - /acl_jackal/dpgo_ros_node/anchor
 - /acl_jackal/dpgo_ros_node/public_poses
+- /acl_jackal/dpgo_ros_node/public_measurements
 - /acl_jackal/dpgo_ros_node/measurement_weights
 - /acl_jackal/dpgo_ros_node/path
 

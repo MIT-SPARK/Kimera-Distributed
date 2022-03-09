@@ -2,13 +2,14 @@
 - /acl_jackal2/kimera_vio_ros/bow_query
 - /acl_jackal2/kimera_vio_ros/pose_graph_incremental
 - /acl_jackal2/kimera_distributed/loop_closure
-- /acl_jackal/kimera_distributed/vlc_responses
-- /acl_jackal/kimera_distributed/vlc_requests
+- /acl_jackal2/kimera_distributed/vlc_responses
+- /acl_jackal2/kimera_distributed/vlc_requests
 - /acl_jackal2/dpgo_ros_node/lifting_matrix
 - /acl_jackal2/dpgo_ros_node/status
 - /acl_jackal2/dpgo_ros_node/command
 - /acl_jackal2/dpgo_ros_node/anchor
 - /acl_jackal2/dpgo_ros_node/public_poses
+- /acl_jackal2/dpgo_ros_node/public_measurements
 - /acl_jackal2/dpgo_ros_node/measurement_weights
 - /acl_jackal2/dpgo_ros_node/path
 

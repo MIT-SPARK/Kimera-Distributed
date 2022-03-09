@@ -2,6 +2,8 @@
 - /acl_jackal2/kimera_vio_ros/bow_query
 - /acl_jackal2/kimera_vio_ros/pose_graph_incremental
 - /acl_jackal2/kimera_distributed/loop_closure
+- /acl_jackal/kimera_distributed/vlc_responses
+- /acl_jackal/kimera_distributed/vlc_requests
 - /acl_jackal2/dpgo_ros_node/lifting_matrix
 - /acl_jackal2/dpgo_ros_node/status
 - /acl_jackal2/dpgo_ros_node/command
@@ -11,20 +13,11 @@
 - /acl_jackal2/dpgo_ros_node/path
 
 # Actions hosted by this robot
-- /acl_jackal2/kimera_vio_ros/vlc_frame_action/feedback
-- /acl_jackal2/kimera_vio_ros/vlc_frame_action/result
-- /acl_jackal2/kimera_vio_ros/vlc_frame_action/status
-
 - /acl_jackal2/distributed_pcm/shared_lc_action/feedback
 - /acl_jackal2/distributed_pcm/shared_lc_action/result
 - /acl_jackal2/distributed_pcm/shared_lc_action/status
 
 # Action requests to other robots
-- /acl_jackal/kimera_vio_ros/vlc_frame_action/cancel
-- /acl_jackal/kimera_vio_ros/vlc_frame_action/goal
-- /kimera2/kimera_vio_ros/vlc_frame_action/cancel
-- /kimera2/kimera_vio_ros/vlc_frame_action/goal
-
 - /acl_jackal/distributed_pcm/shared_lc_action/cancel
 - /acl_jackal/distributed_pcm/shared_lc_action/goal
 - /kimera2/distributed_pcm/shared_lc_action/cancel

@@ -1,13 +1,13 @@
 session_name: kimera-distributed-gq
 
 environment:
-  DEBUG: "true"
+  DEBUG: "false"
   REPLAY: "true"
-  SOBEK_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/sobek/mout_kimera_multi03_2021-11-05-15-58-12.bag"
-  THOTH_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/thoth/mout_kimera_multi03_2021-11-05-15-58-24.bag"
-  SODPU_ROSBAG: "/media/yulun/T7/Datasets/KimeraMulti/GQ_11_2021/thoth/mout_kimera_multi02_2021-11-05-15-31-40.bag"
+  SOBEK_ROSBAG: "/home/yunchang/Downloads/GQ_mout/bags_sobek/mout_kimera_multi03_2021-11-05-15-58-12.bag"
+  THOTH_ROSBAG: "/home/yunchang/Downloads/GQ_mout/bags_thoth/mout_kimera_multi03_2021-11-05-15-58-24.bag"
+  SODPU_ROSBAG: "/home/yunchang/Downloads/GQ_mout/bags_thoth/mout_kimera_multi02_2021-11-05-15-31-40.bag"
   RATE: "0.3"
-  WS: "~/git/arl_ws"
+  WS: "~/catkin_ws"
 
 options:
   default-command: /bin/bash
@@ -22,11 +22,11 @@ windows:
   panes:
     - roscore
     - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=sobek robot_id:=0 replay:=$REPLAY
-    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sobek robot_id:=0 num_robots:=3 dataset_name:=Jackal multi_master:=false debug:=$DEBUG
     - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=thoth robot_id:=1 replay:=$REPLAY
-    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=thoth robot_id:=1 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=thoth robot_id:=1 num_robots:=3 dataset_name:=Jackal multi_master:=false debug:=$DEBUG
     - sleep 20; roslaunch kimera_vio_ros arl_jackal.launch robot_name:=sodpu robot_id:=2 replay:=$REPLAY
-    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sodpu robot_id:=2 num_robots:=3 dataset_name:=Jackal use_actionlib:=false multi_master:=false
+    - sleep 5; roslaunch kimera_distributed kimera_distributed.launch robot_name:=sodpu robot_id:=2 num_robots:=3 dataset_name:=Jackal multi_master:=false debug:=$DEBUG
     - sleep 5; rviz -d $(rospack find kimera_distributed)/rviz/gq_mout.rviz
     - sleep 5; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 0 world map
     

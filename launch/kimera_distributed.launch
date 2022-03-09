@@ -5,11 +5,10 @@
   <arg name="robot_id"                default="0" />
   <arg name="num_robots"              default="1" />
   <arg name="should_use_sim_time"     default="false"/>
+  <arg name="debug"                   default="false"/>
 
   <!-- True if multiple ROS masters are running. This turns on reliable UDP. -->
   <arg name="multi_master" default="false" />
-  <!-- True if use actionlib for cross-robot comm. Otherwise use ROS service. -->
-  <arg name="use_actionlib" default="false" />
 
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
@@ -24,8 +23,7 @@
       <arg name="num_robots"                value="$(arg num_robots)" />
       <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="multirobot_initialization" value="false" />
-      <arg name="use_actionlib"             value="$(arg use_actionlib)" />
-      <arg name="debug"                     value="false" />
+      <arg name="debug"                     value="$(arg debug)" />
     </include>
 
     <!-- Launch dpgo_ros -->

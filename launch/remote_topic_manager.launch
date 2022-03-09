@@ -25,7 +25,7 @@
     <param name="status_pub_period" value="1.0"/>
   </node>
 
-  <node if="$(arg monitor_bw)" pkg="panoptes" type="row_bw_monitor.py" name="bw_motinor" output="screen">
+  <node if="$(arg monitor_bw)" pkg="panoptes" type="ros_bw_monitor.py" name="bw_motinor">
     <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics$(arg robot_id).yaml"/>
     <param name="log" value="true"/>
     <param name="log_dir" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />

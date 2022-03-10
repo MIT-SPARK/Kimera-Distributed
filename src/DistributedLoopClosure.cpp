@@ -219,13 +219,6 @@ void DistributedLoopClosure::bowCallback(
     if (robot_id == my_id_) {
       if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
         for (const auto& vertex_match : vertex_matches) {
-          // ROS_INFO_STREAM(
-          //     "Detected potential loop closure between "
-          //     << "(" << vertex_query.first << ", " << vertex_query.second <<
-          //     ")"
-          //     << " and "
-          //     << "(" << vertex_match.first << ", " << vertex_match.second <<
-          //     ")");
           lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
 
           {  // start candidate critical section. Add to candidate for request
@@ -242,13 +235,6 @@ void DistributedLoopClosure::bowCallback(
       if (lcd_->detectLoopWithRobot(
               my_id_, vertex_query, bow_vec, &vertex_matches)) {
         for (const auto& vertex_match : vertex_matches) {
-          // ROS_INFO_STREAM(
-          //     "Detected potential loop closure between "
-          //     << "(" << vertex_query.first << ", " << vertex_query.second <<
-          //     ")"
-          //     << " and "
-          //     << "(" << vertex_match.first << ", " << vertex_match.second <<
-          //     ")");
           lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
 
           {

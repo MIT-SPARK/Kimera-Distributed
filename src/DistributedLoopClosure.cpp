@@ -8,8 +8,8 @@
 
 #include <DBoW2/DBoW2.h>
 #include <gtsam/geometry/Pose3.h>
-#include <kimera_vio_ros/VLCFrameListQuery.h>
 #include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/VLCFrameQuery.h>
 #include <ros/console.h>
 #include <ros/ros.h>
 
@@ -129,11 +129,13 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   std::string resp_topic =
       "/" + robot_names_[my_id_] + "/kimera_distributed/vlc_responses";
-  vlc_responses_pub_ = nh_.advertise<VLCFrames>(resp_topic, 10, true);
+  vlc_responses_pub_ =
+      nh_.advertise<pose_graph_tools::VLCFrames>(resp_topic, 10, true);
 
   std::string req_topic =
       "/" + robot_names_[my_id_] + "/kimera_distributed/vlc_requests";
-  vlc_requests_pub_ = nh_.advertise<VLCRequests>(req_topic, 10, true);
+  vlc_requests_pub_ =
+      nh_.advertise<pose_graph_tools::VLCRequests>(req_topic, 10, true);
 
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
@@ -200,7 +202,7 @@ DistributedLoopClosure::~DistributedLoopClosure() {
 }
 
 void DistributedLoopClosure::bowCallback(
-    const kimera_vio_ros::BowQueryConstPtr& msg) {
+    const pose_graph_tools::BowQueryConstPtr& msg) {
   size_t robot_id = msg->robot_id;
   assert(robot_id >= my_id_);
   size_t pose_id = msg->pose_id;
@@ -369,7 +371,7 @@ void DistributedLoopClosure::processVLCRequests(
   ROS_INFO("Processing %d VLC requests.", vertex_ids.size());
   if (robot_id == my_id_) {
     // Directly request from Kimera-VIO-ROS
-    { // start vlc service critical section
+    {  // start vlc service critical section
       std::unique_lock<std::mutex> service_lock(vlc_service_mutex_);
       if (!requestVLCFrameService(vertex_ids)) {
         ROS_ERROR("Failed to retrieve local VLC frames on robot %d.", my_id_);
@@ -386,7 +388,7 @@ void DistributedLoopClosure::publishVLCRequests(
   assert(vertex_ids.size() < vlc_batch_size_);
 
   // Create requests msg
-  VLCRequests requests_msg;
+  pose_graph_tools::VLCRequests requests_msg;
   requests_msg.header.stamp = ros::Time::now();
   requests_msg.robot_id = robot_id;
   for (const auto& vertex_id : vertex_ids) {
@@ -409,7 +411,7 @@ bool DistributedLoopClosure::requestVLCFrameService(
 
   // Request local VLC frames
   // Populate requested pose ids in ROS service query
-  kimera_vio_ros::VLCFrameListQuery query;
+  pose_graph_tools::VLCFrameQuery query;
   std::string service_name =
       "/" + robot_names_[my_id_] + "/kimera_vio_ros/vlc_frame_query";
   query.request.robot_id = my_id_;
@@ -451,7 +453,7 @@ bool DistributedLoopClosure::requestVLCFrameService(
 }
 
 void DistributedLoopClosure::vlcResponsesCallback(
-    const kimera_distributed::VLCFramesConstPtr& msg) {
+    const pose_graph_tools::VLCFramesConstPtr& msg) {
   for (const auto& frame_msg : msg->frames) {
     lcd::VLCFrame frame;
     VLCFrameFromMsg(frame_msg, &frame);
@@ -500,7 +502,7 @@ size_t DistributedLoopClosure::updateCandidateList() {
 }
 
 void DistributedLoopClosure::vlcRequestsCallback(
-    const kimera_distributed::VLCRequestsConstPtr& msg) {
+    const pose_graph_tools::VLCRequestsConstPtr& msg) {
   if (msg->robot_id != my_id_) {
     return;
   }
@@ -526,12 +528,12 @@ void DistributedLoopClosure::vlcRequestsCallback(
   }
 
   // Publish VLC frames that was requested
-  VLCFrames requested_frames;
+  pose_graph_tools::VLCFrames requested_frames;
   requested_frames.header.stamp = ros::Time::now();
   for (const auto& pose_id : msg->pose_ids) {
     lcd::RobotPoseId vertex_id(my_id_, pose_id);
     if (lcd_->frameExists(vertex_id)) {
-      kimera_vio_ros::VLCFrameMsg vlc_msg;
+      pose_graph_tools::VLCFrameMsg vlc_msg;
       VLCFrameToMsg(lcd_->getVLCFrame(vertex_id), &vlc_msg);
       requested_frames.frames.push_back(vlc_msg);
     }

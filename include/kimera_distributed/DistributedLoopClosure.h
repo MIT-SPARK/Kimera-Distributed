@@ -17,10 +17,11 @@
 #include <thread>
 #include <vector>
 
+#include <pose_graph_tools/VLCFrames.h>
+#include <pose_graph_tools/VLCRequests.h>
+
 #include <kimera_multi_lcd/LoopClosureDetector.h>
 
-#include <kimera_distributed/VLCFrames.h>
-#include <kimera_distributed/VLCRequests.h>
 #include <kimera_distributed/utils.h>
 
 namespace lcd = kimera_multi_lcd;
@@ -103,17 +104,17 @@ class DistributedLoopClosure {
   /**
    * Callback to process bag of word vectors received from robots
    */
-  void bowCallback(const kimera_vio_ros::BowQueryConstPtr& msg);
+  void bowCallback(const pose_graph_tools::BowQueryConstPtr& msg);
 
   /**
    * Callback to process the VLC responses to our requests
    */
-  void vlcResponsesCallback(const kimera_distributed::VLCFramesConstPtr& msg);
+  void vlcResponsesCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
 
   /**
    * Callback to process the VLC requests from other robots
    */
-  void vlcRequestsCallback(const kimera_distributed::VLCRequestsConstPtr& msg);
+  void vlcRequestsCallback(const pose_graph_tools::VLCRequestsConstPtr& msg);
 
   /**
    * Publish detected loop closure

@@ -10,7 +10,7 @@
 using namespace kimera_distributed;
 
 TEST(UtilsTest, BowVector) {
-  DBoW2::BowVector bow_vec; 
+  DBoW2::BowVector bow_vec;
   kimera_distributed::BowVector msg;
 
   bow_vec.addWeight(1, 1.0);
@@ -22,9 +22,7 @@ TEST(UtilsTest, BowVector) {
   BowVectorFromMsg(msg, &bow_vec_out);
 
   ASSERT_TRUE(bow_vec == bow_vec_out);
-
 }
-
 
 TEST(UtilsTest, VLCFrameConstruction) {
   RobotID robot_id = 0;
@@ -34,21 +32,21 @@ TEST(UtilsTest, VLCFrameConstruction) {
   gtsam::Vector3 p1(0.9, 0.8, 0.7);
   keypoints.push_back(p0);
   keypoints.push_back(p1);
-  
-  OrbDescriptor descriptors_mat(2,7,CV_8UC1,1);
+
+  OrbDescriptor descriptors_mat(2, 7, CV_8UC1, 1);
 
   VLCFrame frame(robot_id, pose_id, keypoints, descriptors_mat);
 
-  ASSERT_EQ(frame.robot_id_ , robot_id);
-  ASSERT_EQ(frame.pose_id_  , pose_id);
+  ASSERT_EQ(frame.robot_id_, robot_id);
+  ASSERT_EQ(frame.pose_id_, pose_id);
   ASSERT_LE((frame.keypoints_[0] - p0).norm(), 1e-4);
   ASSERT_LE((frame.keypoints_[1] - p1).norm(), 1e-4);
-  ASSERT_LE(cv::norm(descriptors_mat - frame.descriptors_mat_),  1e-4);
-  for (size_t i = 0 ; i < descriptors_mat.size().height; ++i){
-    ASSERT_LE(cv::norm(frame.descriptors_vec_[i] - descriptors_mat.row(i)) , 1e-4);
+  ASSERT_LE(cv::norm(descriptors_mat - frame.descriptors_mat_), 1e-4);
+  for (size_t i = 0; i < descriptors_mat.size().height; ++i) {
+    ASSERT_LE(cv::norm(frame.descriptors_vec_[i] - descriptors_mat.row(i)),
+              1e-4);
   }
 }
-
 
 TEST(UtilsTest, VLCFrameMessage) {
   RobotID robot_id = 0;
@@ -59,31 +57,31 @@ TEST(UtilsTest, VLCFrameMessage) {
   keypoints.push_back(p0);
   keypoints.push_back(p1);
 
-  OrbDescriptor descriptors_mat(2,7,CV_8UC1,1);
+  OrbDescriptor descriptors_mat(2, 7, CV_8UC1, 1);
 
   VLCFrame frame_in(robot_id, pose_id, keypoints, descriptors_mat);
   VLCFrame frame;
-  kimera_vio_ros::VLCFrameMsg msg;
+  pose_graph_tools::VLCFrameMsg msg;
   VLCFrameToMsg(frame_in, &msg);
   VLCFrameFromMsg(msg, &frame);
 
-  ASSERT_EQ(frame.robot_id_ , robot_id);
-  ASSERT_EQ(frame.pose_id_  , pose_id);
+  ASSERT_EQ(frame.robot_id_, robot_id);
+  ASSERT_EQ(frame.pose_id_, pose_id);
   ASSERT_LE((frame.keypoints_[0] - p0).norm(), 1e-4);
   ASSERT_LE((frame.keypoints_[1] - p1).norm(), 1e-4);
-  ASSERT_LE(cv::norm(descriptors_mat - frame.descriptors_mat_),  1e-4);
-  for (size_t i = 0 ; i < descriptors_mat.size().height; ++i){
-    ASSERT_LE(cv::norm(frame.descriptors_vec_[i] - descriptors_mat.row(i)) , 1e-4);
+  ASSERT_LE(cv::norm(descriptors_mat - frame.descriptors_mat_), 1e-4);
+  for (size_t i = 0; i < descriptors_mat.size().height; ++i) {
+    ASSERT_LE(cv::norm(frame.descriptors_vec_[i] - descriptors_mat.row(i)),
+              1e-4);
   }
 }
 
-
 TEST(UtilsTest, VLCEdgeMsg) {
-  VertexID vertex_src = std::make_pair(0,0);
-  VertexID vertex_dst = std::make_pair(1,1);
-  gtsam::Point3 position(1.0,2.0,3.0);
-  gtsam::Rot3   rotation(-0.33968, 0.11263, 0.089, 0.92952);
-  gtsam::Pose3  T_src_dst(rotation, position);
+  VertexID vertex_src = std::make_pair(0, 0);
+  VertexID vertex_dst = std::make_pair(1, 1);
+  gtsam::Point3 position(1.0, 2.0, 3.0);
+  gtsam::Rot3 rotation(-0.33968, 0.11263, 0.089, 0.92952);
+  gtsam::Pose3 T_src_dst(rotation, position);
   VLCEdge edge(vertex_src, vertex_dst, T_src_dst);
 
   VLCEdge edge_out;

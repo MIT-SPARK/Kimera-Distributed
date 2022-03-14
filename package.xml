@@ -12,7 +12,6 @@
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
 
-  <depend>kimera_vio_ros</depend>
   <depend>kimera_rpgo</depend>
   <depend>kimera_multi_lcd</depend>
   <depend>actionlib</depend>
@@ -34,7 +33,6 @@
   <depend>cv_bridge</depend>
   <depend>tf</depend>
   <depend>pose_graph_tools</depend>
-  <depend>message_generation</depend>
   <depend>message_runtime</depend>
   <depend>rosunit</depend>
   <depend>rostest</depend>

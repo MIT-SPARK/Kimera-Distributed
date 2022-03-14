@@ -15,7 +15,7 @@
 namespace kimera_distributed {
 
 void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
-                    kimera_vio_ros::BowVector* msg) {
+                    pose_graph_tools::BowVector* msg) {
   msg->word_ids.clear();
   msg->word_values.clear();
   for (auto it = bow_vec.begin(); it != bow_vec.end(); ++it) {
@@ -24,7 +24,7 @@ void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
   }
 }
 
-void BowVectorFromMsg(const kimera_vio_ros::BowVector& msg,
+void BowVectorFromMsg(const pose_graph_tools::BowVector& msg,
                       DBoW2::BowVector* bow_vec) {
   assert(msg.word_ids.size() == msg.word_values.size());
   bow_vec->clear();
@@ -34,7 +34,7 @@ void BowVectorFromMsg(const kimera_vio_ros::BowVector& msg,
 }
 
 void VLCFrameToMsg(const lcd::VLCFrame& frame,
-                   kimera_vio_ros::VLCFrameMsg* msg) {
+                   pose_graph_tools::VLCFrameMsg* msg) {
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
@@ -62,7 +62,7 @@ void VLCFrameToMsg(const lcd::VLCFrame& frame,
   cv_img.toImageMsg(msg->descriptors_mat);
 }
 
-void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg,
+void VLCFrameFromMsg(const pose_graph_tools::VLCFrameMsg& msg,
                      lcd::VLCFrame* frame) {
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
@@ -297,7 +297,7 @@ nav_msgs::Path GtsamPoseTrajectoryToPath(
   return msg;
 }
 
-size_t computeBowQueryPayloadBytes(const kimera_vio_ros::BowQuery& msg) {
+size_t computeBowQueryPayloadBytes(const pose_graph_tools::BowQuery& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);
   bytes += sizeof(msg.pose_id);
@@ -307,7 +307,7 @@ size_t computeBowQueryPayloadBytes(const kimera_vio_ros::BowQuery& msg) {
   return bytes;
 }
 
-size_t computeVLCFramePayloadBytes(const kimera_vio_ros::VLCFrameMsg& msg) {
+size_t computeVLCFramePayloadBytes(const pose_graph_tools::VLCFrameMsg& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);
   bytes += sizeof(msg.pose_id);

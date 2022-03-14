@@ -15,13 +15,13 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <kimera_multi_lcd/types.h>
-#include <kimera_vio_ros/BowQuery.h>
-#include <kimera_vio_ros/BowVector.h>
-#include <kimera_vio_ros/VLCFrameMsg.h>
-#include <kimera_vio_ros/VLCFrameQuery.h>
 #include <nav_msgs/Path.h>
+#include <pose_graph_tools/BowQuery.h>
+#include <pose_graph_tools/BowVector.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphEdge.h>
+#include <pose_graph_tools/VLCFrameMsg.h>
+#include <pose_graph_tools/VLCFrameQuery.h>
 #include <ros/console.h>
 #include <map>
 #include <string>
@@ -30,13 +30,13 @@ namespace lcd = kimera_multi_lcd;
 
 namespace kimera_distributed {
 void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
-                    kimera_vio_ros::BowVector* msg);
-void BowVectorFromMsg(const kimera_vio_ros::BowVector& msg,
+                    pose_graph_tools::BowVector* msg);
+void BowVectorFromMsg(const pose_graph_tools::BowVector& msg,
                       DBoW2::BowVector* bow_vec);
 
 void VLCFrameToMsg(const lcd::VLCFrame& frame,
-                   kimera_vio_ros::VLCFrameMsg* msg);
-void VLCFrameFromMsg(const kimera_vio_ros::VLCFrameMsg& msg,
+                   pose_graph_tools::VLCFrameMsg* msg);
+void VLCFrameFromMsg(const pose_graph_tools::VLCFrameMsg& msg,
                      lcd::VLCFrame* frame);
 
 void VLCEdgeToMsg(const lcd::VLCEdge& edge,
@@ -59,10 +59,10 @@ nav_msgs::Path GtsamPoseTrajectoryToPath(
     const std::vector<gtsam::Pose3>& gtsam_poses);
 
 // Compute the payload size in a BowQuery message
-size_t computeBowQueryPayloadBytes(const kimera_vio_ros::BowQuery& msg);
+size_t computeBowQueryPayloadBytes(const pose_graph_tools::BowQuery& msg);
 
 // Compute the payload size of a VLC frame
-size_t computeVLCFramePayloadBytes(const kimera_vio_ros::VLCFrameMsg& msg);
+size_t computeVLCFramePayloadBytes(const pose_graph_tools::VLCFrameMsg& msg);
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 }  // namespace kimera_distributed

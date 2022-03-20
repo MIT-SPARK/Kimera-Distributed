@@ -19,10 +19,10 @@
 
 #include <pose_graph_tools/VLCFrames.h>
 #include <pose_graph_tools/VLCRequests.h>
-
+#include <pose_graph_tools/PoseGraph.h>
 #include <kimera_multi_lcd/LoopClosureDetector.h>
-
 #include <kimera_distributed/utils.h>
+#include <kimera_distributed/SubmapAtlas.h>
 
 namespace lcd = kimera_multi_lcd;
 
@@ -54,6 +54,10 @@ class DistributedLoopClosure {
   std::vector<size_t> received_bow_bytes_;
   std::vector<size_t> received_vlc_bytes_;
 
+  // Submap Atlas
+  std::unique_ptr<SubmapAtlas> submap_atlas_;
+  gtsam::NonlinearFactorGraph submap_loop_closures_;
+
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
   lcd::LcdParams lcd_params_;
@@ -77,6 +81,7 @@ class DistributedLoopClosure {
   std::map<size_t, std::string> robot_names_;
 
   // ROS subscriber
+  ros::Subscriber local_pg_sub_;
   std::vector<ros::Subscriber> bow_sub_;
   std::vector<ros::Subscriber> vlc_requests_sub_;
   std::vector<ros::Subscriber> vlc_responses_sub_;
@@ -105,6 +110,12 @@ class DistributedLoopClosure {
    * Callback to process bag of word vectors received from robots
    */
   void bowCallback(const pose_graph_tools::BowQueryConstPtr& msg);
+
+  /**
+   * @brief Subscribe to incremental pose graph of this robot published by VIO
+   * @param msg
+   */
+  void localPoseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
 
   /**
    * Callback to process the VLC responses to our requests

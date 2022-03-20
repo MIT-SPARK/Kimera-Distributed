@@ -5,11 +5,13 @@
  */
 
 #include <kimera_distributed/DistributedLoopClosure.h>
+#include <kimera_distributed/prefix.h>
 
 #include <DBoW2/DBoW2.h>
 #include <gtsam/geometry/Pose3.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/VLCFrameQuery.h>
+#include <glog/logging.h>
 #include <ros/console.h>
 #include <ros/ros.h>
 
@@ -94,7 +96,14 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Initialize LCD
   lcd_->loadAndInitialize(lcd_params_);
 
+  // Initialize submap atlas
+  SubmapAtlas::Parameters submap_params;
+  ros::param::get("~max_submap_size", submap_params.max_submap_size);
+  submap_atlas_.reset(new SubmapAtlas(submap_params));
+
   // Subscriber
+  std::string topic = "/" + robot_names_[my_id_] + "/kimera_vio_ros/pose_graph_incremental";
+  local_pg_sub_ = nh_.subscribe(topic, 1000, &DistributedLoopClosure::localPoseGraphCallback, this);
   for (size_t id = 0; id < num_robots_; ++id) {
     if (id < my_id_) {
       std::string req_topic =
@@ -262,6 +271,58 @@ void DistributedLoopClosure::bowCallback(
     saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
     logCommStat(log_output_dir_ + "lcd_log.csv");
   }
+}
+
+void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr &msg) {
+  // Iterate through nodes (keyframes)
+  for (const pose_graph_tools::PoseGraphNode& pg_node : msg->nodes) {
+    const gtsam::Pose3 T_odom_keyframe = RosPoseToGtsam(pg_node.pose);
+    CHECK_EQ(pg_node.robot_id, my_id_);
+    const int frame_id = (int) pg_node.key;
+    if (submap_atlas_->hasKeyframe(frame_id))
+      continue;
+    if (frame_id != submap_atlas_->numKeyframes()) {
+      ROS_ERROR_STREAM("Received out of ordered keyframe. Expected id:"
+                        << submap_atlas_->numKeyframes()
+                        << ", received=" << frame_id);
+    }
+    submap_atlas_->createKeyframe(frame_id, T_odom_keyframe);
+  }
+
+  // Parse intra-robot loop closures
+  for (const pose_graph_tools::PoseGraphEdge& pg_edge : msg->edges) {
+    if (pg_edge.robot_from == my_id_ &&
+        pg_edge.robot_to == my_id_ &&
+        pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
+      // Read loop closure between the keyframes
+      lcd::VLCEdge keyframe_loop_closure;
+      VLCEdgeFromMsg(pg_edge, &keyframe_loop_closure);
+      const auto T_f1_f2 = keyframe_loop_closure.T_src_dst_;
+      const auto keyframe_src = CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_from));
+      const auto keyframe_dst = CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_to));
+      const auto submap_src = CHECK_NOTNULL(keyframe_src->getSubmap());
+      const auto submap_dst = CHECK_NOTNULL(keyframe_dst->getSubmap());
+      // Skip this loop closure if both keyframes belong to the same submap
+      if (submap_src->id() == submap_dst->id())
+        continue;
+      const auto T_s1_f1 = keyframe_src->getPoseInSubmapFrame();
+      const auto T_s2_f2 = keyframe_dst->getPoseInSubmapFrame();
+      const auto T_s1_s2 = T_s1_f1 * T_f1_f2 * (T_s2_f2.inverse());
+      // Convert the loop closure to between the corresponding submaps
+      gtsam::Symbol from_key(robot_id_to_prefix.at(my_id_), submap_src->id());
+      gtsam::Symbol to_key(robot_id_to_prefix.at(my_id_), submap_dst->id());
+      static const gtsam::SharedNoiseModel& noise =
+          gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+      submap_loop_closures_.add(
+          gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
+
+      ROS_INFO_STREAM("New intra lc dist: " << T_s1_s2.translation().norm());
+    }
+  }
+
+  ROS_INFO_STREAM("Num submaps=" << submap_atlas_->numSubmaps()
+                  << ", num_keyframes=" << submap_atlas_->numKeyframes()
+                  << ", num_lcs=" << submap_loop_closures_.size());
 }
 
 void DistributedLoopClosure::runVerification() {

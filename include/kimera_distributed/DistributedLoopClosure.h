@@ -20,6 +20,7 @@
 #include <pose_graph_tools/VLCFrames.h>
 #include <pose_graph_tools/VLCRequests.h>
 #include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/PoseGraphQuery.h>
 #include <kimera_multi_lcd/LoopClosureDetector.h>
 #include <kimera_distributed/utils.h>
 #include <kimera_distributed/SubmapAtlas.h>
@@ -91,6 +92,9 @@ class DistributedLoopClosure {
   ros::Publisher vlc_responses_pub_;
   ros::Publisher vlc_requests_pub_;
 
+  // ROS service
+  ros::ServiceServer pose_graph_request_server_;
+
   // Threads
   std::unique_ptr<std::thread> verification_thread_;
   std::unique_ptr<std::thread> comms_thread_;
@@ -126,6 +130,16 @@ class DistributedLoopClosure {
    * Callback to process the VLC requests from other robots
    */
   void vlcRequestsCallback(const pose_graph_tools::VLCRequestsConstPtr& msg);
+
+  /**
+   * @brief Send submap-level pose graph for distributed optimization
+   * @param request
+   * @param response
+   * @return
+   */
+  bool requestPoseGraphCallback(
+      pose_graph_tools::PoseGraphQuery::Request& request,
+      pose_graph_tools::PoseGraphQuery::Response& response);
 
   /**
    * Publish detected loop closure

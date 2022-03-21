@@ -38,6 +38,10 @@ void VLCFrameToMsg(const lcd::VLCFrame& frame,
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
+  // Convert submap info
+  msg->submap_id = frame.submap_id_;
+  msg->T_submap_pose = GtsamPoseToRos(frame.T_submap_pose_);
+
   // Convert keypoints
   PointCloud keypoints;
   for (size_t i = 0; i < frame.keypoints_.size(); ++i) {
@@ -62,7 +66,11 @@ void VLCFrameFromMsg(const pose_graph_tools::VLCFrameMsg& msg,
   frame->robot_id_ = msg.robot_id;
   frame->pose_id_ = msg.pose_id;
 
-  // Convert keypoints and vesors
+  // Convert submap info
+  frame->submap_id_ = msg.submap_id;
+  frame->T_submap_pose_ = RosPoseToGtsam(msg.T_submap_pose);
+
+  // Convert keypoints 
   PointCloud keypoints;
   pcl::fromROSMsg(msg.keypoints, keypoints);
   frame->keypoints_.clear();

@@ -146,6 +146,10 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   vlc_requests_pub_ =
       nh_.advertise<pose_graph_tools::VLCRequests>(req_topic, 10, true);
 
+  // ROS service
+  pose_graph_request_server_ = nh_.advertiseService(
+      "request_pose_graph", &DistributedLoopClosure::requestPoseGraphCallback, this);
+
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
       << my_id_ << "). \n"
@@ -302,8 +306,8 @@ void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::Pose
       const auto keyframe_dst = CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_to));
       const auto submap_src = CHECK_NOTNULL(keyframe_src->getSubmap());
       const auto submap_dst = CHECK_NOTNULL(keyframe_dst->getSubmap());
-      // Skip this loop closure if both keyframes belong to the same submap
-      if (submap_src->id() == submap_dst->id())
+      // Skip this loop closure if two submaps are identical or consecutive
+      if (std::abs(submap_src->id()-submap_dst->id()) <= 1)
         continue;
       const auto T_s1_f1 = keyframe_src->getPoseInSubmapFrame();
       const auto T_s2_f2 = keyframe_dst->getPoseInSubmapFrame();
@@ -390,8 +394,8 @@ void DistributedLoopClosure::verifyLoopCallback() {
     {  // start lcd critical section
       std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
       // Both frames should already exist locally
-      assert(lcd_->frameExists(vertex_query) &&
-             lcd_->frameExists(vertex_match));
+      CHECK(lcd_->frameExists(vertex_query));
+      CHECK(lcd_->frameExists(vertex_match));
 
       // Find correspondences between frames.
       std::vector<unsigned int> i_query, i_match;
@@ -405,8 +409,6 @@ void DistributedLoopClosure::verifyLoopCallback() {
               vertex_query, vertex_match, &i_query, &i_match)) {
         if (lcd_->recoverPose(
                 vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
-          lcd::VLCEdge edge(vertex_query, vertex_match, T_query_match);
-          loop_closures_.push_back(edge);
           ROS_INFO(
               "Verified loop closure between robot %d pose %d and robot %d "
               "pose %d.",
@@ -414,12 +416,63 @@ void DistributedLoopClosure::verifyLoopCallback() {
               vertex_query.second,
               vertex_match.first,
               vertex_match.second);
-          publishLoopClosure(edge);  // Publish to pcm node
+
+          // Compute loop closure between the corresponding two submaps
+          const auto frame1 = lcd_->getVLCFrame(vertex_query);
+          const auto frame2 = lcd_->getVLCFrame(vertex_match);
+          const auto T_s1_f1 = frame1.T_submap_pose_;
+          const auto T_s2_f2 = frame2.T_submap_pose_;
+          const auto T_f1_f2 = T_query_match;
+          const auto T_s1_s2 = T_s1_f1 * T_f1_f2 * (T_s2_f2.inverse());
+          gtsam::Symbol from_key(robot_id_to_prefix.at(frame1.robot_id_), frame1.submap_id_);
+          gtsam::Symbol to_key(robot_id_to_prefix.at(frame2.robot_id_), frame2.submap_id_);
+          static const gtsam::SharedNoiseModel& noise =
+              gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+          submap_loop_closures_.add(
+              gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
         }
       }
     }  // end lcd critical section
     queued_lc_.pop();
   }
+}
+
+bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGraphQuery::Request &request,
+                                                      pose_graph_tools::PoseGraphQuery::Response &response) {
+  CHECK_EQ(request.robot_id, my_id_);
+
+  // Fill in submap-level loop closures
+  pose_graph_tools::PoseGraph out_graph = GtsamGraphToRos(submap_loop_closures_, gtsam::Values());
+
+  // Fill in submap-level odometry
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps() - 1; ++submap_id) {
+    pose_graph_tools::PoseGraphEdge edge;
+    const auto submap_src = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    const auto submap_dst = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id + 1));
+    const auto T_odom_src = submap_src->getPoseInOdomFrame();
+    const auto T_odom_dst = submap_dst->getPoseInOdomFrame();
+    const auto T_src_dst = (T_odom_src.inverse()) * T_odom_dst;
+    edge.robot_from = my_id_;
+    edge.robot_to = my_id_;
+    edge.key_from = submap_src->id();
+    edge.key_to = submap_dst->id();
+    edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+    edge.pose = GtsamPoseToRos(T_src_dst);
+    out_graph.edges.push_back(edge);
+  }
+
+  // Fill in submap nodes
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps(); ++submap_id) {
+    pose_graph_tools::PoseGraphNode node;
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    node.robot_id = my_id_;
+    node.key = submap->id();
+    node.pose = GtsamPoseToRos(submap->getPoseInOdomFrame());
+    out_graph.nodes.push_back(node);
+  }
+
+  response.pose_graph = out_graph;
+  return true;
 }
 
 void DistributedLoopClosure::processVLCRequests(
@@ -508,6 +561,10 @@ bool DistributedLoopClosure::requestVLCFrameService(
     lcd::RobotPoseId vertex_id(frame.robot_id_, frame.pose_id_);
     {  // start lcd critical section
       std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
+      // Fill in submap information for this keyframe
+      const auto keyframe = CHECK_NOTNULL(submap_atlas_->getKeyframe(frame.pose_id_));
+      frame.submap_id_ = CHECK_NOTNULL(keyframe->getSubmap())->id();
+      frame.T_submap_pose_ = keyframe->getPoseInSubmapFrame();
       lcd_->addVLCFrame(vertex_id, frame);
     }  // end lcd critical section
   }

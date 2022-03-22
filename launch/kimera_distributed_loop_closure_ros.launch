@@ -16,17 +16,9 @@
     <param name="num_robots" value="$(arg num_robots)" />
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
-    <param name="vlc_batch_size" value="10"/>
+    <param name="vlc_batch_size"  value="10"/>
+    <param name="max_submap_size" value="10"/>
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
     <rosparam file="$(find kimera_distributed)/params/robot_names.yaml" />
   </node>    
-
-  <!-- Launch Kimera Distributed PCM Node -->
-  <node launch-prefix="$(arg launch_prefix)" name="distributed_pcm_node" pkg="kimera_distributed" type="kimera_distributed_pcm_node" output="screen" ns="distributed_pcm">
-    <param name="robot_id"   value="$(arg robot_id)"/>
-    <param name="num_robots" value="$(arg num_robots)" />
-    <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
-    <rosparam file="$(find kimera_distributed)/params/pcm_$(arg dataset_name).yaml"/>
-    <rosparam file="$(find kimera_distributed)/params/robot_names.yaml" />
-  </node>
 </launch>

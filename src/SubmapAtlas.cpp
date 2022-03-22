@@ -20,6 +20,7 @@ std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(int keyframe_id, const gts
   CHECK(!hasKeyframe(keyframe_id));
 
   auto keyframe = std::make_shared<Keyframe>(keyframe_id);
+  keyframe->setPoseInOdomFrame(T_odom_keyframe);
   keyframes_.emplace(keyframe_id, keyframe);
 
   // Create a new submap if needed

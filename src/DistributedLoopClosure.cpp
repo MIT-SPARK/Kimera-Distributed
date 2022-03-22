@@ -185,6 +185,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "interrobot loop closure only = " << lcd_params_.inter_robot_only_
       << "\n"
       << "maximum batch size to request VLC frames = " << vlc_batch_size_
+      << "maximum submap size = " << submap_params.max_submap_size
       << "\n");
 
   // Start verification thread
@@ -319,14 +320,8 @@ void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::Pose
           gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
       submap_loop_closures_.add(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
-
-      ROS_INFO_STREAM("New intra lc dist: " << T_s1_s2.translation().norm());
     }
   }
-
-  ROS_INFO_STREAM("Num submaps=" << submap_atlas_->numSubmaps()
-                  << ", num_keyframes=" << submap_atlas_->numKeyframes()
-                  << ", num_lcs=" << submap_loop_closures_.size());
 }
 
 void DistributedLoopClosure::runVerification() {
@@ -341,13 +336,12 @@ void DistributedLoopClosure::runVerification() {
 }
 
 void DistributedLoopClosure::runComms() {
-  ros::WallRate r(1);
   while (ros::ok() && !should_shutdown_) {
     size_t total_candidates = updateCandidateList();
     if (total_candidates > 0) {
       requestFrames();
     }
-    r.sleep();
+    ros::Duration(1.0).sleep();
   }
 }
 
@@ -409,14 +403,6 @@ void DistributedLoopClosure::verifyLoopCallback() {
               vertex_query, vertex_match, &i_query, &i_match)) {
         if (lcd_->recoverPose(
                 vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
-          ROS_INFO(
-              "Verified loop closure between robot %d pose %d and robot %d "
-              "pose %d.",
-              vertex_query.first,
-              vertex_query.second,
-              vertex_match.first,
-              vertex_match.second);
-
           // Compute loop closure between the corresponding two submaps
           const auto frame1 = lcd_->getVLCFrame(vertex_query);
           const auto frame2 = lcd_->getVLCFrame(vertex_match);
@@ -430,6 +416,14 @@ void DistributedLoopClosure::verifyLoopCallback() {
               gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
           submap_loop_closures_.add(
               gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
+
+          ROS_INFO(
+              "Verified loop (%d,%d)-(%d,%d). Total loop closures: %i",
+              vertex_query.first,
+              vertex_query.second,
+              vertex_match.first,
+              vertex_match.second,
+              submap_loop_closures_.size());
         }
       }
     }  // end lcd critical section
@@ -562,7 +556,11 @@ bool DistributedLoopClosure::requestVLCFrameService(
     {  // start lcd critical section
       std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
       // Fill in submap information for this keyframe
-      const auto keyframe = CHECK_NOTNULL(submap_atlas_->getKeyframe(frame.pose_id_));
+      const auto keyframe = submap_atlas_->getKeyframe(frame.pose_id_);
+      if (!keyframe) {
+        ROS_WARN_STREAM("Received VLC frame" << frame.pose_id_ << " does not exist in submap atlas.");
+        continue;
+      }
       frame.submap_id_ = CHECK_NOTNULL(keyframe->getSubmap())->id();
       frame.T_submap_pose_ = keyframe->getPoseInSubmapFrame();
       lcd_->addVLCFrame(vertex_id, frame);

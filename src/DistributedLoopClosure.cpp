@@ -99,6 +99,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Initialize submap atlas
   SubmapAtlas::Parameters submap_params;
   ros::param::get("~max_submap_size", submap_params.max_submap_size);
+  ros::param::get("~max_submap_distance", submap_params.max_submap_distance);
   submap_atlas_.reset(new SubmapAtlas(submap_params));
 
   // Subscriber
@@ -186,6 +187,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "\n"
       << "maximum batch size to request VLC frames = " << vlc_batch_size_
       << "maximum submap size = " << submap_params.max_submap_size
+      << "maximum submap distance = " << submap_params.max_submap_distance
       << "\n");
 
   // Start verification thread

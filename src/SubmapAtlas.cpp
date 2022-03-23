@@ -8,9 +8,7 @@
 
 namespace kimera_distributed {
 
-SubmapAtlas::SubmapAtlas(const Parameters &params) : params_(params) {
-
-}
+SubmapAtlas::SubmapAtlas(const Parameters &params) : params_(params) {}
 
 int SubmapAtlas::numKeyframes() const { return (int) keyframes_.size(); }
 
@@ -32,11 +30,11 @@ std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(int keyframe_id, const gts
 
   // Add this keyframe to the submap
   auto submap = getLatestSubmap();
-  submap->addKeyframe(keyframe);
-  keyframe->setSubmap(submap);
   const auto &T_odom_submap = submap->getPoseInOdomFrame();
   gtsam::Pose3 T_submap_keyframe = T_odom_submap.inverse() * T_odom_keyframe;
   keyframe->setPoseInSubmapFrame(T_submap_keyframe);
+  keyframe->setSubmap(submap);
+  submap->addKeyframe(keyframe);
 
   return keyframe;
 }
@@ -97,6 +95,8 @@ bool SubmapAtlas::shouldCreateNewSubmap() {
   if (submaps_.empty())
     return true;
   if (getLatestSubmap()->numKeyframes() >= params_.max_submap_size)
+    return true;
+  if (getLatestSubmap()->distance() > params_.max_submap_distance)
     return true;
 
   return false;

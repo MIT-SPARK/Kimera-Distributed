@@ -18,8 +18,9 @@ class SubmapAtlas {
    */
   class Parameters {
    public:
-    Parameters() : max_submap_size(10) {}
+    Parameters() : max_submap_size(10), max_submap_distance(1.0) {}
     int max_submap_size;  // maximum number of keyframes in a given submap
+    double max_submap_distance;  // maximum cumulative distance in a given submap
   };
   /**
    * @brief Constructor

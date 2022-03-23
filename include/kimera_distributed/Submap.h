@@ -33,6 +33,11 @@ class Submap {
    */
   int numKeyframes() const;
   /**
+   * @brief Get the cumulative distance traversed in this submap
+   * @return
+   */
+  double distance() const;
+  /**
    * @brief Get pose of this submap in the odometry frame
    * @return
    */
@@ -63,6 +68,7 @@ class Submap {
   const int id_;  // unique id of this submap
   std::unordered_map<int, std::shared_ptr<Keyframe>> keyframes_;  // keyframes that belong to this submap
   gtsam::Pose3 T_odom_submap_;  // the pose of this submap in the odometry frame (Kimera-VIO)
+  double distance_; // cumulative distance traveled in this submap
 };
 
 }

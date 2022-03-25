@@ -31,7 +31,7 @@
       <arg name="num_robots"                       value="$(arg num_robots)" />
       <arg name="debug"                            value="$(arg debug)" />
       <arg name="verbose"                          value="true" />
-      <arg name="publish_iterate"                  value="true"/>
+      <arg name="publish_iterate"                  value="false"/>
       <arg name="multirobot_initialization"        value="true"/>
       <arg name="acceleration"                     value="false" />
       <arg name="relative_change_tolerance"        value="1e-2" />

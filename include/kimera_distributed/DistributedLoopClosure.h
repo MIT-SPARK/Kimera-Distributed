@@ -33,11 +33,6 @@ class DistributedLoopClosure {
  public:
   DistributedLoopClosure(const ros::NodeHandle& n);
   ~DistributedLoopClosure();
-
-  inline void getLoopClosures(std::vector<lcd::VLCEdge>* loop_closures) {
-    *loop_closures = loop_closures_;
-  }
-
   inline size_t getRobotId() const { return my_id_; }
 
   // For debugging purpose
@@ -57,7 +52,6 @@ class DistributedLoopClosure {
 
   // Submap Atlas
   std::unique_ptr<SubmapAtlas> submap_atlas_;
-  gtsam::NonlinearFactorGraph submap_loop_closures_;
 
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
@@ -65,7 +59,8 @@ class DistributedLoopClosure {
   std::mutex lcd_mutex_;
 
   // Loop closures
-  std::vector<lcd::VLCEdge> loop_closures_;
+  gtsam::NonlinearFactorGraph keyframe_loop_closures_;
+  gtsam::NonlinearFactorGraph submap_loop_closures_;
 
   // List of potential loop closures
   // that require to request VLC frames

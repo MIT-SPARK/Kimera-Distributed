@@ -272,12 +272,6 @@ void DistributedLoopClosure::bowCallback(
   if (robot_id != my_id_) {
     received_bow_bytes_.push_back(computeBowQueryPayloadBytes(*msg));
   }
-
-  // Log all loop closures to file
-  if (log_output_) {
-    saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
-    logCommStat(log_output_dir_ + "lcd_log.csv");
-  }
 }
 
 void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr &msg) {
@@ -305,6 +299,10 @@ void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::Pose
       lcd::VLCEdge keyframe_loop_closure;
       VLCEdgeFromMsg(pg_edge, &keyframe_loop_closure);
       const auto T_f1_f2 = keyframe_loop_closure.T_src_dst_;
+      static const gtsam::SharedNoiseModel& noise =
+          gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+
+      // Convert the loop closure to between the corresponding submaps
       const auto keyframe_src = CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_from));
       const auto keyframe_dst = CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_to));
       const auto submap_src = CHECK_NOTNULL(keyframe_src->getSubmap());
@@ -318,8 +316,6 @@ void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::Pose
       // Convert the loop closure to between the corresponding submaps
       gtsam::Symbol from_key(robot_id_to_prefix.at(my_id_), submap_src->id());
       gtsam::Symbol to_key(robot_id_to_prefix.at(my_id_), submap_dst->id());
-      static const gtsam::SharedNoiseModel& noise =
-          gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
       submap_loop_closures_.add(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
     }
@@ -405,22 +401,28 @@ void DistributedLoopClosure::verifyLoopCallback() {
               vertex_query, vertex_match, &i_query, &i_match)) {
         if (lcd_->recoverPose(
                 vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
-          // Compute loop closure between the corresponding two submaps
           const auto frame1 = lcd_->getVLCFrame(vertex_query);
           const auto frame2 = lcd_->getVLCFrame(vertex_match);
+          // Save loop closure between keyframes (for debug purpose)
+          gtsam::Symbol keyframe_from(robot_id_to_prefix.at(frame1.robot_id_), frame1.pose_id_);
+          gtsam::Symbol keyframe_to(robot_id_to_prefix.at(frame2.robot_id_), frame2.pose_id_);
+          static const gtsam::SharedNoiseModel& noise =
+              gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+          keyframe_loop_closures_.add(
+              gtsam::BetweenFactor<gtsam::Pose3>(keyframe_from, keyframe_to, T_query_match, noise));
+
+          // Save loop closure between the corresponding two submaps
           const auto T_s1_f1 = frame1.T_submap_pose_;
           const auto T_s2_f2 = frame2.T_submap_pose_;
           const auto T_f1_f2 = T_query_match;
           const auto T_s1_s2 = T_s1_f1 * T_f1_f2 * (T_s2_f2.inverse());
-          gtsam::Symbol from_key(robot_id_to_prefix.at(frame1.robot_id_), frame1.submap_id_);
-          gtsam::Symbol to_key(robot_id_to_prefix.at(frame2.robot_id_), frame2.submap_id_);
-          static const gtsam::SharedNoiseModel& noise =
-              gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+          gtsam::Symbol submap_from(robot_id_to_prefix.at(frame1.robot_id_), frame1.submap_id_);
+          gtsam::Symbol submap_to(robot_id_to_prefix.at(frame2.robot_id_), frame2.submap_id_);
           submap_loop_closures_.add(
-              gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
+              gtsam::BetweenFactor<gtsam::Pose3>(submap_from, submap_to, T_s1_s2, noise));
 
           ROS_INFO(
-              "Verified loop (%d,%d)-(%d,%d). Total loop closures: %i",
+              "Verified loop (%d,%d)-(%d,%d). Total submap loop closures: %i",
               vertex_query.first,
               vertex_query.second,
               vertex_match.first,
@@ -468,6 +470,13 @@ bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGrap
   }
 
   response.pose_graph = out_graph;
+
+  // Log all loop closures to file
+  if (log_output_) {
+    saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
+    logCommStat(log_output_dir_ + "lcd_log.csv");
+  }
+
   return true;
 }
 
@@ -616,7 +625,7 @@ size_t DistributedLoopClosure::updateCandidateList() {
   ROS_INFO(
       "Number of loop closure candidates ready for geometric verification: %d",
       ready_candidates);
-  ROS_INFO("Total detected loop closures: %d", loop_closures_.size());
+  ROS_INFO("Total detected loop closures: %d", keyframe_loop_closures_.size());
   return total_candidates;
 }
 
@@ -680,7 +689,7 @@ void DistributedLoopClosure::logCommStat(const std::string& filename) {
           "total_vlc_bytes\n";
   file << lcd_->getNumGeomVerificationsMono() << ",";
   file << lcd_->getNumGeomVerifications() << ",";
-  file << loop_closures_.size() << ",";
+  file << keyframe_loop_closures_.size() << ",";
   file << std::accumulate(
               received_bow_bytes_.begin(), received_bow_bytes_.end(), 0)
        << ",";
@@ -695,28 +704,32 @@ void DistributedLoopClosure::saveLoopClosuresToFile(
   std::ofstream file;
   file.open(filename);
 
-  std::vector<lcd::VLCEdge> loop_closures;
-  getLoopClosures(&loop_closures);
-
   // file format
   file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
-
-  for (size_t i = 0; i < loop_closures.size(); ++i) {
-    lcd::VLCEdge edge = loop_closures[i];
-    file << edge.vertex_src_.first << ",";
-    file << edge.vertex_src_.second << ",";
-    file << edge.vertex_dst_.first << ",";
-    file << edge.vertex_dst_.second << ",";
-    gtsam::Pose3 pose = edge.T_src_dst_;
-    gtsam::Quaternion quat = pose.rotation().toQuaternion();
-    gtsam::Point3 point = pose.translation();
-    file << quat.x() << ",";
-    file << quat.y() << ",";
-    file << quat.z() << ",";
-    file << quat.w() << ",";
-    file << point.x() << ",";
-    file << point.y() << ",";
-    file << point.z() << "\n";
+  for (size_t i = 0; i < keyframe_loop_closures_.size(); i++) {
+    // check if between factor
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
+            keyframe_loop_closures_[i])) {
+      // convert to between factor
+      const gtsam::BetweenFactor<gtsam::Pose3>& factor = *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
+              keyframe_loop_closures_[i]);
+      gtsam::Symbol front(factor.front());
+      gtsam::Symbol back(factor.back());
+      file << robot_prefix_to_id.at(front.chr()) << ",";
+      file << front.index() << ",";
+      file << robot_prefix_to_id.at(back.chr()) << ",";
+      file << back.index() << ",";
+      gtsam::Pose3 pose = factor.measured();
+      gtsam::Quaternion quat = pose.rotation().toQuaternion();
+      gtsam::Point3 point = pose.translation();
+      file << quat.x() << ",";
+      file << quat.y() << ",";
+      file << quat.z() << ",";
+      file << quat.w() << ",";
+      file << point.x() << ",";
+      file << point.y() << ",";
+      file << point.z() << "\n";
+    }
   }
 
   file.close();

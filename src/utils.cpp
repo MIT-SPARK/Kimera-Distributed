@@ -38,19 +38,14 @@ void VLCFrameToMsg(const lcd::VLCFrame& frame,
   msg->robot_id = frame.robot_id_;
   msg->pose_id = frame.pose_id_;
 
-  // Convert keypoints and versors
+  // Convert keypoints
   PointCloud keypoints;
-  PointCloud versors;
   for (size_t i = 0; i < frame.keypoints_.size(); ++i) {
     gtsam::Vector3 p_ = frame.keypoints_[i];
     pcl::PointXYZ p(p_(0), p_(1), p_(2));
     keypoints.push_back(p);
-    gtsam::Vector3 v_ = frame.versors_[i];
-    pcl::PointXYZ v(v_(0), v_(1), v_(2));
-    versors.push_back(v);
   }
   pcl::toROSMsg(keypoints, msg->keypoints);
-  pcl::toROSMsg(versors, msg->versors);
 
   // Convert descriptors
   assert(frame.descriptors_mat_.type() ==
@@ -68,16 +63,12 @@ void VLCFrameFromMsg(const pose_graph_tools::VLCFrameMsg& msg,
   frame->pose_id_ = msg.pose_id;
 
   // Convert keypoints and vesors
-  PointCloud keypoints, versors;
+  PointCloud keypoints;
   pcl::fromROSMsg(msg.keypoints, keypoints);
-  pcl::fromROSMsg(msg.versors, versors);
   frame->keypoints_.clear();
-  frame->versors_.clear();
   for (size_t i = 0; i < keypoints.size(); ++i) {
     gtsam::Vector3 p(keypoints[i].x, keypoints[i].y, keypoints[i].z);
     frame->keypoints_.push_back(p);
-    gtsam::Vector3 v(versors[i].x, versors[i].y, versors[i].z);
-    frame->versors_.push_back(v);
   }
 
   // Convert descriptors

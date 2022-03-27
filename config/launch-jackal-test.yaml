@@ -1,7 +1,7 @@
 session_name: kimera-distributed-jackal
 
 environment:
-  ROSBAG0: "/home/yunchang/Downloads/kimera_test_2022-03-18-14-58-51.bag"
+  ROSBAG0: "/home/yunchang/Downloads/kimera_test_j1_2022-03-11-13-46-21.bag"
   ROSBAG1: "/home/yunchang/Downloads/kimera_test_j2_2022-03-11-13-46-19.bag"
   RATE: "1.0"
 

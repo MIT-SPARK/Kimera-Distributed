@@ -442,6 +442,7 @@ bool DistributedLoopClosure::requestVLCFrameService(
   for (const auto& frame_msg : query.response.frames) {
     lcd::VLCFrame frame;
     VLCFrameFromMsg(frame_msg, &frame);
+    frame.pruneInvalidKeypoints();
     assert(frame.robot_id_ == my_id_);
     lcd::RobotPoseId vertex_id(frame.robot_id_, frame.pose_id_);
     {  // start lcd critical section

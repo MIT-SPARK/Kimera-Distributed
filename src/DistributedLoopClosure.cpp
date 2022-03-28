@@ -28,6 +28,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       my_id_(0),
       num_robots_(1),
       log_output_(false),
+      run_offline_(false),
       lcd_(new lcd::LoopClosureDetector) {
   int my_id_int = -1;
   int num_robots_int = -1;
@@ -44,6 +45,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   // Path to log outputs
   log_output_ = ros::param::get("~log_output_path", log_output_dir_);
+  ros::param::get("~run_offline", run_offline_);
 
   // Visual place recognition params
   ros::param::get("~alpha", lcd_params_.alpha_);
@@ -185,10 +187,24 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << lcd_params_.geometric_verification_min_inlier_percentage_ << "\n"
       << "interrobot loop closure only = " << lcd_params_.inter_robot_only_
       << "\n"
-      << "maximum batch size to request VLC frames = " << vlc_batch_size_
-      << "maximum submap size = " << submap_params.max_submap_size
+      << "maximum batch size to request VLC frames = " << vlc_batch_size_ << "\n"
+      << "maximum submap size = " << submap_params.max_submap_size << "\n"
       << "maximum submap distance = " << submap_params.max_submap_distance
       << "\n");
+
+  if (run_offline_) {
+    // Run offline. Load keyframe and loop closures from file.
+    loadKeyframeFromFile(log_output_dir_ + "keyframe_poses.csv");
+    loadLoopClosuresFromFile(log_output_dir_ + "loop_closures.csv");
+  } else {
+    // Run online. In this case initialize log files to record keyframe poses and loop closures.
+    if (log_output_) {
+      createLogFiles();
+    }
+    // Create the first keyframe
+    submap_atlas_->createKeyframe(0, gtsam::Pose3());
+    logKeyframePose(gtsam::Symbol(robot_id_to_prefix.at(my_id_), 0), gtsam::Pose3());
+  }
 
   // Start verification thread
   verification_thread_.reset(
@@ -198,7 +214,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   // Start comms thread
   comms_thread_.reset(new std::thread(&DistributedLoopClosure::runComms, this));
-  ROS_INFO("Started distributed loop closure comms thread (ID = %d0", my_id_);
+  ROS_INFO("Started distributed loop closure comms thread (ID = %d)", my_id_);
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {
@@ -275,19 +291,35 @@ void DistributedLoopClosure::bowCallback(
 }
 
 void DistributedLoopClosure::localPoseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr &msg) {
-  // Iterate through nodes (keyframes)
-  for (const pose_graph_tools::PoseGraphNode& pg_node : msg->nodes) {
-    const gtsam::Pose3 T_odom_keyframe = RosPoseToGtsam(pg_node.pose);
-    CHECK_EQ(pg_node.robot_id, my_id_);
-    const int frame_id = (int) pg_node.key;
-    if (submap_atlas_->hasKeyframe(frame_id))
-      continue;
-    if (frame_id != submap_atlas_->numKeyframes()) {
-      ROS_ERROR_STREAM("Received out of ordered keyframe. Expected id:"
-                        << submap_atlas_->numKeyframes()
-                        << ", received=" << frame_id);
+  // Parse odometry edges and create new keyframes in the submap atlas
+  for (const pose_graph_tools::PoseGraphEdge &pg_edge: msg->edges) {
+    if (pg_edge.robot_from == my_id_ &&
+        pg_edge.robot_to == my_id_ &&
+        pg_edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
+      int frame_src = (int) pg_edge.key_from;
+      int frame_dst = (int) pg_edge.key_to;
+      CHECK_EQ(frame_src + 1, frame_dst);
+      if (submap_atlas_->hasKeyframe(frame_src) &&
+          !submap_atlas_->hasKeyframe(frame_dst)) {
+        // Check that the next keyframe has the expected id
+        int expected_frame_id = submap_atlas_->numKeyframes();
+        if (frame_dst != expected_frame_id) {
+          ROS_ERROR("Received unexpected keyframe! (received %i, expected %i)", frame_dst, expected_frame_id);
+        }
+
+        // Use odometry to initialize the next keyframe
+        lcd::VLCEdge keyframe_odometry;
+        VLCEdgeFromMsg(pg_edge, &keyframe_odometry);
+        const auto T_src_dst = keyframe_odometry.T_src_dst_;
+        const auto T_odom_src = submap_atlas_->getKeyframe(frame_src)->getPoseInOdomFrame();
+        const auto T_odom_dst = T_odom_src * T_src_dst;
+        submap_atlas_->createKeyframe(frame_dst, T_odom_dst);
+
+        // Save keyframe pose to file
+        gtsam::Symbol symbol_dst(robot_id_to_prefix.at(my_id_), frame_dst);
+        logKeyframePose(symbol_dst, T_odom_dst);
+      }
     }
-    submap_atlas_->createKeyframe(frame_id, T_odom_keyframe);
   }
 
   // Parse intra-robot loop closures
@@ -403,23 +435,46 @@ void DistributedLoopClosure::verifyLoopCallback() {
                 vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
           const auto frame1 = lcd_->getVLCFrame(vertex_query);
           const auto frame2 = lcd_->getVLCFrame(vertex_match);
-          // Save loop closure between keyframes (for debug purpose)
+          // Get loop closure between keyframes (for debug purpose)
           gtsam::Symbol keyframe_from(robot_id_to_prefix.at(frame1.robot_id_), frame1.pose_id_);
           gtsam::Symbol keyframe_to(robot_id_to_prefix.at(frame2.robot_id_), frame2.pose_id_);
           static const gtsam::SharedNoiseModel& noise =
               gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
-          keyframe_loop_closures_.add(
-              gtsam::BetweenFactor<gtsam::Pose3>(keyframe_from, keyframe_to, T_query_match, noise));
 
-          // Save loop closure between the corresponding two submaps
+          // Get loop closure between the corresponding two submaps
           const auto T_s1_f1 = frame1.T_submap_pose_;
           const auto T_s2_f2 = frame2.T_submap_pose_;
           const auto T_f1_f2 = T_query_match;
           const auto T_s1_s2 = T_s1_f1 * T_f1_f2 * (T_s2_f2.inverse());
           gtsam::Symbol submap_from(robot_id_to_prefix.at(frame1.robot_id_), frame1.submap_id_);
           gtsam::Symbol submap_to(robot_id_to_prefix.at(frame2.robot_id_), frame2.submap_id_);
-          submap_loop_closures_.add(
-              gtsam::BetweenFactor<gtsam::Pose3>(submap_from, submap_to, T_s1_s2, noise));
+
+          // Add this loop closure if no loop closure exists between the two submaps
+          // This ensures that there is at most one loop closure between every pair of submaps
+          // This is a temporary solution, and will be removed once submap frontend is implemented.
+          bool add_factor = true;
+          for (size_t i = 0; i < submap_loop_closures_.size(); i++) {
+            // check if between factor
+            if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
+                submap_loop_closures_[i])) {
+              // convert to between factor
+              const gtsam::BetweenFactor<gtsam::Pose3>& factor = *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
+                  submap_loop_closures_[i]);
+              gtsam::Symbol front(factor.front());
+              gtsam::Symbol back(factor.back());
+              if (front == submap_from && back == submap_to) {
+                add_factor = false;
+                break;
+              }
+            }
+          }
+          if (add_factor) {
+            logLoopClosure(keyframe_from, keyframe_to, T_query_match);
+            keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+                keyframe_from, keyframe_to, T_query_match, noise));
+            submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+                submap_from, submap_to, T_s1_s2, noise));
+          }
 
           ROS_INFO(
               "Verified loop (%d,%d)-(%d,%d). Total submap loop closures: %i",
@@ -473,7 +528,6 @@ bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGrap
 
   // Log all loop closures to file
   if (log_output_) {
-    saveLoopClosuresToFile(log_output_dir_ + "loop_closures.csv");
     logCommStat(log_output_dir_ + "lcd_log.csv");
   }
 
@@ -625,7 +679,7 @@ size_t DistributedLoopClosure::updateCandidateList() {
   ROS_INFO(
       "Number of loop closure candidates ready for geometric verification: %d",
       ready_candidates);
-  ROS_INFO("Total detected loop closures: %d", keyframe_loop_closures_.size());
+  ROS_INFO("Total submap loop closures: %d", submap_loop_closures_.size());
   return total_candidates;
 }
 
@@ -699,40 +753,204 @@ void DistributedLoopClosure::logCommStat(const std::string& filename) {
   file.close();
 }
 
-void DistributedLoopClosure::saveLoopClosuresToFile(
-    const std::string filename) {
-  std::ofstream file;
-  file.open(filename);
+void DistributedLoopClosure::createLogFiles() {
+  std::string pose_file_path = log_output_dir_ + "keyframe_poses.csv";
+  std::string inter_lc_file_path = log_output_dir_ + "loop_closures.csv";
+  keyframe_pose_file_.open(pose_file_path);
+  if (!keyframe_pose_file_.is_open())
+    ROS_ERROR_STREAM("Error opening log file: " << pose_file_path);
+  keyframe_pose_file_ << std::fixed << std::setprecision(15);
+  keyframe_pose_file_ << "robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
+  keyframe_pose_file_.flush();
 
-  // file format
-  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
-  for (size_t i = 0; i < keyframe_loop_closures_.size(); i++) {
-    // check if between factor
-    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
-            keyframe_loop_closures_[i])) {
-      // convert to between factor
-      const gtsam::BetweenFactor<gtsam::Pose3>& factor = *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
-              keyframe_loop_closures_[i]);
-      gtsam::Symbol front(factor.front());
-      gtsam::Symbol back(factor.back());
-      file << robot_prefix_to_id.at(front.chr()) << ",";
-      file << front.index() << ",";
-      file << robot_prefix_to_id.at(back.chr()) << ",";
-      file << back.index() << ",";
-      gtsam::Pose3 pose = factor.measured();
-      gtsam::Quaternion quat = pose.rotation().toQuaternion();
-      gtsam::Point3 point = pose.translation();
-      file << quat.x() << ",";
-      file << quat.y() << ",";
-      file << quat.z() << ",";
-      file << quat.w() << ",";
-      file << point.x() << ",";
-      file << point.y() << ",";
-      file << point.z() << "\n";
-    }
+  loop_closure_file_.open(inter_lc_file_path);
+  if (!loop_closure_file_.is_open())
+    ROS_ERROR_STREAM("Error opening log file: " << inter_lc_file_path);
+  loop_closure_file_ << std::fixed << std::setprecision(15);
+  loop_closure_file_ << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+  loop_closure_file_.flush();
+}
+
+void DistributedLoopClosure::closeLogFiles() {
+  if (keyframe_pose_file_.is_open())
+    keyframe_pose_file_.close();
+  if (loop_closure_file_.is_open())
+    loop_closure_file_.close();
+}
+
+void DistributedLoopClosure::logKeyframePose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame) {
+  if (keyframe_pose_file_.is_open()) {
+    gtsam::Quaternion quat = T_odom_frame.rotation().toQuaternion();
+    gtsam::Point3 point = T_odom_frame.translation();
+    const uint32_t robot_id = robot_prefix_to_id.at(symbol_frame.chr());
+    const uint32_t frame_id = symbol_frame.index();
+    keyframe_pose_file_ << robot_id << ",";
+    keyframe_pose_file_ << frame_id << ",";
+    keyframe_pose_file_ << quat.x() << ",";
+    keyframe_pose_file_ << quat.y() << ",";
+    keyframe_pose_file_ << quat.z() << ",";
+    keyframe_pose_file_ << quat.w() << ",";
+    keyframe_pose_file_ << point.x() << ",";
+    keyframe_pose_file_ << point.y() << ",";
+    keyframe_pose_file_ << point.z() << "\n";
+    keyframe_pose_file_.flush();
+  }
+}
+
+void DistributedLoopClosure::logLoopClosure(const gtsam::Symbol &symbol_src,
+                                            const gtsam::Symbol &symbol_dst,
+                                            const gtsam::Pose3 &T_src_dst) {
+  if (loop_closure_file_.is_open()) {
+    gtsam::Quaternion quat = T_src_dst.rotation().toQuaternion();
+    gtsam::Point3 point = T_src_dst.translation();
+    const uint32_t robot_src = robot_prefix_to_id.at(symbol_src.chr());
+    const uint32_t frame_src = symbol_src.index();
+    const uint32_t robot_dst = robot_prefix_to_id.at(symbol_dst.chr());
+    const uint32_t frame_dst = symbol_dst.index();
+    loop_closure_file_ << robot_src << ",";
+    loop_closure_file_ << frame_src << ",";
+    loop_closure_file_ << robot_dst << ",";
+    loop_closure_file_ << frame_dst << ",";
+    loop_closure_file_ << quat.x() << ",";
+    loop_closure_file_ << quat.y() << ",";
+    loop_closure_file_ << quat.z() << ",";
+    loop_closure_file_ << quat.w() << ",";
+    loop_closure_file_ << point.x() << ",";
+    loop_closure_file_ << point.y() << ",";
+    loop_closure_file_ << point.z() << "\n";
+    loop_closure_file_.flush();
+  }
+}
+
+void DistributedLoopClosure::loadKeyframeFromFile(const std::string &pose_file) {
+  std::ifstream infile(pose_file);
+  if (!infile.is_open()) {
+    ROS_ERROR("Could not open specified file!");
+    ros::shutdown();
   }
 
-  file.close();
+  size_t num_poses_read = 0;
+
+  // Scalars that will be filled
+  uint32_t robot_id;
+  uint32_t frame_id;
+  double qx, qy, qz, qw;
+  double tx, ty, tz;
+
+  std::string line;
+  std::string token;
+
+  // Skip first line (headers)
+  std::getline(infile, line);
+
+  // Iterate over remaining lines
+  while (std::getline(infile, line)) {
+    std::istringstream ss(line);
+
+    std::getline(ss, token, ',');
+    robot_id = std::stoi(token);
+    std::getline(ss, token, ',');
+    frame_id = std::stoi(token);
+
+    std::getline(ss, token, ',');
+    qx = std::stod(token);
+    std::getline(ss, token, ',');
+    qy = std::stod(token);
+    std::getline(ss, token, ',');
+    qz = std::stod(token);
+    std::getline(ss, token, ',');
+    qw = std::stod(token);
+
+    std::getline(ss, token, ',');
+    tx = std::stod(token);
+    std::getline(ss, token, ',');
+    ty = std::stod(token);
+    std::getline(ss, token, ',');
+    tz = std::stod(token);
+
+    // Add this keyframe to submap atlas
+    CHECK_EQ(robot_id, my_id_);
+    gtsam::Pose3 T_odom_keyframe;
+    T_odom_keyframe = gtsam::Pose3(gtsam::Rot3(qw,qx,qy,qz), gtsam::Point3(tx,ty,tz));
+    if (submap_atlas_->hasKeyframe(frame_id))
+      continue;
+    if (frame_id != submap_atlas_->numKeyframes()) {
+      ROS_ERROR_STREAM("Received out of ordered keyframe. Expected id:"
+                           << submap_atlas_->numKeyframes()
+                           << ", received=" << frame_id);
+    }
+    submap_atlas_->createKeyframe(frame_id, T_odom_keyframe);
+    num_poses_read++;
+  }
+  infile.close();
+  ROS_INFO_STREAM("Loaded " << num_poses_read << " from " << pose_file);
+}
+
+void DistributedLoopClosure::loadLoopClosuresFromFile(const std::string &lc_file) {
+  if (submap_atlas_->params().max_submap_size != 1) {
+    ROS_ERROR("Loading loop closure from file only supports max_submap_size=1");
+    ros::shutdown();
+  }
+  std::ifstream infile(lc_file);
+  if (!infile.is_open()) {
+    ROS_ERROR("Could not open specified file!");
+    ros::shutdown();
+  }
+
+  size_t num_measurements_read = 0;
+
+  // Scalars that will be filled
+  uint32_t robot_from, robot_to, pose_from, pose_to;
+  double qx, qy, qz, qw;
+  double tx, ty, tz;
+
+  std::string line;
+  std::string token;
+
+  // Skip first line (headers)
+  std::getline(infile, line);
+
+  // Iterate over remaining lines
+  while (std::getline(infile, line)) {
+    std::istringstream ss(line);
+
+    std::getline(ss, token, ',');
+    robot_from = std::stoi(token);
+    std::getline(ss, token, ',');
+    pose_from = std::stoi(token);
+    std::getline(ss, token, ',');
+    robot_to = std::stoi(token);
+    std::getline(ss, token, ',');
+    pose_to = std::stoi(token);
+
+    std::getline(ss, token, ',');
+    qx = std::stod(token);
+    std::getline(ss, token, ',');
+    qy = std::stod(token);
+    std::getline(ss, token, ',');
+    qz = std::stod(token);
+    std::getline(ss, token, ',');
+    qw = std::stod(token);
+
+    std::getline(ss, token, ',');
+    tx = std::stod(token);
+    std::getline(ss, token, ',');
+    ty = std::stod(token);
+    std::getline(ss, token, ',');
+    tz = std::stod(token);
+
+    gtsam::Symbol submap_from(robot_id_to_prefix.at(robot_from), pose_from);
+    gtsam::Symbol submap_to(robot_id_to_prefix.at(robot_to), pose_to);
+    gtsam::Pose3 T_f1_f2;
+    T_f1_f2 = gtsam::Pose3(gtsam::Rot3(qw,qx,qy,qz), gtsam::Point3(tx,ty,tz));
+    static const gtsam::SharedNoiseModel& noise =
+        gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+    submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+        submap_from, submap_to, T_f1_f2, noise));
+    num_measurements_read++;
+  }
+  infile.close();
+  ROS_INFO_STREAM("Loaded " << num_measurements_read << " loop closures from " << lc_file);
 }
 
 }  // namespace kimera_distributed

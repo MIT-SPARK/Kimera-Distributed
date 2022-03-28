@@ -28,6 +28,11 @@ class SubmapAtlas {
    */
   SubmapAtlas(const Parameters &params);
   /**
+   * @brief Get parameters
+   * @return
+   */
+  Parameters params() const;
+  /**
    * @brief Get number of keyframes
    * @return
    */

@@ -35,9 +35,6 @@ class DistributedLoopClosure {
   ~DistributedLoopClosure();
   inline size_t getRobotId() const { return my_id_; }
 
-  // For debugging purpose
-  void saveLoopClosuresToFile(const std::string filename);
-
  private:
   ros::NodeHandle nh_;
   size_t my_id_;
@@ -46,6 +43,7 @@ class DistributedLoopClosure {
   bool log_output_;
   std::string log_output_dir_;
   std::atomic<bool> should_shutdown_{false};
+  bool run_offline_;  // true to load poses and loop closures from file
 
   std::vector<size_t> received_bow_bytes_;
   std::vector<size_t> received_vlc_bytes_;
@@ -94,6 +92,9 @@ class DistributedLoopClosure {
   std::unique_ptr<std::thread> verification_thread_;
   std::unique_ptr<std::thread> comms_thread_;
 
+  // Logging
+  std::ofstream keyframe_pose_file_;        // log received keyframe poses
+  std::ofstream loop_closure_file_;       // log inter-robot loop closures
  private:
   /**
    * Run Geometric verification spin
@@ -177,6 +178,37 @@ class DistributedLoopClosure {
    * Log communication stats to file
    */
   void logCommStat(const std::string& filename);
+  /**
+   * @brief Create log files
+   */
+  void createLogFiles();
+  /**
+   * @brief Close all log files
+   */
+  void closeLogFiles();
+  /**
+   * @brief Log a keyframe to file
+   * @param symbol_frame
+   * @param T_odom_frame
+   */
+  void logKeyframePose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame);
+  /**
+   * @brief Log a loop closure to file
+   * @param symbol_src
+   * @param symbol_dst
+   * @param T_src_dst
+   */
+  void logLoopClosure(const gtsam::Symbol &symbol_src, const gtsam::Symbol &symbol_dst, const gtsam::Pose3 &T_src_dst);
+  /**
+   * @brief Load keyframe poses from a file
+   * @param pose_file
+   */
+  void loadKeyframeFromFile(const std::string &pose_file);
+  /**
+   * @brief Load loop closures (between keyframes from file)
+   * @param lc_file
+   */
+  void loadLoopClosuresFromFile(const std::string &lc_file);
 };
 
 }  // namespace kimera_distributed

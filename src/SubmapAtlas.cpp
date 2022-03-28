@@ -10,12 +10,19 @@ namespace kimera_distributed {
 
 SubmapAtlas::SubmapAtlas(const Parameters &params) : params_(params) {}
 
+SubmapAtlas::Parameters SubmapAtlas::params() const {
+  return params_;
+}
+
 int SubmapAtlas::numKeyframes() const { return (int) keyframes_.size(); }
 
 int SubmapAtlas::numSubmaps() const { return (int) submaps_.size(); }
 
 std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(int keyframe_id, const gtsam::Pose3 &T_odom_keyframe) {
-  CHECK(!hasKeyframe(keyframe_id));
+  if(hasKeyframe(keyframe_id)) {
+    ROS_WARN_STREAM("Keyframe " << keyframe_id << " already exists!");
+    return getKeyframe(keyframe_id);
+  }
 
   auto keyframe = std::make_shared<Keyframe>(keyframe_id);
   keyframe->setPoseInOdomFrame(T_odom_keyframe);

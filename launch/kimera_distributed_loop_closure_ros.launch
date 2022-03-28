@@ -9,6 +9,11 @@
   <arg name="debug"              default="false" />
   <arg name="launch_prefix"      value="xterm -e gdb -ex run \-\-args" if="$(arg debug)"/>
   <arg name="launch_prefix"      value=""    unless="$(arg debug)"/>
+  <!-- Run offline -->
+  <arg name="run_offline"          default="false" />
+  <!-- Submap setup -->
+  <arg name="max_submap_size"      default="100" />
+  <arg name="max_submap_distance"  default="0.5" />
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
   <node launch-prefix="$(arg launch_prefix)" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
@@ -17,8 +22,9 @@
     <param name="vocabulary_path" value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
     <param name="log_output_path" type="str" value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
     <param name="vlc_batch_size"  value="10"/>
-    <param name="max_submap_size" value="100"/>
-    <param name="max_submap_distance" value="0.5"/>
+    <param name="run_offline"     value="$(arg run_offline)" />
+    <param name="max_submap_size" value="$(arg max_submap_size)"/>
+    <param name="max_submap_distance" value="$(arg max_submap_distance)"/>
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
     <rosparam file="$(find kimera_distributed)/params/robot_names.yaml" />
   </node>    

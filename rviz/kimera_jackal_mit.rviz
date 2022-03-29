@@ -114,6 +114,47 @@ Visualization Manager:
       Marker Topic: /acl_jackal/dpgo_ros_node/loop_closures
       Name: Loop Closures
       Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: voxblox_rviz_plugin/VoxbloxMesh
+      Enabled: false
+      Name: VoxbloxMesh
+      Topic: /acl_jackal/kimera_semantics_node/mesh
+      Unreliable: false
+      Value: false
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: TriangleMesh
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: false
+      Show Wireframe:
+        Value: false
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /acl_jackal/kimera_pgmo/optimized_mesh
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /acl_jackal/kimera_pgmo/deformation_graph_mesh_mesh
+      Name: MeshMesh
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /acl_jackal/kimera_pgmo/deformation_graph_pose_mesh
+      Name: PoseMesh
+      Namespaces:
         "": true
       Queue Size: 100
       Value: true
@@ -145,16 +186,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.119518280029297
+      Distance: 30.170440673828125
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.1337298154830933
-        Y: -4.2401933670043945
-        Z: 0.2894601821899414
+        X: -0.9766339659690857
+        Y: -4.466259002685547
+        Z: 0.2894964814186096
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -163,7 +204,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 1.7053972482681274
+      Yaw: 1.955397129058838
     Saved: ~
 Window Geometry:
   Displays:

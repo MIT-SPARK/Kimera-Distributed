@@ -19,10 +19,11 @@
 
 #include <pose_graph_tools/VLCFrames.h>
 #include <pose_graph_tools/VLCRequests.h>
-
+#include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/PoseGraphQuery.h>
 #include <kimera_multi_lcd/LoopClosureDetector.h>
-
 #include <kimera_distributed/utils.h>
+#include <kimera_distributed/SubmapAtlas.h>
 
 namespace lcd = kimera_multi_lcd;
 
@@ -32,15 +33,7 @@ class DistributedLoopClosure {
  public:
   DistributedLoopClosure(const ros::NodeHandle& n);
   ~DistributedLoopClosure();
-
-  inline void getLoopClosures(std::vector<lcd::VLCEdge>* loop_closures) {
-    *loop_closures = loop_closures_;
-  }
-
   inline size_t getRobotId() const { return my_id_; }
-
-  // For debugging purpose
-  void saveLoopClosuresToFile(const std::string filename);
 
  private:
   ros::NodeHandle nh_;
@@ -50,9 +43,13 @@ class DistributedLoopClosure {
   bool log_output_;
   std::string log_output_dir_;
   std::atomic<bool> should_shutdown_{false};
+  bool run_offline_;  // true to load poses and loop closures from file
 
   std::vector<size_t> received_bow_bytes_;
   std::vector<size_t> received_vlc_bytes_;
+
+  // Submap Atlas
+  std::unique_ptr<SubmapAtlas> submap_atlas_;
 
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
@@ -60,7 +57,8 @@ class DistributedLoopClosure {
   std::mutex lcd_mutex_;
 
   // Loop closures
-  std::vector<lcd::VLCEdge> loop_closures_;
+  gtsam::NonlinearFactorGraph keyframe_loop_closures_;
+  gtsam::NonlinearFactorGraph submap_loop_closures_;
 
   // List of potential loop closures
   // that require to request VLC frames
@@ -77,6 +75,7 @@ class DistributedLoopClosure {
   std::map<size_t, std::string> robot_names_;
 
   // ROS subscriber
+  ros::Subscriber local_pg_sub_;
   std::vector<ros::Subscriber> bow_sub_;
   std::vector<ros::Subscriber> vlc_requests_sub_;
   std::vector<ros::Subscriber> vlc_responses_sub_;
@@ -86,10 +85,16 @@ class DistributedLoopClosure {
   ros::Publisher vlc_responses_pub_;
   ros::Publisher vlc_requests_pub_;
 
+  // ROS service
+  ros::ServiceServer pose_graph_request_server_;
+
   // Threads
   std::unique_ptr<std::thread> verification_thread_;
   std::unique_ptr<std::thread> comms_thread_;
 
+  // Logging
+  std::ofstream keyframe_pose_file_;        // log received keyframe poses
+  std::ofstream loop_closure_file_;       // log inter-robot loop closures
  private:
   /**
    * Run Geometric verification spin
@@ -107,6 +112,12 @@ class DistributedLoopClosure {
   void bowCallback(const pose_graph_tools::BowQueryConstPtr& msg);
 
   /**
+   * @brief Subscribe to incremental pose graph of this robot published by VIO
+   * @param msg
+   */
+  void localPoseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+
+  /**
    * Callback to process the VLC responses to our requests
    */
   void vlcResponsesCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
@@ -115,6 +126,16 @@ class DistributedLoopClosure {
    * Callback to process the VLC requests from other robots
    */
   void vlcRequestsCallback(const pose_graph_tools::VLCRequestsConstPtr& msg);
+
+  /**
+   * @brief Send submap-level pose graph for distributed optimization
+   * @param request
+   * @param response
+   * @return
+   */
+  bool requestPoseGraphCallback(
+      pose_graph_tools::PoseGraphQuery::Request& request,
+      pose_graph_tools::PoseGraphQuery::Response& response);
 
   /**
    * Publish detected loop closure
@@ -157,6 +178,37 @@ class DistributedLoopClosure {
    * Log communication stats to file
    */
   void logCommStat(const std::string& filename);
+  /**
+   * @brief Create log files
+   */
+  void createLogFiles();
+  /**
+   * @brief Close all log files
+   */
+  void closeLogFiles();
+  /**
+   * @brief Log a keyframe to file
+   * @param symbol_frame
+   * @param T_odom_frame
+   */
+  void logKeyframePose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame);
+  /**
+   * @brief Log a loop closure to file
+   * @param symbol_src
+   * @param symbol_dst
+   * @param T_src_dst
+   */
+  void logLoopClosure(const gtsam::Symbol &symbol_src, const gtsam::Symbol &symbol_dst, const gtsam::Pose3 &T_src_dst);
+  /**
+   * @brief Load keyframe poses from a file
+   * @param pose_file
+   */
+  void loadKeyframeFromFile(const std::string &pose_file);
+  /**
+   * @brief Load loop closures (between keyframes from file)
+   * @param lc_file
+   */
+  void loadLoopClosuresFromFile(const std::string &lc_file);
 };
 
 }  // namespace kimera_distributed

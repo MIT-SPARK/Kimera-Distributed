@@ -47,7 +47,7 @@
       <arg name="robust_opt_warm_start"            value="true" />
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
       <arg name="robust_opt_inner_iters"           value="10" />
-      <arg name="max_iteration_number"             value="100" />
+      <arg name="max_iteration_number"             value="50" />
       <arg name="log_directory"                    value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
     </include> 
 

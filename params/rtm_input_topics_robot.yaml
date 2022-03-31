@@ -1,14 +1,14 @@
 # ROS messages to send to others
-- /$(arg robot_name)/kimera_vio_ros/bow_query
-- /$(arg robot_name)/kimera_vio_ros/pose_graph_incremental
-- /$(arg robot_name)/kimera_distributed/loop_closure
-- /$(arg robot_name)/kimera_distributed/vlc_responses
-- /$(arg robot_name)/kimera_distributed/vlc_requests
-- /$(arg robot_name)/dpgo_ros_node/lifting_matrix
-- /$(arg robot_name)/dpgo_ros_node/status
-- /$(arg robot_name)/dpgo_ros_node/command
-- /$(arg robot_name)/dpgo_ros_node/anchor
-- /$(arg robot_name)/dpgo_ros_node/public_poses
-- /$(arg robot_name)/dpgo_ros_node/public_measurements
-- /$(arg robot_name)/dpgo_ros_node/measurement_weights
-- /$(arg robot_name)/dpgo_ros_node/path
+- /$(arg robot_name)/kimera_vio_ros/bow_query: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/kimera_vio_ros/pose_graph_incremental: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/kimera_distributed/loop_closure: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/kimera_distributed/vlc_responses: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/kimera_distributed/vlc_requests: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/lifting_matrix: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/status: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/command: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/anchor: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/public_poses: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/public_measurements: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/measurement_weights: {queue_size: 10, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/path: {queue_size: 10, reliable: true}

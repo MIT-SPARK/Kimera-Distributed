@@ -18,7 +18,10 @@ int SubmapAtlas::numKeyframes() const { return (int) keyframes_.size(); }
 
 int SubmapAtlas::numSubmaps() const { return (int) submaps_.size(); }
 
-std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(int keyframe_id, const gtsam::Pose3 &T_odom_keyframe) {
+std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(
+    int keyframe_id,
+    const gtsam::Pose3& T_odom_keyframe,
+    const uint64_t& timestamp) {
   if(hasKeyframe(keyframe_id)) {
     ROS_WARN_STREAM("Keyframe " << keyframe_id << " already exists!");
     return getKeyframe(keyframe_id);
@@ -32,7 +35,7 @@ std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(int keyframe_id, const gts
   if (shouldCreateNewSubmap()) {
     // Create a new submap with the same pose as the keyframe in the odom frame
     int new_submap_id = numSubmaps();
-    createSubmap(new_submap_id, T_odom_keyframe);
+    createSubmap(new_submap_id, T_odom_keyframe, timestamp);
   }
 
   // Add this keyframe to the submap
@@ -68,9 +71,12 @@ std::shared_ptr<Keyframe> SubmapAtlas::getLatestKeyframe() {
   }
 }
 
-std::shared_ptr<Submap> SubmapAtlas::createSubmap(int submap_id, const gtsam::Pose3 &T_odom_submap) {
+std::shared_ptr<Submap> SubmapAtlas::createSubmap(
+    int submap_id,
+    const gtsam::Pose3& T_odom_submap,
+    const uint64_t& timestamp) {
   CHECK(!hasSubmap(submap_id));
-  auto submap = std::make_shared<Submap>(submap_id);
+  auto submap = std::make_shared<Submap>(submap_id, timestamp);
   submap->setPoseInOdomFrame(T_odom_submap);
   submaps_.emplace(submap_id, submap);
   return submap;

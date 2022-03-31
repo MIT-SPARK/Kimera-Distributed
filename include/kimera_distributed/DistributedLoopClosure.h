@@ -39,6 +39,7 @@ class DistributedLoopClosure {
   ros::NodeHandle nh_;
   size_t my_id_;
   size_t num_robots_;
+  std::string frame_id_;
 
   bool log_output_;
   std::string log_output_dir_;
@@ -50,6 +51,7 @@ class DistributedLoopClosure {
 
   // Submap Atlas
   std::unique_ptr<SubmapAtlas> submap_atlas_;
+  std::mutex submap_atlas_mutex_;
 
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
@@ -84,6 +86,11 @@ class DistributedLoopClosure {
   ros::Publisher loop_closure_pub_;
   ros::Publisher vlc_responses_pub_;
   ros::Publisher vlc_requests_pub_;
+  ros::Publisher pose_graph_pub_;
+
+  // For incremental publishing
+  size_t last_get_submap_idx_;
+  size_t last_get_lc_idx_;
 
   // ROS service
   ros::ServiceServer pose_graph_request_server_;
@@ -168,6 +175,11 @@ class DistributedLoopClosure {
    * Perform geometric verification
    */
   void verifyLoopCallback();
+
+  /**
+   * Get sparse pose graph
+   */
+  pose_graph_tools::PoseGraph getSubmapPoseGraph(bool incremental = false);
 
   /**
    * Update the candidate list and verification queue

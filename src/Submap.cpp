@@ -8,9 +8,11 @@
 
 namespace kimera_distributed {
 
-Submap::Submap(int id) : id_(id), distance_(0) {}
+Submap::Submap(int id, uint64_t stamp) : id_(id), stamp_(stamp), distance_(0) {}
 
 int Submap::id() const { return id_; }
+
+uint64_t Submap::stamp() const { return stamp_; }
 
 int Submap::numKeyframes() const { return (int) keyframes_.size(); }
 

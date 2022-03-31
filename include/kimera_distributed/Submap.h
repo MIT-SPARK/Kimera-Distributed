@@ -21,12 +21,17 @@ class Submap {
    * @brief Constructor
    * @param id
    */
-  Submap(int id);
+  Submap(int id, uint64_t stamp);
   /**
    * @brief Get ID of this submap
    * @return
    */
   int id() const;
+  /**
+   * @brief Get timestamp of this submap
+   * @return
+   */
+  uint64_t stamp() const;
   /**
    * @brief Get number of keyframes in this submap
    * @return
@@ -46,12 +51,12 @@ class Submap {
    * @brief Set pose of this submap in the odometry frame
    * @param T_odom_submap
    */
-  void setPoseInOdomFrame(const gtsam::Pose3 &T_odom_submap);
+  void setPoseInOdomFrame(const gtsam::Pose3& T_odom_submap);
   /**
    * @brief Add a new keyframe to this submap
    * @param keyframe
    */
-  void addKeyframe(const std::shared_ptr<Keyframe> &keyframe);
+  void addKeyframe(const std::shared_ptr<Keyframe>& keyframe);
   /**
    * @brief Get the keyframe (nullptr if keyframe does not exist)
    * @param keyframe_id
@@ -66,6 +71,7 @@ class Submap {
 
  private:
   const int id_;  // unique id of this submap
+  uint64_t stamp_;
   std::unordered_map<int, std::shared_ptr<Keyframe>> keyframes_;  // keyframes that belong to this submap
   gtsam::Pose3 T_odom_submap_;  // the pose of this submap in the odometry frame (Kimera-VIO)
   double distance_; // cumulative distance traveled in this submap

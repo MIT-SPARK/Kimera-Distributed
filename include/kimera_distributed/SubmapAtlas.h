@@ -26,7 +26,7 @@ class SubmapAtlas {
    * @brief Constructor
    * @param params
    */
-  SubmapAtlas(const Parameters &params);
+  SubmapAtlas(const Parameters& params);
   /**
    * @brief Get parameters
    * @return
@@ -49,7 +49,9 @@ class SubmapAtlas {
    * @param T_odom_keyframe pose of this keyframe in the odometry frame
    * @return
    */
-  std::shared_ptr<Keyframe> createKeyframe(int keyframe_id, const gtsam::Pose3 &T_odom_keyframe);
+  std::shared_ptr<Keyframe> createKeyframe(int keyframe_id,
+                                           const gtsam::Pose3& T_odom_keyframe,
+                                           const uint64_t& timestamp);
   /**
    * @brief Check if keyframe with specified ID exists.
    * @param keyframe_id
@@ -71,9 +73,12 @@ class SubmapAtlas {
    * @brief Create a new submap with the given id and pose in the odometry frame.
    * @param submap_id
    * @param T_odom_submap
+   * @param timestamp
    * @return
    */
-  std::shared_ptr<Submap> createSubmap(int submap_id, const gtsam::Pose3 &T_odom_submap);
+  std::shared_ptr<Submap> createSubmap(int submap_id,
+                                       const gtsam::Pose3& T_odom_submap,
+                                       const uint64_t& timestamp);
   /**
    * @brief Check if a submap already exists.
    * @param submap_id

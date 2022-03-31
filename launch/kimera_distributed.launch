@@ -20,10 +20,13 @@
     <!-- Launch distributed loop closure detection and PCM -->
     <include file="$(find kimera_distributed)/launch/kimera_distributed_loop_closure_ros.launch">
       <arg name="robot_id"                  value="$(arg robot_id)" />
+      <arg name="robot_name"                value="$(arg robot_name)" />
+      <arg name="frame_id"                  value="$(arg robot_name)/map"/>
       <arg name="num_robots"                value="$(arg num_robots)" />
       <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="debug"                     value="$(arg debug)" />
       <arg name="run_offline"               value="false" />
+      <arg name="vlc_batch_size"            value="10" />
       <arg name="max_submap_size"           value="100" />
       <arg name="max_submap_distance"       value="0.5" />
     </include>

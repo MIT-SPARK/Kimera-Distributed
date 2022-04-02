@@ -326,7 +326,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
     if (pg_edge.robot_from == my_id_ &&
         pg_edge.robot_to == my_id_ &&
         pg_edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
-      int frame_src = (int)pg_edge.key_from;
+      int frame_src = (int) pg_edge.key_from;
       int frame_dst = (int) pg_edge.key_to;
       CHECK_EQ(frame_src + 1, frame_dst);
       if (submap_atlas_->hasKeyframe(frame_src) &&
@@ -377,14 +377,17 @@ void DistributedLoopClosure::localPoseGraphCallback(
           CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_to));
       const auto submap_src = CHECK_NOTNULL(keyframe_src->getSubmap());
       const auto submap_dst = CHECK_NOTNULL(keyframe_dst->getSubmap());
+      gtsam::Symbol from_key(robot_id_to_prefix.at(my_id_), submap_src->id());
+      gtsam::Symbol to_key(robot_id_to_prefix.at(my_id_), submap_dst->id());
       // Skip this loop closure if two submaps are identical or consecutive
       if (std::abs(submap_src->id() - submap_dst->id()) <= 1) continue;
+      // Skip this loop closure if a loop closure already exists between the two submaps
+      if (hasBetweenFactor(submap_loop_closures_, from_key, to_key))
+        continue;
       const auto T_s1_f1 = keyframe_src->getPoseInSubmapFrame();
       const auto T_s2_f2 = keyframe_dst->getPoseInSubmapFrame();
       const auto T_s1_s2 = T_s1_f1 * T_f1_f2 * (T_s2_f2.inverse());
       // Convert the loop closure to between the corresponding submaps
-      gtsam::Symbol from_key(robot_id_to_prefix.at(my_id_), submap_src->id());
-      gtsam::Symbol to_key(robot_id_to_prefix.at(my_id_), submap_dst->id());
       submap_loop_closures_.add(
           gtsam::BetweenFactor<gtsam::Pose3>(from_key, to_key, T_s1_s2, noise));
     }
@@ -496,23 +499,7 @@ void DistributedLoopClosure::verifyLoopCallback() {
           // Add this loop closure if no loop closure exists between the two submaps
           // This ensures that there is at most one loop closure between every pair of submaps
           // This is a temporary solution, and will be removed once submap frontend is implemented.
-          bool add_factor = true;
-          for (size_t i = 0; i < submap_loop_closures_.size(); i++) {
-            // check if between factor
-            if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(
-                submap_loop_closures_[i])) {
-              // convert to between factor
-              const gtsam::BetweenFactor<gtsam::Pose3>& factor = *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
-                  submap_loop_closures_[i]);
-              gtsam::Symbol front(factor.front());
-              gtsam::Symbol back(factor.back());
-              if (front == submap_from && back == submap_to) {
-                add_factor = false;
-                break;
-              }
-            }
-          }
-          if (add_factor) {
+          if (!hasBetweenFactor(submap_loop_closures_, submap_from, submap_to)) {
             logLoopClosure(keyframe_from, keyframe_to, T_query_match);
             keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 keyframe_from, keyframe_to, T_query_match, noise));

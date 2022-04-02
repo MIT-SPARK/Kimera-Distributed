@@ -296,6 +296,25 @@ nav_msgs::Path GtsamPoseTrajectoryToPath(
   return msg;
 }
 
+bool hasBetweenFactor(const gtsam::NonlinearFactorGraph &nfg,
+                      const gtsam::Symbol &symbol_src,
+                      const gtsam::Symbol &symbol_dst) {
+  for (size_t i = 0; i < nfg.size(); i++) {
+    // check if between factor
+    if (boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3> >(nfg[i])) {
+      // convert to between factor
+      const gtsam::BetweenFactor<gtsam::Pose3>& factor = *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(
+          nfg[i]);
+      gtsam::Symbol front(factor.front());
+      gtsam::Symbol back(factor.back());
+      if (front == symbol_src && back == symbol_dst) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 size_t computeBowQueryPayloadBytes(const pose_graph_tools::BowQuery& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);

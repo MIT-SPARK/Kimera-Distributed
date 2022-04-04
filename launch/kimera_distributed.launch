@@ -31,29 +31,6 @@
       <arg name="max_submap_distance"       value="0.5" />
     </include>
 
-    <!-- Launch dpgo_ros -->
-    <include file="$(find dpgo_ros)/launch/PGOAgent.launch">
-      <arg name="agent_id"                         value="$(arg robot_id)" />
-      <arg name="num_robots"                       value="$(arg num_robots)" />
-      <arg name="debug"                            value="$(arg debug)" />
-      <arg name="verbose"                          value="true" />
-      <arg name="publish_iterate"                  value="false"/>
-      <arg name="multirobot_initialization"        value="true"/>
-      <arg name="acceleration"                     value="false" />
-      <arg name="relative_change_tolerance"        value="1e-2" />
-      <arg name="robust_cost_type"                 value="GNC_TLS" />
-      <arg name="GNC_use_probability"              value="false" />
-      <arg name="GNC_quantile"                     value="0.9" />
-      <arg name="GNC_barc"                         value="7.0" />
-      <arg name="GNC_mu_step"                      value="2.0" />
-      <arg name="GNC_init_mu"                      value="1e-5" />
-      <arg name="robust_opt_warm_start"            value="true" />
-      <arg name="robust_opt_min_convergence_ratio" value="0.0" />
-      <arg name="robust_opt_inner_iters"           value="10" />
-      <arg name="max_iteration_number"             value="50" />
-      <arg name="log_directory"                    value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
-    </include> 
-
     <!-- Launch remote topic manager (reliable UDP) -->
     <include if="$(arg multi_master)" file="$(find kimera_distributed)/launch/remote_topic_manager.launch">
       <arg name="robot_id" value="$(arg robot_id)" />

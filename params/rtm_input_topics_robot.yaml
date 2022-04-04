@@ -1,6 +1,5 @@
 # ROS messages to send to others
 - /$(arg robot_name)/kimera_vio_ros/bow_query: {queue_size: 10, reliable: true}
-- /$(arg robot_name)/kimera_vio_ros/pose_graph_incremental: {queue_size: 10, reliable: true}
 - /$(arg robot_name)/kimera_distributed/loop_closure: {queue_size: 10, reliable: true}
 - /$(arg robot_name)/kimera_distributed/vlc_responses: {queue_size: 10, reliable: true}
 - /$(arg robot_name)/kimera_distributed/vlc_requests: {queue_size: 10, reliable: true}

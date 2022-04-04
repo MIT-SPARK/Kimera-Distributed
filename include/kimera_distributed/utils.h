@@ -58,6 +58,17 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
 nav_msgs::Path GtsamPoseTrajectoryToPath(
     const std::vector<gtsam::Pose3>& gtsam_poses);
 
+/**
+ * @brief Check if the input factor graph contains a Pose3 between factor with the specified src and dst vertices
+ * @param nfg
+ * @param symbol_src
+ * @param symbol_dst
+ * @return
+ */
+bool hasBetweenFactor(const gtsam::NonlinearFactorGraph &nfg,
+                      const gtsam::Symbol &symbol_src,
+                      const gtsam::Symbol &symbol_dst);
+
 // Compute the payload size in a BowQuery message
 size_t computeBowQueryPayloadBytes(const pose_graph_tools::BowQuery& msg);
 

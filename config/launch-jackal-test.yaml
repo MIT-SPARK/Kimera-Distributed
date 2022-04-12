@@ -3,7 +3,7 @@ session_name: kimera-distributed-jackal
 environment:
   ROSBAG0: "/home/yunchang/Downloads/kimera_test_j1_2022-04-01-14-41-32.bag"
   ROSBAG1: "/home/yunchang/Downloads/kimera_test_j2_2022-04-01-14-41-23.bag"
-  RATE: "1.0"
+  RATE: "0.8"
 
 options:
   default-command: /bin/bash
@@ -39,6 +39,7 @@ windows:
     - roslaunch kimera_distributed dpgo.launch robot_id:=1 robot_name:=acl_jackal2 num_robots:=2 dataset_name:=Jackal
     - roslaunch kimera_semantics_ros kimera_semantics_jackal.launch robot_name:=acl_jackal2 decompress_depth:=false decompress_color:=true use_sim_time:=true
     - roslaunch kimera_pgmo kimera_pgmo_robot.launch robot_name:=acl_jackal2 robot_id:=1 dataset:=Jackal run_mode:=1 optimized_path_topic:=/acl_jackal2/dpgo_ros_node/path pose_graph_topic:=/acl_jackal2/kimera_distributed/pose_graph_incremental
+    - rviz -d $(rospack find kimera_distributed)/rviz/kimera_jackal2_mit.rviz
 
 - window_name: data
   focus: true  
@@ -49,8 +50,8 @@ windows:
   panes:
     - roscore -p 11311
     - roscore -p 11312
-    - sleep 15; export ROS_MASTER_URI=http://localhost:11311; rosbag play $ROSBAG0 --clock -r$RATE --pause
-    - sleep 15; export ROS_MASTER_URI=http://localhost:11312; rosbag play $ROSBAG1 --clock -r$RATE --pause
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11311; rosbag play $ROSBAG0 --clock -r$RATE --pause --topics /acl_jackal/forward/infra1/camera_info /acl_jackal/forward/infra2/camera_info /acl_jackal/forward/depth/camera_info /acl_jackal/forward/color/camera_info /acl_jackal/forward/infra1/image_rect_raw/compressed /acl_jackal/forward/infra2/image_rect_raw/compressed /acl_jackal/forward/depth/image_rect_raw /acl_jackal/forward/color/image_raw/compressed /acl_jackal/forward/imu /acl_jackal/jackal_velocity_controller/odom /tf_static /tf_aggregate
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11312; rosbag play $ROSBAG1 --clock -r$RATE --pause --topics /acl_jackal2/forward/infra1/camera_info /acl_jackal2/forward/infra2/camera_info /acl_jackal2/forward/depth/camera_info /acl_jackal2/forward/color/camera_info /acl_jackal2/forward/infra1/image_rect_raw/compressed /acl_jackal2/forward/infra2/image_rect_raw/compressed /acl_jackal2/forward/depth/image_rect_raw /acl_jackal2/forward/color/image_raw/compressed /acl_jackal2/forward/imu /acl_jackal2/jackal_velocity_controller/odom /tf_static /tf_aggregate
     - sleep 15; export ROS_MASTER_URI=http://localhost:11311; rosrun static_transform_mux static_transform_mux
     - sleep 15; export ROS_MASTER_URI=http://localhost:11312; rosrun static_transform_mux static_transform_mux
     - sleep 10; export ROS_MASTER_URI=http://localhost:11311; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 1 world acl_jackal/map

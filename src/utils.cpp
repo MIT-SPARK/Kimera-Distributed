@@ -273,13 +273,13 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(
   pose_graph_tools::PoseGraph posegraph;
   posegraph.nodes = nodes;
   posegraph.edges = edges;
-  ROS_INFO(
-      "Detected %d single robot loop closures with %d inliers and %d "
-      "inter-robot loop closures with %d inliers. ",
-      single_robot_lcs,
-      single_robot_inliers,
-      inter_robot_lcs,
-      inter_robot_inliers);
+  // ROS_INFO(
+  //     "Detected %d single robot loop closures with %d inliers and %d "
+  //     "inter-robot loop closures with %d inliers. ",
+  //     single_robot_lcs,
+  //     single_robot_inliers,
+  //     inter_robot_lcs,
+  //     inter_robot_inliers);
   return posegraph;
 }
 

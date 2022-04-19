@@ -18,7 +18,7 @@ windows:
     - rosparam set use_sim_time true
 
   panes:
-    - roslaunch kimera_vio_ros kimera_vio_jackal.launch robot_name:=acl_jackal robot_id:=0 use_d455:=false multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=acl_jackal robot_id:=0 use_d455:=false multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true
     - roslaunch kimera_distributed kimera_distributed.launch robot_id:=0 robot_name:=acl_jackal num_robots:=2 dataset_name:=Jackal multi_master:=true
     - roslaunch kimera_distributed dpgo.launch robot_id:=0 robot_name:=acl_jackal num_robots:=2 dataset_name:=Jackal
     - roslaunch kimera_semantics_ros kimera_semantics_jackal.launch robot_name:=acl_jackal decompress_depth:=false decompress_color:=true use_sim_time:=true
@@ -34,7 +34,7 @@ windows:
     - rosparam set use_sim_time true
 
   panes:
-    - roslaunch kimera_vio_ros kimera_vio_jackal.launch robot_name:=acl_jackal2 robot_id:=1 use_d455:=false multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=acl_jackal2 robot_id:=1 use_d455:=false multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true
     - roslaunch kimera_distributed kimera_distributed.launch robot_id:=1 robot_name:=acl_jackal2 num_robots:=2 dataset_name:=Jackal multi_master:=true
     - roslaunch kimera_distributed dpgo.launch robot_id:=1 robot_name:=acl_jackal2 num_robots:=2 dataset_name:=Jackal
     - roslaunch kimera_semantics_ros kimera_semantics_jackal.launch robot_name:=acl_jackal2 decompress_depth:=false decompress_color:=true use_sim_time:=true

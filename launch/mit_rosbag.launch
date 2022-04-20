@@ -1,0 +1,21 @@
+<launch>
+	<arg name="bagfile"   default="/home/yunchang/data/kimera.bag"/>
+	<arg name="input_ns"  default="sobek" />
+	<arg name="output_ns" default="sobek" />
+	<arg name="rate"      default="1.0"   />
+
+	<node pkg="rosbag" type="play" name="player" ns="$(arg output_ns)" output="screen" 
+		args="$(arg bagfile) -r $(arg rate) --pause -s0.1 ">
+		<remap from="/$(arg input_ns)/detection_out_topic"                      to="/$(arg output_ns)/detection_out_topic"/>
+		<remap from="/$(arg input_ns)/forward/color/camera_info"                to="/$(arg output_ns)/forward/color/camera_info"/>
+		<remap from="/$(arg input_ns)/forward/color/image_raw/compressed"       to="/$(arg output_ns)/forward/color/image_raw/compressed"/>
+		<remap from="/$(arg input_ns)/forward/depth/camera_info"                to="/$(arg output_ns)/forward/depth/camera_info"/>
+		<remap from="/$(arg input_ns)/forward/imu"                              to="/$(arg output_ns)/forward/imu"/>
+		<remap from="/$(arg input_ns)/forward/infra1/camera_info"               to="/$(arg output_ns)/forward/infra1/camera_info"/>
+		<remap from="/$(arg input_ns)/forward/infra1/image_rect_raw/compressed" to="/$(arg output_ns)/forward/infra1/image_rect_raw/compressed"/>
+		<remap from="/$(arg input_ns)/forward/infra2/camera_info"               to="/$(arg output_ns)/forward/infra2/camera_info"/>
+		<remap from="/$(arg input_ns)/forward/infra2/image_rect_raw/compressed" to="/$(arg output_ns)/forward/infra2/image_rect_raw/compressed"/>
+		<remap from="/$(arg input_ns)/jackal_velocity_controller/odom"          to="/$(arg output_ns)/jackal_velocity_controller/odom"/>
+	</node> 
+
+</launch>

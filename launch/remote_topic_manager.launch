@@ -5,7 +5,7 @@
   <arg name="simulation" default="false"/>
   <arg name="monitor_bw" default="true"/>
 
-<!--  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/>-->
+  <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/> -->
 
   <node if="$(arg service_discovery)" pkg="reliable_udp_comms" type="remote_host_discovery.py" name="remote_host_discovery" output="screen">
     <param name="group_name" value="TESTING"/>
@@ -22,7 +22,7 @@
     <!-- Load topics to be transmited to other robots -->
     <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics_robot.yaml" subst_value="true" />
 
-    <param name="latch" value="true"/>
+    <param name="latch" value="false"/>
     <param name="status_pub_period" value="1.0"/>
   </node>
 

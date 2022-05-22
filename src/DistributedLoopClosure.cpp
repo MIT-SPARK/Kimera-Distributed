@@ -30,6 +30,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       log_output_(false),
       run_offline_(false),
       lcd_(new lcd::LoopClosureDetector),
+      num_inter_robot_loops_(0),
+      vlc_batch_size_(10),
+      vlc_sleep_time_(5),
       last_get_submap_idx_(0),
       last_get_lc_idx_(0) {
   int my_id_int = -1;
@@ -85,9 +88,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   ros::param::get("~vocabulary_path", lcd_params_.vocab_path_);
 
-  // Load VLC frame batch size
-  vlc_batch_size_ = 25;
+  // Load parameters controlling VLC communication
   ros::param::get("~vlc_batch_size", vlc_batch_size_);
+  ros::param::get("~vlc_sleep_time", vlc_sleep_time_);
 
   // Load robot names and initialize candidate lc queues
   for (size_t id = 0; id < num_robots_; id++) {
@@ -196,6 +199,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "interrobot loop closure only = " << lcd_params_.inter_robot_only_
       << "\n"
       << "maximum batch size to request VLC frames = " << vlc_batch_size_ << "\n"
+      << "VLC communication thread sleep time = " << vlc_sleep_time_ << "\n"
       << "maximum submap size = " << submap_params.max_submap_size << "\n"
       << "maximum submap distance = " << submap_params.max_submap_distance
       << "\n");
@@ -395,8 +399,8 @@ void DistributedLoopClosure::localPoseGraphCallback(
 
   pose_graph_tools::PoseGraph sparse_pose_graph =
       getSubmapPoseGraph(incremental_pub);
-  if (sparse_pose_graph.edges.size() > 0 ||
-      sparse_pose_graph.nodes.size() > 0) {
+  if (!sparse_pose_graph.edges.empty() ||
+      !sparse_pose_graph.nodes.empty()) {
     pose_graph_pub_.publish(sparse_pose_graph);
   }
 }
@@ -404,7 +408,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
 void DistributedLoopClosure::runVerification() {
   ros::WallRate r(1);
   while (ros::ok() && !should_shutdown_) {
-    if (queued_lc_.size() == 0) {
+    if (queued_lc_.empty()) {
       r.sleep();
     } else {
       verifyLoopCallback();
@@ -414,12 +418,39 @@ void DistributedLoopClosure::runVerification() {
 
 void DistributedLoopClosure::runComms() {
   while (ros::ok() && !should_shutdown_) {
+    // Request VLC frames from other robots
     size_t total_candidates = updateCandidateList();
     if (total_candidates > 0) {
       requestFrames();
     }
-    ros::Duration(1.0).sleep();
+
+    // Publish VLC frames requested by other robots
+    if (!requested_frames_.empty()) {
+      std::unique_lock<std::mutex> requested_frames_lock(requested_frames_mutex_);
+      auto it = requested_frames_.begin();
+      pose_graph_tools::VLCFrames frames_msg;
+      while (true) {
+        if (frames_msg.frames.size() > vlc_batch_size_)
+          break;
+        if (it == requested_frames_.end())
+          break;
+        lcd::RobotPoseId vertex_id(my_id_, *it);
+        if (lcd_->frameExists(vertex_id)) {
+          pose_graph_tools::VLCFrameMsg vlc_msg;
+          VLCFrameToMsg(lcd_->getVLCFrame(vertex_id), &vlc_msg);
+          frames_msg.frames.push_back(vlc_msg);
+        }
+        it = requested_frames_.erase(it);  // remove the current ID and proceed to next one
+      }
+      vlc_responses_pub_.publish(frames_msg);
+      ROS_INFO("Published %zu frames with %zu frames waiting.",
+               frames_msg.frames.size(), requested_frames_.size());
+    }
+
+    ROS_INFO_STREAM("Total inter-robot loop closures: " << num_inter_robot_loops_);
+    ros::Duration(vlc_sleep_time_).sleep();
   }
+
 }
 
 void DistributedLoopClosure::requestFrames() {
@@ -505,10 +536,11 @@ void DistributedLoopClosure::verifyLoopCallback() {
                 keyframe_from, keyframe_to, T_query_match, noise));
             submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 submap_from, submap_to, T_s1_s2, noise));
+            num_inter_robot_loops_++;
           }
 
           ROS_INFO(
-              "Verified loop (%d,%d)-(%d,%d). Total submap loop closures: %i",
+              "Verified loop (%lu,%lu)-(%lu,%lu). Total submap loop closures: %zu",
               vertex_query.first,
               vertex_query.second,
               vertex_match.first,
@@ -741,12 +773,8 @@ size_t DistributedLoopClosure::updateCandidateList() {
     // Update candidate list
     candidate_lc_[robot_queue.first] = unresolved_candidates;
   }
-  ROS_INFO("Number of loop closure candidates waiting for VLC frames: %d",
-           total_candidates);
-  ROS_INFO(
-      "Number of loop closure candidates ready for geometric verification: %d",
-      ready_candidates);
-  ROS_INFO("Total submap loop closures: %d", submap_loop_closures_.size());
+  ROS_INFO("Loop closure candidates ready for verification: %zu, waiting for frames: %zu",
+           ready_candidates, total_candidates);
   return total_candidates;
 }
 
@@ -756,7 +784,7 @@ void DistributedLoopClosure::vlcRequestsCallback(
     return;
   }
 
-  if (msg->pose_ids.size() == 0) {
+  if (msg->pose_ids.empty()) {
     return;
   }
 
@@ -769,25 +797,18 @@ void DistributedLoopClosure::vlcRequestsCallback(
     }
   }
 
-  if (missing_vertex_ids.size() > 0) {  // start vlc service critical section
+  if (!missing_vertex_ids.empty()) {  // start vlc service critical section
     std::unique_lock<std::mutex> service_lock(vlc_service_mutex_);
     if (!requestVLCFrameService(missing_vertex_ids)) {
-      ROS_ERROR("Failed to retrieve local VLC frames on robot %d.", my_id_);
+      ROS_ERROR_STREAM("Failed to retrieve local VLC frames on robot " << my_id_);
     }
   }
 
-  // Publish VLC frames that was requested
-  pose_graph_tools::VLCFrames requested_frames;
-  requested_frames.header.stamp = ros::Time::now();
+  // Push requested VLC frame IDs to queue to be transmitted later
+  std::unique_lock<std::mutex> requested_frames_lock(requested_frames_mutex_);
   for (const auto& pose_id : msg->pose_ids) {
-    lcd::RobotPoseId vertex_id(my_id_, pose_id);
-    if (lcd_->frameExists(vertex_id)) {
-      pose_graph_tools::VLCFrameMsg vlc_msg;
-      VLCFrameToMsg(lcd_->getVLCFrame(vertex_id), &vlc_msg);
-      requested_frames.frames.push_back(vlc_msg);
-    }
+    requested_frames_.emplace(pose_id);
   }
-  vlc_responses_pub_.publish(requested_frames);
 }
 
 void DistributedLoopClosure::publishLoopClosure(

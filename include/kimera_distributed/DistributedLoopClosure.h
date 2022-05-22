@@ -59,19 +59,24 @@ class DistributedLoopClosure {
   std::mutex lcd_mutex_;
 
   // Loop closures
+  int num_inter_robot_loops_;
   gtsam::NonlinearFactorGraph keyframe_loop_closures_;
   gtsam::NonlinearFactorGraph submap_loop_closures_;
 
   // List of potential loop closures
   // that require to request VLC frames
+  std::mutex vlc_service_mutex_;
   std::unordered_map<size_t, std::vector<lcd::PotentialVLCEdge> > candidate_lc_;
   std::mutex candidate_lc_mutex_;
   std::queue<lcd::PotentialVLCEdge> queued_lc_;
 
-  std::mutex vlc_service_mutex_;
+  // List of VLC frame IDs requested by other robots
+  std::set<size_t> requested_frames_;
+  std::mutex requested_frames_mutex_;
 
-  // Maximum number of VLC frames per robot to request in one batch
-  int vlc_batch_size_;
+  // Parameters controlling communication due to VLC request/response
+  int vlc_batch_size_;  // Maximum number of VLC frames per robot to request in one batch
+  int vlc_sleep_time_;  // Sleep time of communication thread
 
   // Map from robot ID to name
   std::map<size_t, std::string> robot_names_;

@@ -6,8 +6,10 @@
   <arg name="robot_name" default="kimera"/>
   <arg name="frame_id" default="map"/>
   <!-- Dataset -->
-  <arg name="dataset_name" default="warty"/>
+  <arg name="dataset_name"   default="warty"/>
+  <!-- Parameters that control communication due to VLC -->
   <arg name="vlc_batch_size" default="10"/>
+  <arg name="vlc_sleep_time" default="5" />
   <!-- Debug -->
   <arg name="debug"              default="false" />
   <arg name="launch_prefix"      value="xterm -e gdb -ex run \-\-args" if="$(arg debug)"/>
@@ -27,6 +29,7 @@
     <param name="vocabulary_path"     value="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
     <param name="log_output_path"     value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
     <param name="vlc_batch_size"      value="$(arg vlc_batch_size)"/>
+    <param name="vlc_sleep_time"      value="$(arg vlc_sleep_time)"/>
     <param name="run_offline"         value="$(arg run_offline)" />
     <param name="max_submap_size"     value="$(arg max_submap_size)"/>
     <param name="max_submap_distance" value="$(arg max_submap_distance)"/>

@@ -24,6 +24,7 @@
 
     <param name="latch" value="false"/>
     <param name="status_pub_period" value="1.0"/>
+    <param name="queue_size" value="1000"/>
   </node>
 
   <node if="$(arg monitor_bw)" pkg="panoptes" type="ros_bw_monitor.py" name="bw_motinor">

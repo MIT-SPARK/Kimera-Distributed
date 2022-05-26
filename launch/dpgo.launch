@@ -1,6 +1,7 @@
 <launch>
   <arg name="robot_name"              default="sobek" />
   <arg name="dataset_name"            default="Euroc" />
+  <arg name="robot_names_config"      default="robot_names"/>
   <arg name="verbosity"               default="0" />
   <arg name="robot_id"                default="0" />
   <arg name="num_robots"              default="1" />
@@ -21,6 +22,7 @@
     <include file="$(find dpgo_ros)/launch/PGOAgent.launch">
       <arg name="agent_id"                         value="$(arg robot_id)" />
       <arg name="num_robots"                       value="$(arg num_robots)" />
+      <arg name="robot_names_file"                 value="$(find kimera_distributed)/params/$(arg robot_names_config).yaml" />
       <arg name="debug"                            value="$(arg debug)" />
       <arg name="verbose"                          value="true" />
       <arg name="publish_iterate"                  value="false"/>

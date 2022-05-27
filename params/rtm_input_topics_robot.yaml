@@ -11,5 +11,5 @@
 - /$(arg robot_name)/dpgo_ros_node/public_measurements: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/dpgo_ros_node/measurement_weights: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/dpgo_ros_node/path: {queue_size: 1, reliable: false}
-- /$(arg robot_name)/kimera_pgmo/optimized_mesh: {queue_size: 1, reliable: false}
+# - /$(arg robot_name)/kimera_pgmo/optimized_mesh: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/landmarks: {queue_size: 1, reliable: false}

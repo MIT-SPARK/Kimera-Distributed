@@ -148,7 +148,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   std::string pose_graph_topic =
       "/" + robot_names_[my_id_] + "/kimera_distributed/pose_graph_incremental";
   pose_graph_pub_ =
-      nh_.advertise<pose_graph_tools::PoseGraph>(pose_graph_topic, 1000, false);
+      nh_.advertise<pose_graph_tools::PoseGraph>(pose_graph_topic, 1000, true);
 
   std::string resp_topic =
       "/" + robot_names_[my_id_] + "/kimera_distributed/vlc_responses";

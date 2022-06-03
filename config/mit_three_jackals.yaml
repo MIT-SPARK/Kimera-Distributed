@@ -1,0 +1,86 @@
+session_name: kimera-distributed-jackal
+
+environment:
+  ROSBAG0: "/home/yunchang/Downloads/kimera_test_j1_2022-06-02-13-54-02.bag"
+  ROSBAG1: "/home/yunchang/Downloads/kimera_test_j2_2022-06-02-13-54-04.bag"
+  ROSBAG2: "/home/yunchang/Downloads/kimera_test_sj1_2022-06-02-13-53-51.bag"
+  ROBOT0: "acl_jackal"
+  ROBOT1: "acl_jackal2"
+  ROBOT2: "sparkal1"
+  RATE: "1.0"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: robot0
+  layout: tiled  
+  shell_command_before:
+    - sleep 10;
+    - source ~/catkin_ws/devel/setup.bash
+    - export ROS_MASTER_URI=http://localhost:11311
+    - rosparam set use_sim_time true
+
+  panes:
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT0 robot_id:=0 use_d455:=true multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true use_external_odom:=true
+    - roslaunch kimera_distributed kimera_distributed.launch robot_id:=0 robot_name:=$ROBOT0 num_robots:=3 dataset_name:=Jackal multi_master:=true
+    - roslaunch kimera_distributed dpgo.launch robot_id:=0 robot_name:=$ROBOT0 num_robots:=3 dataset_name:=Jackal
+    - roslaunch kimera_semantics_ros kimera_semantics_jackal.launch robot_name:=$ROBOT0 decompress_depth:=false decompress_color:=true use_sim_time:=true
+    - roslaunch kimera_pgmo kimera_pgmo_robot.launch robot_name:=$ROBOT0 robot_id:=0 dataset:=Jackal run_mode:=1 optimized_path_topic:=/$ROBOT0/dpgo_ros_node/path pose_graph_topic:=/$ROBOT0/kimera_distributed/pose_graph_incremental
+    - roslaunch object_mapper object_mapper_2.launch robot_name:=$ROBOT0
+    - rviz -d $(rospack find kimera_distributed)/rviz/kimera_jackal_mit.rviz
+
+- window_name: robot1
+  layout: tiled  
+  shell_command_before:
+    - sleep 10;
+    - source ~/catkin_ws/devel/setup.bash
+    - export ROS_MASTER_URI=http://localhost:11312
+    - rosparam set use_sim_time true
+
+  panes:
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT1 robot_id:=1 use_d455:=true multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true use_external_odom:=true
+    - roslaunch kimera_distributed kimera_distributed.launch robot_id:=1 robot_name:=$ROBOT1 num_robots:=3 dataset_name:=Jackal multi_master:=true
+    - roslaunch kimera_distributed dpgo.launch robot_id:=1 robot_name:=$ROBOT1 num_robots:=3 dataset_name:=Jackal
+    - roslaunch kimera_semantics_ros kimera_semantics_jackal.launch robot_name:=$ROBOT1 decompress_depth:=false decompress_color:=true use_sim_time:=true
+    - roslaunch kimera_pgmo kimera_pgmo_robot.launch robot_name:=$ROBOT1 robot_id:=1 dataset:=Jackal run_mode:=1 optimized_path_topic:=/$ROBOT1/dpgo_ros_node/path pose_graph_topic:=/$ROBOT1/kimera_distributed/pose_graph_incremental
+    - roslaunch object_mapper object_mapper_2.launch robot_name:=$ROBOT1
+    - rviz -d $(rospack find kimera_distributed)/rviz/kimera_jackal2_mit.rviz
+
+- window_name: sparkal1
+  layout: tiled  
+  shell_command_before:
+    - sleep 10;
+    - source ~/catkin_ws/devel/setup.bash
+    - export ROS_MASTER_URI=http://localhost:11313
+    - rosparam set use_sim_time true
+
+  panes:
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT2 robot_id:=2 use_d455:=true multirobot:=true replay:=true should_use_sim_time:=true lcd_no_optimize:=true use_external_odom:=true
+    - roslaunch kimera_distributed kimera_distributed.launch robot_id:=1 robot_name:=$ROBOT2 num_robots:=3 dataset_name:=Jackal multi_master:=true
+    - roslaunch kimera_distributed dpgo.launch robot_id:=1 robot_name:=$ROBOT2 num_robots:=3 dataset_name:=Jackal
+    - roslaunch kimera_semantics_ros kimera_semantics_jackal.launch robot_name:=$ROBOT2 decompress_depth:=false decompress_color:=true use_sim_time:=true
+    - roslaunch kimera_pgmo kimera_pgmo_robot.launch robot_name:=$ROBOT2 robot_id:=1 dataset:=Jackal run_mode:=1 optimized_path_topic:=/$ROBOT2/dpgo_ros_node/path pose_graph_topic:=/$ROBOT2/kimera_distributed/pose_graph_incremental
+    - roslaunch object_mapper object_mapper_2.launch robot_name:=$ROBOT2
+    - sleep 10;
+
+- window_name: data
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source ~/catkin_ws/devel/setup.bash
+
+  panes:
+    - roscore -p 11311
+    - roscore -p 11312
+    - roscore -p 11313
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11311; rosbag play $ROSBAG0 --clock -r$RATE --pause --topics /$ROBOT0/forward/infra1/camera_info /$ROBOT0/forward/infra2/camera_info /$ROBOT0/forward/depth/camera_info /$ROBOT0/forward/color/camera_info /$ROBOT0/forward/infra1/image_rect_raw/compressed /$ROBOT0/forward/infra2/image_rect_raw/compressed /$ROBOT0/forward/depth/image_rect_raw /$ROBOT0/forward/color/image_raw/compressed /$ROBOT0/forward/imu /$ROBOT0/jackal_velocity_controller/odom /tf_static /tf_aggregate /$ROBOT0/lidar_points /$ROBOT0/detection_out_topic
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11312; rosbag play $ROSBAG1 --clock -r$RATE --pause --topics /$ROBOT1/forward/infra1/camera_info /$ROBOT1/forward/infra2/camera_info /$ROBOT1/forward/depth/camera_info /$ROBOT1/forward/color/camera_info /$ROBOT1/forward/infra1/image_rect_raw/compressed /$ROBOT1/forward/infra2/image_rect_raw/compressed /$ROBOT1/forward/depth/image_rect_raw /$ROBOT1/forward/color/image_raw/compressed /$ROBOT1/forward/imu /$ROBOT1/jackal_velocity_controller/odom /tf_static /tf_aggregate /$ROBOT1/lidar_points /$ROBOT1/detection_out_topic
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11313; rosbag play $ROSBAG2 --clock -r$RATE --pause --topics /$ROBOT2/forward/infra1/camera_info /$ROBOT2/forward/infra2/camera_info /$ROBOT2/forward/depth/camera_info /$ROBOT2/forward/color/camera_info /$ROBOT2/forward/infra1/image_rect_raw/compressed /$ROBOT2/forward/infra2/image_rect_raw/compressed /$ROBOT2/forward/depth/image_rect_raw /$ROBOT2/forward/color/image_raw/compressed /$ROBOT2/forward/imu /$ROBOT2/jackal_velocity_controller/odom /tf_static /tf_aggregate /$ROBOT2/lidar_points /$ROBOT2/detection_out_topic
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11311; rosrun static_transform_mux static_transform_mux
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11312; rosrun static_transform_mux static_transform_mux
+    - sleep 15; export ROS_MASTER_URI=http://localhost:11313; rosrun static_transform_mux static_transform_mux
+    # - sleep 10; export ROS_MASTER_URI=http://localhost:11311; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 1 world $ROBOT0/map
+    # - sleep 10; export ROS_MASTER_URI=http://localhost:11311; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 1 world $ROBOT2/map
+    # - sleep 10; export ROS_MASTER_URI=http://localhost:11312; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 1 world $ROBOT0/map
+    # - sleep 10; export ROS_MASTER_URI=http://localhost:11312; rosrun tf2_ros static_transform_publisher 0 0 0 0 0 1 world $ROBOT2/map

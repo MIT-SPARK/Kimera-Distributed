@@ -97,6 +97,29 @@ Visualization Manager:
       Topic: /acl_jackal2/dpgo_ros_node/path
       Unreliable: false
       Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 206; 92; 0
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: Path3
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /sparkal1/dpgo_ros_node/path
+      Unreliable: false
+      Value: true
     - Class: rviz/Image
       Enabled: true
       Image Topic: /acl_jackal/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
@@ -114,7 +137,7 @@ Visualization Manager:
       Marker Topic: /acl_jackal/dpgo_ros_node/loop_closures
       Name: Loop Closures
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: voxblox_rviz_plugin/VoxbloxMesh
@@ -189,9 +212,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 4096
       Min Color: 0; 0; 0
-      Min Intensity: 0
       Name: Landmarks
       Position Transformer: XYZ
       Queue Size: 10
@@ -238,9 +259,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 4096
       Min Color: 0; 0; 0
-      Min Intensity: 0
       Name: Landmarks2
       Position Transformer: XYZ
       Queue Size: 10
@@ -281,16 +300,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 46.53733444213867
+      Distance: 82.01469421386719
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.098590850830078
-        Y: -7.3570170402526855
-        Z: 4.7238030433654785
+        X: 6.097530364990234
+        Y: -13.715639114379883
+        Z: 26.279129028320312
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

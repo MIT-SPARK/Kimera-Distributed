@@ -10,9 +10,6 @@
   <arg name="vocab_path"              default="$(find kimera_core)/vocab/jackal_voc.yml"/>
   <!-- <arg name="vocab_path"              default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/> -->
 
-  <!-- True if multiple ROS masters are running. This turns on reliable UDP. -->
-  <arg name="multi_master" default="false" />
-
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
   <arg name="log_output" default="true" />
@@ -35,12 +32,6 @@
       <arg name="max_submap_distance"       value="0.5" />
       <arg name="robot_names_config"        value="$(arg robot_names_config)"/>
       <arg name="vocab_path"                value="$(arg vocab_path)"/>
-    </include>
-
-    <!-- Launch remote topic manager (reliable UDP) -->
-    <include if="$(arg multi_master)" file="$(find kimera_distributed)/launch/remote_topic_manager.launch">
-      <arg name="robot_id" value="$(arg robot_id)" />
-      <arg name="robot_name" value="$(arg robot_name)" />
     </include>
 
   </group>

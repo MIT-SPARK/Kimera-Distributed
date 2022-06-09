@@ -722,7 +722,7 @@ bool DistributedLoopClosure::requestVLCFrameService(
       // Fill in submap information for this keyframe
       const auto keyframe = submap_atlas_->getKeyframe(frame.pose_id_);
       if (!keyframe) {
-        ROS_WARN_STREAM("Received VLC frame" << frame.pose_id_ << " does not exist in submap atlas.");
+        ROS_WARN_STREAM("Received VLC frame " << frame.pose_id_ << " does not exist in submap atlas.");
         continue;
       }
       frame.submap_id_ = CHECK_NOTNULL(keyframe->getSubmap())->id();

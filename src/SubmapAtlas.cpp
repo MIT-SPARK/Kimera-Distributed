@@ -27,7 +27,7 @@ std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(
     return getKeyframe(keyframe_id);
   }
 
-  auto keyframe = std::make_shared<Keyframe>(keyframe_id);
+  auto keyframe = std::make_shared<Keyframe>(keyframe_id, timestamp);
   keyframe->setPoseInOdomFrame(T_odom_keyframe);
   keyframes_.emplace(keyframe_id, keyframe);
 

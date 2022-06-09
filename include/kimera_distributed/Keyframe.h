@@ -22,12 +22,17 @@ class Keyframe {
    * @param keyframe_id unique ID of this keyframe
    * @param submap pointer to the submap that contains this keyframe
    */
-  Keyframe(int id) : id_(id) {}
+  Keyframe(int id, uint64_t stamp) : id_(id), stamp_(stamp) {}
   /**
    * @brief Get keyframe ID
    * @return
    */
   int id() const { return id_; }
+  /**
+   * @brief Get timestamp in ns
+   * @return
+   */
+  uint64_t stamp() const { return stamp_; }
   /**
    * @brief Get submap
    * @return
@@ -72,6 +77,7 @@ class Keyframe {
   }
  private:
   const int id_;  // unique id associated with this keyframe
+  const uint64_t stamp_;  // const timestamp of this keyframe in ns
   std::shared_ptr<Submap> submap_;  // pointer to the submap that contains this KF
   gtsam::Pose3 T_odom_keyframe_;    // pose of this keyframe in the odometry frame
   gtsam::Pose3 T_submap_keyframe_;  // pose of this keyframe in the submap frame

@@ -113,6 +113,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Subscriber
   std::string topic = "/" + robot_names_[my_id_] + "/kimera_vio_ros/pose_graph_incremental";
   local_pg_sub_ = nh_.subscribe(topic, 1000, &DistributedLoopClosure::localPoseGraphCallback, this);
+  std::string dpgo_topic = "/" + robot_names_[my_id_] + "/dpgo_ros_node/path";
+  dpgo_sub_ = nh_.subscribe(dpgo_topic, 3, &DistributedLoopClosure::dpgoCallback, this);
   for (size_t id = 0; id < num_robots_; ++id) {
     if (id < my_id_) {
       std::string req_topic =
@@ -306,7 +308,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
   const uint64_t ts = msg->header.stamp.toNSec();
 
   bool incremental_pub = true;
-  if (submap_atlas_->numSubmaps() == 0 && msg->nodes.size() > 0) {
+  if (submap_atlas_->numSubmaps() == 0 && !msg->nodes.empty()) {
     // Create the first keyframe
     // Start submap critical section
     std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
@@ -324,6 +326,12 @@ void DistributedLoopClosure::localPoseGraphCallback(
     logKeyframePose(gtsam::Symbol(robot_id_to_prefix.at(my_id_), 0),
                     init_pose);
     incremental_pub = false;
+  }
+
+  // Extract timestamps of each new pose node
+  std::map<int, uint64_t> node_timestamps;
+  for (const auto& pg_node: msg->nodes) {
+    node_timestamps[(int) pg_node.key] = pg_node.header.stamp.toNSec();
   }
 
   for (const auto& pg_edge : msg->edges) {
@@ -349,7 +357,10 @@ void DistributedLoopClosure::localPoseGraphCallback(
         const auto T_src_dst = keyframe_odometry.T_src_dst_;
         const auto T_odom_src = submap_atlas_->getKeyframe(frame_src)->getPoseInOdomFrame();
         const auto T_odom_dst = T_odom_src * T_src_dst;
-        submap_atlas_->createKeyframe(frame_dst, T_odom_dst, ts);
+        uint64_t node_ts = ts;
+        if (node_timestamps.find(frame_dst) != node_timestamps.end())
+          node_ts = node_timestamps[frame_dst];
+        submap_atlas_->createKeyframe(frame_dst, T_odom_dst, node_ts);
 
         // Save keyframe pose to file
         gtsam::Symbol symbol_dst(robot_id_to_prefix.at(my_id_), frame_dst);
@@ -403,6 +414,45 @@ void DistributedLoopClosure::localPoseGraphCallback(
       !sparse_pose_graph.nodes.empty()) {
     pose_graph_pub_.publish(sparse_pose_graph);
   }
+}
+
+void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
+  if (!log_output_) return;
+  std::string file_path = log_output_dir_ + "kimera_distributed_poses.csv";
+  std::ofstream file;
+  file.open(file_path);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << file_path);
+    return;
+  }
+  file << std::fixed << std::setprecision(15);
+  file << "ns,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
+
+  // Using the optimized submap poses from dpgo, recover optimized poses for the original VIO keyframes,
+  // and save the results to a log file
+  for (int submap_id = 0; submap_id < msg->poses.size(); ++submap_id) {
+    const auto T_world_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    for (const int keyframe_id: submap->getKeyframeIDs()) {
+      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
+      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
+      const auto T_world_keyframe = T_world_submap * T_submap_keyframe;
+      // Save to log
+      gtsam::Quaternion quat = T_world_keyframe.rotation().toQuaternion();
+      gtsam::Point3 point = T_world_keyframe.translation();
+      file << keyframe->stamp() << ",";
+      file << keyframe->id() << ",";
+      file << quat.x() << ",";
+      file << quat.y() << ",";
+      file << quat.z() << ",";
+      file << quat.w() << ",";
+      file << point.x() << ",";
+      file << point.y() << ",";
+      file << point.z() << "\n";
+    }
+  }
+
+  file.close();
 }
 
 void DistributedLoopClosure::runVerification() {

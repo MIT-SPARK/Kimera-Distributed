@@ -86,6 +86,7 @@ class DistributedLoopClosure {
   std::vector<ros::Subscriber> bow_sub_;
   std::vector<ros::Subscriber> vlc_requests_sub_;
   std::vector<ros::Subscriber> vlc_responses_sub_;
+  ros::Subscriber dpgo_sub_;
 
   // ROS publisher
   ros::Publisher loop_closure_pub_;
@@ -138,6 +139,12 @@ class DistributedLoopClosure {
    * Callback to process the VLC requests from other robots
    */
   void vlcRequestsCallback(const pose_graph_tools::VLCRequestsConstPtr& msg);
+
+  /**
+   * @brief Callback to receive optimized submap poses from dpgo
+   * @param msg
+   */
+  void dpgoCallback(const nav_msgs::PathConstPtr& msg);
 
   /**
    * @brief Send submap-level pose graph for distributed optimization

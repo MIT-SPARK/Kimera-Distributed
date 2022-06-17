@@ -39,7 +39,7 @@
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
       <arg name="robust_opt_inner_iters"           value="10" />
       <arg name="max_iteration_number"             value="50" />
-      <arg name="log_directory"                    value="$(arg log_output_path)" />
+      <arg name="log_directory"                    value="$(arg log_output_path)/" />
     </include> 
 
   </group>

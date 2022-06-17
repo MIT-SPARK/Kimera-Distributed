@@ -32,6 +32,7 @@
       <arg name="max_submap_distance"       value="0.5" />
       <arg name="robot_names_config"        value="$(arg robot_names_config)"/>
       <arg name="vocab_path"                value="$(arg vocab_path)"/>
+      <arg name="log_output_path"           value="$(arg log_output_path)/"/>
     </include>
 
   </group>

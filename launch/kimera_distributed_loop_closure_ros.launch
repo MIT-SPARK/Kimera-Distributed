@@ -21,6 +21,7 @@
   <arg name="max_submap_distance"  default="0.5" />
   <arg name="robot_names_config"   default="robot_names"/>
   <arg name="vocab_path"           default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/>
+  <arg name="log_output_path"      default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
   <node launch-prefix="$(arg launch_prefix)" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
@@ -28,7 +29,7 @@
     <param name="num_robots"          value="$(arg num_robots)" />
     <param name="frame_id"            value="$(arg frame_id)" />
     <param name="vocabulary_path"     value="$(arg vocab_path)"/>
-    <param name="log_output_path"     value="$(find kimera_distributed)/logs/kimera$(arg robot_id)/"/>
+    <param name="log_output_path"     value="$(arg log_output_path)/"/>
     <param name="vlc_batch_size"      value="$(arg vlc_batch_size)"/>
     <param name="vlc_sleep_time"      value="$(arg vlc_sleep_time)"/>
     <param name="run_offline"         value="$(arg run_offline)" />

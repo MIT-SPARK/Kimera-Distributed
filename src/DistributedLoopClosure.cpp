@@ -388,8 +388,10 @@ void DistributedLoopClosure::localPoseGraphCallback(
       // Convert the loop closure to between the corresponding submaps
       const auto keyframe_src = submap_atlas_->getKeyframe(pg_edge.key_from);
       const auto keyframe_dst = submap_atlas_->getKeyframe(pg_edge.key_to);
-      if (!keyframe_src || !keyframe_dst)
+      if (!keyframe_src || !keyframe_dst) {
+        ROS_ERROR("Received intra loop closure but keyframe does not exist!");
         continue;
+      }
       const auto submap_src = CHECK_NOTNULL(keyframe_src->getSubmap());
       const auto submap_dst = CHECK_NOTNULL(keyframe_dst->getSubmap());
       gtsam::Symbol from_key(robot_id_to_prefix.at(my_id_), submap_src->id());

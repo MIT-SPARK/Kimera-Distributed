@@ -13,3 +13,5 @@
 - /$(arg robot_name)/dpgo_ros_node/path: {queue_size: 1, reliable: true}
 # - /$(arg robot_name)/kimera_pgmo/optimized_mesh: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/landmarks: {queue_size: 1, reliable: false}
+- /$(arg robot_name)/test_ping: {queue_size: 1, reliable: false}
+- /$(arg robot_name)/test_ack: {queue_size: 1, reliable: false}

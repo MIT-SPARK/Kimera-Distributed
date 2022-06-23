@@ -386,10 +386,10 @@ void DistributedLoopClosure::localPoseGraphCallback(
       // Start submap critical section
       std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
       // Convert the loop closure to between the corresponding submaps
-      const auto keyframe_src =
-          CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_from));
-      const auto keyframe_dst =
-          CHECK_NOTNULL(submap_atlas_->getKeyframe(pg_edge.key_to));
+      const auto keyframe_src = submap_atlas_->getKeyframe(pg_edge.key_from);
+      const auto keyframe_dst = submap_atlas_->getKeyframe(pg_edge.key_to);
+      if (!keyframe_src || !keyframe_dst)
+        continue;
       const auto submap_src = CHECK_NOTNULL(keyframe_src->getSubmap());
       const auto submap_dst = CHECK_NOTNULL(keyframe_dst->getSubmap());
       gtsam::Symbol from_key(robot_id_to_prefix.at(my_id_), submap_src->id());

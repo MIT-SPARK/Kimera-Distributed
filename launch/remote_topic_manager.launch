@@ -6,10 +6,8 @@
   <arg name="enet_port"  default="-1" /> 
   <arg name="service_discovery" default="true"/>
   <arg name="simulation" default="false"/>
-  <arg name="monitor_bw" default="true"/>
-  <arg name="monitor_latency" default="true"/>
   <arg name="logging"    default="true"/>
-  <arg name="log_directory" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
+  <arg name="log_directory" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
   <arg name="robot_names_config" default="robot_names"/>
   <!-- Uncomment below to enable debug printing -->
   <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/> -->
@@ -37,17 +35,5 @@
 
     </node>
 
-    <node if="$(arg monitor_bw)" pkg="panoptes" type="ros_bw_monitor.py" name="bw_motinor">
-      <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics_robot.yaml" subst_value="true"/>
-      <param name="log" value="true"/>
-      <param name="log_dir" value="$(arg log_directory)/" />
-    </node>
-
-    <node if="$(arg monitor_latency)" pkg="panoptes" type="latency_monitor.py" name="latency_monitor" output="screen">
-      <param name="log_dir" value="$(arg log_directory)/"/>
-      <param name="robot_id" value="$(arg robot_id)"/>
-      <param name="num_robots" value="$(arg num_robots)"/>
-      <rosparam file="$(find kimera_distributed)/params/$(arg robot_names_config).yaml"/>
-    </node>
   </group>
 </launch>

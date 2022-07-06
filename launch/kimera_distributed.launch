@@ -9,6 +9,10 @@
   <arg name="robot_names_config"      default="robot_names"/>
   <arg name="vocab_path"              default="$(find kimera_core)/vocab/jackal_voc.yml"/>
   <!-- <arg name="vocab_path"              default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/> -->
+  <arg name="monitor_bw" default="true"/>
+  <arg name="monitor_latency" default="true"/>
+  <arg name="logging"    default="true"/>
+  <arg name="log_directory" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
 
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
@@ -34,6 +38,19 @@
       <arg name="vocab_path"                value="$(arg vocab_path)"/>
       <arg name="log_output_path"           value="$(arg log_output_path)/"/>
     </include>
+
+    <node if="$(arg monitor_bw)" pkg="panoptes" type="ros_bw_monitor.py" name="bw_motinor">
+      <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics_robot.yaml" subst_value="true"/>
+      <param name="log" value="true"/>
+      <param name="log_dir" value="$(arg log_directory)/" />
+    </node>
+
+    <node if="$(arg monitor_latency)" pkg="panoptes" type="latency_monitor.py" name="latency_monitor" output="screen">
+      <param name="log_dir" value="$(arg log_directory)/"/>
+      <param name="robot_id" value="$(arg robot_id)"/>
+      <param name="num_robots" value="$(arg num_robots)"/>
+      <rosparam file="$(find kimera_distributed)/params/$(arg robot_names_config).yaml"/>
+    </node>
 
   </group>
 

@@ -120,6 +120,29 @@ Visualization Manager:
       Topic: /sparkal1/dpgo_ros_node/path
       Unreliable: false
       Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 206; 92; 0
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: Path4
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /sparkal2/dpgo_ros_node/path
+      Unreliable: false
+      Value: true
     - Class: rviz/Image
       Enabled: true
       Image Topic: /acl_jackal/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
@@ -212,7 +235,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
+      Max Intensity: 4096
       Min Color: 0; 0; 0
+      Min Intensity: 0
       Name: Landmarks
       Position Transformer: XYZ
       Queue Size: 10
@@ -259,7 +284,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
+      Max Intensity: 4096
       Min Color: 0; 0; 0
+      Min Intensity: 0
       Name: Landmarks2
       Position Transformer: XYZ
       Queue Size: 10
@@ -271,6 +298,44 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: TriangleMesh3
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: false
+      Show Wireframe:
+        Value: false
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /sparkal1/kimera_pgmo/optimized_mesh
+      Value: true
+    - Class: rviz_mesh_plugin/TriangleMesh
+      Display Type:
+        Faces Alpha: 1
+        Faces Color: 0; 255; 0
+        Value: Vertex Color
+      Enabled: true
+      Mesh Buffer Size: 1
+      Name: TriangleMesh4
+      Show Normals:
+        Normals Alpha: 1
+        Normals Color: 255; 0; 255
+        Normals Scaling Factor: 0.10000000149011612
+        Value: false
+      Show Wireframe:
+        Value: false
+        Wireframe Alpha: 1
+        Wireframe Color: 0; 0; 0
+      Topic: /sparkal2/kimera_pgmo/optimized_mesh
       Value: true
   Enabled: true
   Global Options:
@@ -300,25 +365,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 82.01469421386719
+      Distance: 61.36284637451172
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.097530364990234
-        Y: -13.715639114379883
-        Z: 26.279129028320312
+        X: -0.3443269431591034
+        Y: 4.2198076248168945
+        Z: 2.2535905838012695
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -0.2847970426082611
+      Pitch: 1.2302021980285645
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 4.8354058265686035
+      Yaw: 4.2603912353515625
     Saved: ~
 Window Geometry:
   Displays:

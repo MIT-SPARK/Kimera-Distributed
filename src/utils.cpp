@@ -35,58 +35,12 @@ void BowVectorFromMsg(const pose_graph_tools::BowVector& msg,
 
 void VLCFrameToMsg(const lcd::VLCFrame& frame,
                    pose_graph_tools::VLCFrameMsg* msg) {
-  msg->robot_id = frame.robot_id_;
-  msg->pose_id = frame.pose_id_;
-
-  // Convert submap info
-  msg->submap_id = frame.submap_id_;
-  msg->T_submap_pose = GtsamPoseToRos(frame.T_submap_pose_);
-
-  // Convert keypoints
-  PointCloud keypoints;
-  for (size_t i = 0; i < frame.keypoints_.size(); ++i) {
-    gtsam::Vector3 p_ = frame.keypoints_[i];
-    pcl::PointXYZ p(p_(0), p_(1), p_(2));
-    keypoints.push_back(p);
-  }
-  pcl::toROSMsg(keypoints, msg->keypoints);
-
-  // Convert descriptors
-  assert(frame.descriptors_mat_.type() ==
-         CV_8UC1);  // check that the matrix is of type CV_8U
-  cv_bridge::CvImage cv_img;
-  // cv_img.header   = in_msg->header; // Yulun: need to set header explicitly?
-  cv_img.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
-  cv_img.image = frame.descriptors_mat_;
-  cv_img.toImageMsg(msg->descriptors_mat);
+  frame.toROSMessage(msg);
 }
 
 void VLCFrameFromMsg(const pose_graph_tools::VLCFrameMsg& msg,
                      lcd::VLCFrame* frame) {
-  frame->robot_id_ = msg.robot_id;
-  frame->pose_id_ = msg.pose_id;
-
-  // Convert submap info
-  frame->submap_id_ = msg.submap_id;
-  frame->T_submap_pose_ = RosPoseToGtsam(msg.T_submap_pose);
-
-  // Convert keypoints 
-  PointCloud keypoints;
-  pcl::fromROSMsg(msg.keypoints, keypoints);
-  frame->keypoints_.clear();
-  for (size_t i = 0; i < keypoints.size(); ++i) {
-    gtsam::Vector3 p(keypoints[i].x, keypoints[i].y, keypoints[i].z);
-    frame->keypoints_.push_back(p);
-  }
-
-  // Convert descriptors
-  sensor_msgs::ImageConstPtr ros_image_ptr(
-      new sensor_msgs::Image(msg.descriptors_mat));
-  frame->descriptors_mat_ =
-      cv_bridge::toCvCopy(ros_image_ptr,
-                          sensor_msgs::image_encodings::TYPE_8UC1)
-          ->image;
-  frame->initializeDescriptorsVector();
+  *frame = lcd::VLCFrame(msg);
 }
 
 gtsam::BetweenFactor<gtsam::Pose3> VLCEdgeToGtsam(
@@ -334,8 +288,8 @@ size_t computeVLCFramePayloadBytes(const pose_graph_tools::VLCFrameMsg& msg) {
   bytes +=
       sizeof(msg.descriptors_mat.data[0]) * msg.descriptors_mat.data.size();
   // keypoints
-  bytes += sizeof(msg.keypoints);
-  bytes += sizeof(msg.keypoints.data[0]) * msg.keypoints.data.size();
+  bytes += sizeof(msg.versors);
+  bytes += sizeof(msg.versors.data[0]) * msg.versors.data.size();
   return bytes;
 }
 

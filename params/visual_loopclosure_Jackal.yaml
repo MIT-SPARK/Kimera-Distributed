@@ -17,10 +17,10 @@ max_nrFrames_between_queries: 2
 # Mono RANSAC 
 ransac_threshold_mono: 0.00001
 ransac_inlier_percentage_mono: 0.01
-max_ransac_iterations_mono: 500
+max_ransac_iterations_mono: 1000
 
 # Stereo RANSAC
-max_ransac_iterations: 500
-ransac_threshold: 0.1
+max_ransac_iterations: 1000
+ransac_threshold: 0.3
 geometric_verification_min_inlier_count: 4
 geometric_verification_min_inlier_percentage: 0.1

@@ -531,10 +531,10 @@ void DistributedLoopClosure::requestFrames() {
         vertex_ids_map.at(robot_id).emplace(cand.vertex_dst_);
       }
     }
-    // Publish or process request for the set of VLC frames
-    for (const auto& robot_set : vertex_ids_map) {
-      processVLCRequests(robot_set.first, robot_set.second);
-    }
+  }
+  // Publish or process request for the set of VLC frames
+  for (const auto& robot_set : vertex_ids_map) {
+    processVLCRequests(robot_set.first, robot_set.second);
   }
 }
 
@@ -558,11 +558,16 @@ void DistributedLoopClosure::verifyLoopCallback() {
       assert(i_query.size() == i_match.size());
 
       // Geometric verificaton
+      gtsam::Rot3 monoR_query_match;
       gtsam::Pose3 T_query_match;
+      // Perform monocular RANSAC
       if (lcd_->geometricVerificationNister(
-              vertex_query, vertex_match, &i_query, &i_match)) {
+              vertex_query, vertex_match, &i_query, &i_match, &monoR_query_match)) {
+        size_t mono_inliers_count = i_query.size();
+
+        // Perform stereo RANSAC, using relative rotation estimate from mono RANSAC as prior
         if (lcd_->recoverPose(
-                vertex_query, vertex_match, i_query, i_match, &T_query_match)) {
+                vertex_query, vertex_match, &i_query, &i_match, &T_query_match, &monoR_query_match)) {
           const auto frame1 = lcd_->getVLCFrame(vertex_query);
           const auto frame2 = lcd_->getVLCFrame(vertex_match);
           // Get loop closure between keyframes (for debug purpose)
@@ -590,14 +595,15 @@ void DistributedLoopClosure::verifyLoopCallback() {
                 submap_from, submap_to, T_s1_s2, noise));
             num_inter_robot_loops_++;
           }
-
+          size_t stereo_inliers_count = i_query.size();
           ROS_INFO(
-              "Verified loop (%lu,%lu)-(%lu,%lu). Total submap loop closures: %zu",
+              "Verified loop (%lu,%lu)-(%lu,%lu). Mono inliers: %zu. Stereo inliers: %zu.",
               vertex_query.first,
               vertex_query.second,
               vertex_match.first,
               vertex_match.second,
-              submap_loop_closures_.size());
+              mono_inliers_count,
+              stereo_inliers_count);
         }
       }
     }  // end lcd critical section
@@ -766,7 +772,6 @@ bool DistributedLoopClosure::requestVLCFrameService(
   for (const auto& frame_msg : query.response.frames) {
     lcd::VLCFrame frame;
     VLCFrameFromMsg(frame_msg, &frame);
-    frame.pruneInvalidKeypoints();
     assert(frame.robot_id_ == my_id_);
     lcd::RobotPoseId vertex_id(frame.robot_id_, frame.pose_id_);
     {  // start lcd critical section

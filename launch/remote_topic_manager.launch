@@ -4,7 +4,7 @@
   <arg name="num_robots" default="1" />
   <!-- Port that reliable UDP runs on. Default (-1) uses arbitrary port number. -->
   <arg name="enet_port"  default="-1" /> 
-  <arg name="service_discovery" default="true"/>
+  <arg name="service_discovery" default="false"/>
   <arg name="simulation" default="false"/>
   <arg name="logging"    default="true"/>
   <arg name="log_directory" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
@@ -19,6 +19,7 @@
     </node>
 
     <node pkg="reliable_udp_comms" type="remote_topic_manager" name="rtp" output="screen" launch-prefix="">
+      <param name="service_discovery"        value="$(arg service_discovery)" />
       <param name="simulation"               value="$(arg simulation)"/>
       <param name="enet_port"                value="$(arg enet_port)"/>
       <param name="latch"                    value="false"/>

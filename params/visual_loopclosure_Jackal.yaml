@@ -23,4 +23,4 @@ max_ransac_iterations_mono: 1000
 max_ransac_iterations: 1000
 ransac_threshold: 0.3
 geometric_verification_min_inlier_count: 5
-geometric_verification_min_inlier_percentage: 0.1
+geometric_verification_min_inlier_percentage: 0.0

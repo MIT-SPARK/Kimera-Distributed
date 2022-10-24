@@ -26,20 +26,26 @@
       <arg name="debug"                            value="$(arg debug)" />
       <arg name="verbose"                          value="true" />
       <arg name="publish_iterate"                  value="false"/>
+      <arg name="local_initialization_method"      value="Odometry"/>
       <arg name="multirobot_initialization"        value="true"/>
+      <arg name="RTR_iterations"                   value="3" />
+      <arg name="RTR_tCG_iterations"               value="50" />
+      <arg name="RTR_gradnorm_tol"                 value="1e-2" />
       <arg name="acceleration"                     value="false" />
       <arg name="relative_change_tolerance"        value="1e-2" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
       <arg name="GNC_use_probability"              value="false" />
       <arg name="GNC_quantile"                     value="0.9" />
-      <arg name="GNC_barc"                         value="7.0" />
+      <arg name="GNC_barc"                         value="3.0" />
       <arg name="GNC_mu_step"                      value="2.0" />
       <arg name="GNC_init_mu"                      value="1e-5" />
-      <arg name="robust_opt_warm_start"            value="true" />
-      <arg name="robust_opt_min_convergence_ratio" value="0.0" />
-      <arg name="robust_opt_inner_iters"           value="10" />
       <arg name="robust_init_min_inliers"          value="3" />
-      <arg name="max_iteration_number"             value="100" />
+      <arg name="robust_opt_warm_start"            value="false" />
+      <arg name="robust_opt_min_convergence_ratio" value="0.0" />
+      <arg name="robust_opt_inner_iters"           value="60" />
+      <arg name="max_iteration_number"             value="240" />
+      <arg name="inter_update_sleep_time"          value="0.2" />
+      <arg name="max_distributed_init_steps"       value="30" />
       <arg name="log_directory"                    value="$(arg log_output_path)/" />
     </include> 
 

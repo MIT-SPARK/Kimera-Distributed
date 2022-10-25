@@ -44,7 +44,7 @@
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
       <arg name="robust_opt_inner_iters"           value="60" />
       <arg name="max_iteration_number"             value="240" />
-      <arg name="inter_update_sleep_time"          value="0.2" />
+      <arg name="inter_update_sleep_time"          value="0.5" />
       <arg name="max_distributed_init_steps"       value="30" />
       <arg name="log_directory"                    value="$(arg log_output_path)/" />
     </include> 

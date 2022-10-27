@@ -8,8 +8,9 @@
   <!-- Dataset -->
   <arg name="dataset_name"   default="warty"/>
   <!-- Parameters that control communication due to VLC -->
-  <arg name="vlc_batch_size" default="10"/>
-  <arg name="vlc_sleep_time" default="5" />
+  <arg name="bow_batch_size"  default="100" />
+  <arg name="vlc_batch_size"  default="10"/>
+  <arg name="comm_sleep_time" default="5" />
   <!-- Debug -->
   <arg name="debug"              default="false" />
   <arg name="launch_prefix"      value="xterm -e gdb -ex run \-\-args" if="$(arg debug)"/>
@@ -30,8 +31,9 @@
     <param name="frame_id"            value="$(arg frame_id)" />
     <param name="vocabulary_path"     value="$(arg vocab_path)"/>
     <param name="log_output_path"     value="$(arg log_output_path)/"/>
+    <param name="bow_batch_size"      value="$(arg bow_batch_size)"/>
     <param name="vlc_batch_size"      value="$(arg vlc_batch_size)"/>
-    <param name="vlc_sleep_time"      value="$(arg vlc_sleep_time)"/>
+    <param name="comm_sleep_time"     value="$(arg comm_sleep_time)"/>
     <param name="run_offline"         value="$(arg run_offline)" />
     <param name="max_submap_size"     value="$(arg max_submap_size)"/>
     <param name="max_submap_distance" value="$(arg max_submap_distance)"/>

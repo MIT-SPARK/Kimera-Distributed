@@ -29,10 +29,6 @@
 namespace lcd = kimera_multi_lcd;
 
 namespace kimera_distributed {
-void BowVectorToMsg(const DBoW2::BowVector& bow_vec,
-                    pose_graph_tools::BowVector* msg);
-void BowVectorFromMsg(const pose_graph_tools::BowVector& msg,
-                      DBoW2::BowVector* bow_vec);
 
 void VLCFrameToMsg(const lcd::VLCFrame& frame,
                    pose_graph_tools::VLCFrameMsg* msg);

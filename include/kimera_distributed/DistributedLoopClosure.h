@@ -17,6 +17,8 @@
 #include <thread>
 #include <vector>
 
+#include <pose_graph_tools/BowQueries.h>
+#include <pose_graph_tools/BowRequests.h>
 #include <pose_graph_tools/VLCFrames.h>
 #include <pose_graph_tools/VLCRequests.h>
 #include <pose_graph_tools/PoseGraph.h>
@@ -53,6 +55,13 @@ class DistributedLoopClosure {
   std::unique_ptr<SubmapAtlas> submap_atlas_;
   std::mutex submap_atlas_mutex_;
 
+  // Bag of words vectors
+  // My own BoW vectors
+  std::unordered_map<lcd::PoseId, DBoW2::BowVector> my_bow_vectors_;
+  // The Pose Ids of Bow vectors received from each robot
+  std::unordered_map<lcd::RobotId, std::unordered_set<lcd::PoseId>> bow_received_;
+  std::unordered_map<lcd::RobotId, lcd::PoseId> bow_latest_; // Latest BoW received from each robot
+
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
   lcd::LcdParams lcd_params_;
@@ -70,13 +79,18 @@ class DistributedLoopClosure {
   std::mutex candidate_lc_mutex_;
   std::queue<lcd::PotentialVLCEdge> queued_lc_;
 
+  // List of Bow frame IDs requested by other robots
+  std::set<lcd::PoseId> requested_bows_;
+  std::mutex requested_bows_mutex_;
+
   // List of VLC frame IDs requested by other robots
-  std::set<size_t> requested_frames_;
+  std::set<lcd::PoseId> requested_frames_;
   std::mutex requested_frames_mutex_;
 
   // Parameters controlling communication due to VLC request/response
+  int bow_batch_size_;  // Maximum number of Bow vectors per robot to request in one batch
   int vlc_batch_size_;  // Maximum number of VLC frames per robot to request in one batch
-  int vlc_sleep_time_;  // Sleep time of communication thread
+  int comm_sleep_time_;  // Sleep time of communication thread
 
   // Map from robot ID to name
   std::map<size_t, std::string> robot_names_;
@@ -84,6 +98,7 @@ class DistributedLoopClosure {
   // ROS subscriber
   ros::Subscriber local_pg_sub_;
   std::vector<ros::Subscriber> bow_sub_;
+  std::vector<ros::Subscriber> bow_requests_sub_;
   std::vector<ros::Subscriber> vlc_requests_sub_;
   std::vector<ros::Subscriber> vlc_responses_sub_;
   ros::Subscriber dpgo_sub_;
@@ -93,6 +108,8 @@ class DistributedLoopClosure {
   ros::Publisher vlc_responses_pub_;
   ros::Publisher vlc_requests_pub_;
   ros::Publisher pose_graph_pub_;
+  ros::Publisher bow_requests_pub_;
+  ros::Publisher bow_response_pub_;
 
   // For incremental publishing
   size_t last_get_submap_idx_;
@@ -122,7 +139,7 @@ class DistributedLoopClosure {
   /**
    * Callback to process bag of word vectors received from robots
    */
-  void bowCallback(const pose_graph_tools::BowQueryConstPtr& msg);
+  void bowCallback(const pose_graph_tools::BowQueriesConstPtr& query_msg);
 
   /**
    * @brief Subscribe to incremental pose graph of this robot published by VIO
@@ -134,6 +151,12 @@ class DistributedLoopClosure {
    * Callback to process the VLC responses to our requests
    */
   void vlcResponsesCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
+
+  /**
+   * @brief Callback to process the BoW requests from other robots
+   * @param msg
+   */
+  void bowRequestsCallback(const pose_graph_tools::BowRequestsConstPtr& msg);
 
   /**
    * Callback to process the VLC requests from other robots
@@ -177,6 +200,11 @@ class DistributedLoopClosure {
    * Request local VLC Frames from Kimera-VIO-ROS
    */
   bool requestVLCFrameService(const lcd::RobotPoseIdSet& vertex_ids);
+
+  /**
+   * @brief Request BoW vectors
+   */
+  void requestBowVectors();
 
   /**
    * Check and submit VLC requests

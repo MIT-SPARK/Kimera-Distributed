@@ -242,16 +242,16 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Start verification thread
   verification_thread_.reset(
       new std::thread(&DistributedLoopClosure::runVerification, this));
-  ROS_INFO("Started distributed loop closure verification thread (ID =  %d)",
+  ROS_INFO("Started distributed loop closure verification thread (ID = %zu)",
            my_id_);
 
   // Start comms thread
   comms_thread_.reset(new std::thread(&DistributedLoopClosure::runComms, this));
-  ROS_INFO("Started distributed loop closure comms thread (ID = %d)", my_id_);
+  ROS_INFO("Started distributed loop closure comms thread (ID = %zu)", my_id_);
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {
-  ROS_INFO("Shutting down DistributedLoopClosure process on robot %d...",
+  ROS_INFO("Shutting down DistributedLoopClosure process on robot %zu...",
            my_id_);
   should_shutdown_ = true;
 
@@ -280,9 +280,6 @@ void DistributedLoopClosure::bowCallback(
     }
     DBoW2::BowVector bow_vec;
     pose_graph_tools::BowVectorFromMsg(msg.bow_vector, &bow_vec);
-    if(robot_id == my_id_) {
-      my_bow_vectors_[pose_id] = bow_vec;
-    }
     bow_received_[robot_id].emplace(pose_id);
     bow_latest_[robot_id] = std::max(bow_latest_[robot_id], pose_id);
     // Perform place recognition by comparing received BoW with database
@@ -522,17 +519,19 @@ void DistributedLoopClosure::runComms() {
           break;
         if (it == requested_bows_.end())
           break;
-        lcd::PoseId requested_pose_id = *it;
-        if (my_bow_vectors_.find(requested_pose_id) == my_bow_vectors_.end()) {
-          ROS_ERROR("Requested BoW of frame %lu does not exist!", requested_pose_id);
+        lcd::PoseId pose_id = *it;
+        it = requested_bows_.erase(it);  // remove the current ID and proceed to next one
+        lcd::RobotPoseId requested_robot_pose_id(my_id_, pose_id);
+        if (!lcd_->bowExists(requested_robot_pose_id)) {
+          ROS_ERROR("Requested BoW of frame %lu does not exist!", pose_id);
+          continue;
         }
         pose_graph_tools::BowQuery query_msg;
         query_msg.robot_id = my_id_;
-        query_msg.pose_id = requested_pose_id;
-        pose_graph_tools::BowVectorToMsg(my_bow_vectors_[requested_pose_id],
+        query_msg.pose_id = pose_id;
+        pose_graph_tools::BowVectorToMsg(lcd_->getBoWVector(requested_robot_pose_id),
                                          &(query_msg.bow_vector));
         msg.queries.push_back(query_msg);
-        it = requested_bows_.erase(it);  // remove the current ID and proceed to next one
       }
       bow_response_pub_.publish(msg);
       ROS_INFO("Published %zu BoWs with %zu waiting.",

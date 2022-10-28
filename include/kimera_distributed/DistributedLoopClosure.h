@@ -56,8 +56,6 @@ class DistributedLoopClosure {
   std::mutex submap_atlas_mutex_;
 
   // Bag of words vectors
-  // The Pose Ids of Bow vectors received from each robot
-  std::unordered_map<lcd::RobotId, std::unordered_set<lcd::PoseId>> bow_received_;
   std::unordered_map<lcd::RobotId, lcd::PoseId> bow_latest_; // Latest BoW received from each robot
 
   // Loop closure detector

@@ -139,7 +139,6 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       ros::Subscriber bow_sub = nh_.subscribe(
           bow_topic, 1000, &DistributedLoopClosure::bowCallback, this);
       bow_sub_.push_back(bow_sub);
-      bow_received_[id] = std::unordered_set<lcd::PoseId>();
       bow_latest_[id] = 0;
     }
 
@@ -274,13 +273,12 @@ void DistributedLoopClosure::bowCallback(
     // This robot is responsible for detecting loop closures with others with a larger ID
     CHECK_GE(robot_id, my_id_);
     lcd::RobotPoseId vertex_query(robot_id, pose_id);
-    if (bow_received_[robot_id].find(pose_id) != bow_received_[robot_id].end()) {
+    if (lcd_->bowExists(vertex_query)) {
       // Skip if this vector has been received before
       continue;
     }
     DBoW2::BowVector bow_vec;
     pose_graph_tools::BowVectorFromMsg(msg.bow_vector, &bow_vec);
-    bow_received_[robot_id].emplace(pose_id);
     bow_latest_[robot_id] = std::max(bow_latest_[robot_id], pose_id);
     // Perform place recognition by comparing received BoW with database
     std::vector<lcd::RobotPoseId> vertex_matches;
@@ -568,17 +566,20 @@ void DistributedLoopClosure::runComms() {
 }
 
 void DistributedLoopClosure::requestBowVectors() {
-  for (lcd::RobotId robot_id = my_id_ + 1; robot_id < num_robots_; ++robot_id) {
+  for (lcd::RobotId robot_id = my_id_; robot_id < num_robots_; ++robot_id) {
     pose_graph_tools::BowRequests msg;
     msg.robot_id = robot_id;
-    const auto& received_pose_ids = bow_received_[robot_id];
     const lcd::PoseId latest_pose_id = bow_latest_[robot_id];
     for (lcd::PoseId pose_id = 0; pose_id < latest_pose_id; ++pose_id) {
       if (msg.pose_ids.size() >= bow_batch_size_)
         break;
-      if (received_pose_ids.find(pose_id) == received_pose_ids.end()) {
-        // ROS_INFO("Robot %lu Bow: could not find %lu (latest = %lu).", robot_id, pose_id, latest_pose_id);
-        msg.pose_ids.push_back(pose_id);
+      const lcd::RobotPoseId vertex(robot_id, pose_id);
+      if (!lcd_->bowExists(vertex)) {
+        if (robot_id == my_id_) {
+          ROS_ERROR("Robot %lu cannot find BoW of itself! Missing %lu (latest = %lu).", robot_id, pose_id, latest_pose_id);
+        } else {
+          msg.pose_ids.push_back(pose_id);
+        }
       }
     }
     if (!msg.pose_ids.empty()) {

@@ -35,6 +35,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       bow_batch_size_(100),
       vlc_batch_size_(10),
       comm_sleep_time_(5),
+      detection_batch_size_(20),
       last_get_submap_idx_(0),
       last_get_lc_idx_(0) {
   int my_id_int = -1;
@@ -90,6 +91,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   ros::param::get("~vocabulary_path", lcd_params_.vocab_path_);
 
+  ros::param::get("~detection_batch_size", detection_batch_size_);
   // Load parameters controlling VLC communication
   ros::param::get("~bow_batch_size", bow_batch_size_);
   ros::param::get("~vlc_batch_size", vlc_batch_size_);
@@ -140,6 +142,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
           bow_topic, 1000, &DistributedLoopClosure::bowCallback, this);
       bow_sub_.push_back(bow_sub);
       bow_latest_[id] = 0;
+      bow_received_[id] = std::unordered_set<lcd::PoseId>();
     }
 
     if (id > my_id_) {
@@ -160,12 +163,12 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   std::string bow_response_topic =
       "/" + robot_names_[my_id_] + "/kimera_vio_ros/bow_query";
   bow_response_pub_ =
-      nh_.advertise<pose_graph_tools::BowQueries>(bow_response_topic, 5, true);
+      nh_.advertise<pose_graph_tools::BowQueries>(bow_response_topic, 1000, true);
 
   std::string bow_request_topic =
       "/" + robot_names_[my_id_] + "/kimera_distributed/bow_requests";
   bow_requests_pub_ =
-      nh_.advertise<pose_graph_tools::BowRequests>(bow_request_topic, 5, true);
+      nh_.advertise<pose_graph_tools::BowRequests>(bow_request_topic, 100, true);
 
   std::string pose_graph_topic =
       "/" + robot_names_[my_id_] + "/kimera_distributed/pose_graph_incremental";
@@ -224,7 +227,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "maximum batch size to request VLC frames = " << vlc_batch_size_ << "\n"
       << "Communication thread sleep time = " << comm_sleep_time_ << "\n"
       << "maximum submap size = " << submap_params.max_submap_size << "\n"
-      << "maximum submap distance = " << submap_params.max_submap_distance
+      << "maximum submap distance = " << submap_params.max_submap_distance << "\n"
+      << "loop detection batch size = " << detection_batch_size_
       << "\n");
 
   if (run_offline_) {
@@ -238,21 +242,31 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     }
   }
 
+  // Start loop detection thread
+  detection_thread_.reset(
+      new std::thread(&DistributedLoopClosure::runDetection, this));
+  ROS_INFO("Robot %zu started loop detection / place recognition thread.", my_id_);
+
   // Start verification thread
   verification_thread_.reset(
       new std::thread(&DistributedLoopClosure::runVerification, this));
-  ROS_INFO("Started distributed loop closure verification thread (ID = %zu)",
+  ROS_INFO("Robot %zu started loop verification thread.",
            my_id_);
 
   // Start comms thread
   comms_thread_.reset(new std::thread(&DistributedLoopClosure::runComms, this));
-  ROS_INFO("Started distributed loop closure comms thread (ID = %zu)", my_id_);
+  ROS_INFO("Robot %zu started communication thread.", my_id_);
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {
   ROS_INFO("Shutting down DistributedLoopClosure process on robot %zu...",
            my_id_);
   should_shutdown_ = true;
+
+  if (detection_thread_) {
+    detection_thread_->join();
+    detection_thread_.reset();
+  }
 
   if (verification_thread_) {
     verification_thread_->join();
@@ -273,59 +287,16 @@ void DistributedLoopClosure::bowCallback(
     // This robot is responsible for detecting loop closures with others with a larger ID
     CHECK_GE(robot_id, my_id_);
     lcd::RobotPoseId vertex_query(robot_id, pose_id);
-    if (lcd_->bowExists(vertex_query)) {
+    if (bow_received_[robot_id].find(pose_id) != bow_received_[robot_id].end()) {
       // Skip if this vector has been received before
       continue;
     }
-    DBoW2::BowVector bow_vec;
-    pose_graph_tools::BowVectorFromMsg(msg.bow_vector, &bow_vec);
     bow_latest_[robot_id] = std::max(bow_latest_[robot_id], pose_id);
-    // Perform place recognition by comparing received BoW with database
-    std::vector<lcd::RobotPoseId> vertex_matches;
-    {  // start lcd critical section
-      std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
-
-      // Incoming bow vector is from my trajectory
-      // Detect loop closures with all robots in the database
-      // (including myself if inter_robot_only is set to false)
-      if (robot_id == my_id_) {
-        if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
-          for (const auto& vertex_match : vertex_matches) {
-            lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
-
-            {  // start candidate critical section. Add to candidate for request
-              std::unique_lock<std::mutex> candidate_lock(candidate_lc_mutex_);
-              candidate_lc_.at(robot_id).push_back(potential_edge);
-            }  // end candidate critical section
-          }
-        }
-      }
-
-      // Incoming bow vector is from another robot
-      // Detect loop closures ONLY with my trajectory
-      if (robot_id != my_id_) {
-        if (lcd_->detectLoopWithRobot(
-            my_id_, vertex_query, bow_vec, &vertex_matches)) {
-          for (const auto& vertex_match : vertex_matches) {
-            lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
-
-            {
-              // start candidate critical section. Add to candidate for request
-              std::unique_lock<std::mutex> candidate_lock(candidate_lc_mutex_);
-              candidate_lc_.at(robot_id).push_back(potential_edge);
-            }  // end candidate critical section
-          }
-        }
-      }
-
-      // Add bow vector to database
-      lcd_->addBowVector(vertex_query, bow_vec);
-    }  // end lcd critical section
-
-    // Inter-robot queries will count as communication payloads
-    if (robot_id != my_id_) {
-      received_bow_bytes_.push_back(computeBowQueryPayloadBytes(msg));
-    }
+    bow_received_[robot_id].emplace(pose_id);
+    { // start of BoW critical section
+      std::unique_lock<std::mutex> bow_lock(bow_msgs_mutex_);
+      bow_msgs_.push_back(msg);
+    } // end BoW critical section
   }
 }
 
@@ -485,6 +456,15 @@ void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
   file.close();
 }
 
+void DistributedLoopClosure::runDetection() {
+  while (ros::ok() && !should_shutdown_) {
+    if (!bow_msgs_.empty()) {
+      detectLoopCallback();
+    }
+    ros::Duration(1.0).sleep();
+  }
+}
+
 void DistributedLoopClosure::runVerification() {
   ros::WallRate r(1);
   while (ros::ok() && !should_shutdown_) {
@@ -569,12 +549,12 @@ void DistributedLoopClosure::requestBowVectors() {
   for (lcd::RobotId robot_id = my_id_; robot_id < num_robots_; ++robot_id) {
     pose_graph_tools::BowRequests msg;
     msg.robot_id = robot_id;
+    const auto &received_pose_ids = bow_received_.at(robot_id);
     const lcd::PoseId latest_pose_id = bow_latest_[robot_id];
     for (lcd::PoseId pose_id = 0; pose_id < latest_pose_id; ++pose_id) {
       if (msg.pose_ids.size() >= bow_batch_size_)
         break;
-      const lcd::RobotPoseId vertex(robot_id, pose_id);
-      if (!lcd_->bowExists(vertex)) {
+      if (received_pose_ids.find(pose_id) == received_pose_ids.end()) {
         if (robot_id == my_id_) {
           ROS_ERROR("Robot %lu cannot find BoW of itself! Missing %lu (latest = %lu).", robot_id, pose_id, latest_pose_id);
         } else {
@@ -620,6 +600,95 @@ void DistributedLoopClosure::requestFrames() {
   for (const auto& robot_set : vertex_ids_map) {
     processVLCRequests(robot_set.first, robot_set.second);
   }
+}
+
+void DistributedLoopClosure::detectLoopCallback() {
+  std::unique_lock<std::mutex> bow_lock(bow_msgs_mutex_);
+  auto it = bow_msgs_.begin();
+  int num_detection_performed = 0;
+  while (num_detection_performed < detection_batch_size_) {
+    if (it == bow_msgs_.end()) {
+      break;
+    }
+    const pose_graph_tools::BowQuery msg = *it;
+    lcd::RobotId query_robot = msg.robot_id;
+    lcd::PoseId query_pose = msg.pose_id;
+    lcd::RobotPoseId query_vertex(query_robot, query_pose);
+    DBoW2::BowVector bow_vec;
+    pose_graph_tools::BowVectorFromMsg(msg.bow_vector, &bow_vec);
+
+    if (query_pose <= 1) {
+      // We cannot detect loop for the very first few frames
+      // Remove and proceed to next message
+      ROS_INFO("Received first BoW from robot %zu (pose %zu).", query_robot, query_pose);
+      lcd_->addBowVector(query_vertex, bow_vec);
+      it = bow_msgs_.erase(it);
+    } else if (!lcd_->bowExists(lcd::RobotPoseId(query_robot, query_pose - 1))) {
+      // We cannot detect loop since the BoW of previous frame is missing
+      // (Recall we need that to compute nss factor)
+      // In this case we skip the message and try again later
+      // ROS_WARN("Cannot detect loop for (%zu,%zu) because previous BoW is missing.",
+      //           query_robot, query_pose);
+      ++it;
+    } else {
+      // We are ready to detect loop for this query message
+      // ROS_INFO("Detect loop for (%zu,%zu).", query_robot, query_pose);
+      detectLoop(query_vertex, bow_vec);
+      num_detection_performed++;
+      // Inter-robot queries will count as communication payloads
+      if (query_robot != my_id_) {
+        received_bow_bytes_.push_back(computeBowQueryPayloadBytes(msg));
+      }
+      lcd_->addBowVector(query_vertex, bow_vec);
+      it = bow_msgs_.erase(it); // Erase this message and move on to next one
+    }
+  }
+  if (!bow_msgs_.empty()) {
+    ROS_INFO("Performed %d loop detection (%zu pending).", num_detection_performed, bow_msgs_.size());
+  }
+}
+
+void DistributedLoopClosure::detectLoop(const lcd::RobotPoseId &vertex_query,
+                                        const DBoW2::BowVector &bow_vec) {
+  const lcd::RobotId robot_query = vertex_query.first;
+  const lcd::PoseId pose_query = vertex_query.second;
+  std::vector<lcd::RobotPoseId> vertex_matches;
+  {  // start lcd critical section
+    std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
+
+    // Incoming bow vector is from my trajectory
+    // Detect loop closures with all robots in the database
+    // (including myself if inter_robot_only is set to false)
+    if (robot_query == my_id_) {
+      if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
+        for (const auto& vertex_match : vertex_matches) {
+          lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
+
+          {  // start candidate critical section. Add to candidate for request
+            std::unique_lock<std::mutex> candidate_lock(candidate_lc_mutex_);
+            candidate_lc_.at(robot_query).push_back(potential_edge);
+          }  // end candidate critical section
+        }
+      }
+    }
+
+    // Incoming bow vector is from another robot
+    // Detect loop closures ONLY with my trajectory
+    if (robot_query != my_id_) {
+      if (lcd_->detectLoopWithRobot(
+          my_id_, vertex_query, bow_vec, &vertex_matches)) {
+        for (const auto& vertex_match : vertex_matches) {
+          lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
+
+          {
+            // start candidate critical section. Add to candidate for request
+            std::unique_lock<std::mutex> candidate_lock(candidate_lc_mutex_);
+            candidate_lc_.at(robot_query).push_back(potential_edge);
+          }  // end candidate critical section
+        }
+      }
+    }
+  }  // end lcd critical section
 }
 
 void DistributedLoopClosure::verifyLoopCallback() {

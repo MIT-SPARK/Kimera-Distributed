@@ -8,9 +8,10 @@
   <!-- Dataset -->
   <arg name="dataset_name"   default="warty"/>
   <!-- Parameters that control communication due to VLC -->
-  <arg name="bow_batch_size"  default="100" />
-  <arg name="vlc_batch_size"  default="10"/>
-  <arg name="comm_sleep_time" default="5" />
+  <arg name="bow_batch_size"       default="100" />
+  <arg name="vlc_batch_size"       default="10"/>
+  <arg name="comm_sleep_time"      default="5" />
+  <arg name="detection_batch_size" default="30" />
   <!-- Debug -->
   <arg name="debug"              default="false" />
   <arg name="launch_prefix"      value="xterm -e gdb -ex run \-\-args" if="$(arg debug)"/>
@@ -26,17 +27,18 @@
 
   <!-- Launch Kimera Distributed Loop Closure Node -->
   <node launch-prefix="$(arg launch_prefix)" name="distributed_loop_closure_node" pkg="kimera_distributed" type="kimera_distributed_loop_closure_node" output="screen" ns="distributed_loop_closure">
-    <param name="robot_id"            value="$(arg robot_id)"/>
-    <param name="num_robots"          value="$(arg num_robots)" />
-    <param name="frame_id"            value="$(arg frame_id)" />
-    <param name="vocabulary_path"     value="$(arg vocab_path)"/>
-    <param name="log_output_path"     value="$(arg log_output_path)/"/>
-    <param name="bow_batch_size"      value="$(arg bow_batch_size)"/>
-    <param name="vlc_batch_size"      value="$(arg vlc_batch_size)"/>
-    <param name="comm_sleep_time"     value="$(arg comm_sleep_time)"/>
-    <param name="run_offline"         value="$(arg run_offline)" />
-    <param name="max_submap_size"     value="$(arg max_submap_size)"/>
-    <param name="max_submap_distance" value="$(arg max_submap_distance)"/>
+    <param name="robot_id"               value="$(arg robot_id)"/>
+    <param name="num_robots"             value="$(arg num_robots)" />
+    <param name="frame_id"               value="$(arg frame_id)" />
+    <param name="vocabulary_path"        value="$(arg vocab_path)"/>
+    <param name="log_output_path"        value="$(arg log_output_path)/"/>
+    <param name="bow_batch_size"         value="$(arg bow_batch_size)"/>
+    <param name="vlc_batch_size"         value="$(arg vlc_batch_size)"/>
+    <param name="comm_sleep_time"        value="$(arg comm_sleep_time)"/>
+    <param name="detection_batch_size"   value="$(arg detection_batch_size)" />
+    <param name="run_offline"            value="$(arg run_offline)" />
+    <param name="max_submap_size"        value="$(arg max_submap_size)"/>
+    <param name="max_submap_distance"    value="$(arg max_submap_distance)"/>
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>
     <rosparam file="$(find kimera_distributed)/params/$(arg robot_names_config).yaml" />
   </node>

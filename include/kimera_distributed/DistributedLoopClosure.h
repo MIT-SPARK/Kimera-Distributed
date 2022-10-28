@@ -57,6 +57,9 @@ class DistributedLoopClosure {
 
   // Bag of words vectors
   std::unordered_map<lcd::RobotId, lcd::PoseId> bow_latest_; // Latest BoW received from each robot
+  std::unordered_map<lcd::RobotId, std::unordered_set<lcd::PoseId>> bow_received_; 
+  std::vector<pose_graph_tools::BowQuery> bow_msgs_; // New BoW messages that need to be processed
+  std::mutex bow_msgs_mutex_;
 
   // Loop closure detector
   std::shared_ptr<lcd::LoopClosureDetector> lcd_;
@@ -87,6 +90,7 @@ class DistributedLoopClosure {
   int bow_batch_size_;  // Maximum number of Bow vectors per robot to request in one batch
   int vlc_batch_size_;  // Maximum number of VLC frames per robot to request in one batch
   int comm_sleep_time_;  // Sleep time of communication thread
+  int detection_batch_size_;  // Maximum number of loop detection to perform in one batch
 
   // Map from robot ID to name
   std::map<size_t, std::string> robot_names_;
@@ -115,6 +119,7 @@ class DistributedLoopClosure {
   ros::ServiceServer pose_graph_request_server_;
 
   // Threads
+  std::unique_ptr<std::thread> detection_thread_;
   std::unique_ptr<std::thread> verification_thread_;
   std::unique_ptr<std::thread> comms_thread_;
 
@@ -122,6 +127,11 @@ class DistributedLoopClosure {
   std::ofstream keyframe_pose_file_;        // log received keyframe poses
   std::ofstream loop_closure_file_;       // log inter-robot loop closures
  private:
+  /**
+   * @brief Run place recognition / loop detection spin
+   */
+  void runDetection();
+
   /**
    * Run Geometric verification spin
    */
@@ -206,6 +216,18 @@ class DistributedLoopClosure {
    * Check and submit VLC requests
    */
   void requestFrames();
+
+  /**
+   * @brief Detect loop closure using BoW vectors
+   */
+  void detectLoopCallback();
+
+  /**
+   * @brief Detect loop closure using the input BoW vector
+   * @param vertex_query the unique ID associated with the frame of this BoW vector
+   * @param bow_vec query bag of words vector
+   */
+  void detectLoop(const lcd::RobotPoseId& vertex_query, const DBoW2::BowVector& bow_vec);
 
   /**
    * Perform geometric verification

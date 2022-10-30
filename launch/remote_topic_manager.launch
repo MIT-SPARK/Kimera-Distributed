@@ -1,14 +1,14 @@
 <launch>
-  <arg name="robot_id" default="0"/>
-  <arg name="robot_name" default="acl_jackal"/>
-  <arg name="num_robots" default="1" />
+  <arg name="robot_id"                      default="0"/>
+  <arg name="robot_name"                    default="acl_jackal"/>
+  <arg name="num_robots"                    default="1" />
   <!-- Port that reliable UDP runs on. Default (-1) uses arbitrary port number. -->
-  <arg name="enet_port"  default="-1" /> 
-  <arg name="service_discovery" default="false"/>
-  <arg name="simulation" default="false"/>
-  <arg name="logging"    default="true"/>
-  <arg name="log_directory" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
-  <arg name="robot_names_config" default="robot_names"/>
+  <arg name="enet_port"                     default="-1" /> 
+  <arg name="check_remote_subscription"     default="true"/>
+  <arg name="service_discovery"             default="false"/>
+  <arg name="logging"                       default="true"/>
+  <arg name="log_directory"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
+  <arg name="robot_names_config"            default="robot_names"/>
   <!-- Uncomment below to enable debug printing -->
   <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/> -->
 
@@ -19,14 +19,15 @@
     </node>
 
     <node pkg="reliable_udp_comms" type="remote_topic_manager" name="rtp" output="screen" launch-prefix="">
-      <param name="service_discovery"        value="$(arg service_discovery)" />
-      <param name="simulation"               value="$(arg simulation)"/>
-      <param name="enet_port"                value="$(arg enet_port)"/>
-      <param name="latch"                    value="false"/>
-      <param name="status_pub_period"        value="1.0"/>
-      <param name="queue_size"               value="10"/>
-      <param name="logging"                  value="$(arg logging)" />
-      <param name="log_directory"            value="$(arg log_directory)" />
+      <param name="service_discovery"                 value="$(arg service_discovery)" />
+      <param name="check_remote_subscription"         value="$(arg check_remote_subscription)" />
+      <param name="enet_port"                         value="$(arg enet_port)"/>
+      <param name="latch"                             value="false"/>
+      <param name="status_pub_period"                 value="1.0"/>
+      <param name="queue_size"                        value="10"/>
+      <param name="simulation"                        value="false"/>
+      <param name="logging"                           value="$(arg logging)" />
+      <param name="log_directory"                     value="$(arg log_directory)" />
 
       <!-- Load topics to be transmited to other robots -->
       <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics_robot.yaml" subst_value="true" />

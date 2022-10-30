@@ -21,6 +21,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <random>
 
 namespace kimera_distributed {
 
@@ -540,7 +541,15 @@ void DistributedLoopClosure::runComms() {
     }
 
     ROS_INFO_STREAM("Total inter-robot loop closures: " << num_inter_robot_loops_);
-    ros::Duration(comm_sleep_time_).sleep();
+    
+    double avg_sleep_time = (double) comm_sleep_time_;
+    double min_sleep_time = 0.5 * avg_sleep_time;
+    double max_sleep_time = 1.5 * avg_sleep_time;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> distribution(min_sleep_time, max_sleep_time);
+    double sleep_time = distribution(gen);
+    ros::Duration(sleep_time).sleep();
   }
 
 }

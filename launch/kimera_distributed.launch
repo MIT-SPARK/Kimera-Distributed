@@ -30,6 +30,7 @@
       <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="debug"                     value="$(arg debug)" />
       <arg name="run_offline"               value="false" />
+      <arg name="bow_skip_num"              value="1"   />
       <arg name="bow_batch_size"            value="100" />
       <arg name="vlc_batch_size"            value="10" />
       <arg name="comm_sleep_time"           value="10"  />

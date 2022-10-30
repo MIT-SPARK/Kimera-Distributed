@@ -37,6 +37,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       vlc_batch_size_(10),
       comm_sleep_time_(5),
       detection_batch_size_(20),
+      bow_skip_num_(1),
       last_get_submap_idx_(0),
       last_get_lc_idx_(0) {
   int my_id_int = -1;
@@ -93,6 +94,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ros::param::get("~vocabulary_path", lcd_params_.vocab_path_);
 
   ros::param::get("~detection_batch_size", detection_batch_size_);
+  ros::param::get("~bow_skip_num", bow_skip_num_);
   // Load parameters controlling VLC communication
   ros::param::get("~bow_batch_size", bow_batch_size_);
   ros::param::get("~vlc_batch_size", vlc_batch_size_);
@@ -229,7 +231,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "Communication thread sleep time = " << comm_sleep_time_ << "\n"
       << "maximum submap size = " << submap_params.max_submap_size << "\n"
       << "maximum submap distance = " << submap_params.max_submap_distance << "\n"
-      << "loop detection batch size = " << detection_batch_size_
+      << "loop detection batch size = " << detection_batch_size_ << "\n"
+      << "BoW vector skip num = " << bow_skip_num_ 
       << "\n");
 
   if (run_offline_) {
@@ -560,7 +563,7 @@ void DistributedLoopClosure::requestBowVectors() {
     msg.robot_id = robot_id;
     const auto &received_pose_ids = bow_received_.at(robot_id);
     const lcd::PoseId latest_pose_id = bow_latest_[robot_id];
-    for (lcd::PoseId pose_id = 0; pose_id < latest_pose_id; ++pose_id) {
+    for (lcd::PoseId pose_id = 0; pose_id < latest_pose_id; pose_id += bow_skip_num_) {
       if (msg.pose_ids.size() >= bow_batch_size_)
         break;
       if (received_pose_ids.find(pose_id) == received_pose_ids.end()) {
@@ -626,13 +629,13 @@ void DistributedLoopClosure::detectLoopCallback() {
     DBoW2::BowVector bow_vec;
     pose_graph_tools::BowVectorFromMsg(msg.bow_vector, &bow_vec);
 
-    if (query_pose <= 1) {
+    if (query_pose <= 2 * bow_skip_num_) {
       // We cannot detect loop for the very first few frames
       // Remove and proceed to next message
-      ROS_INFO("Received first BoW from robot %zu (pose %zu).", query_robot, query_pose);
+      ROS_INFO("Received initial BoW from robot %zu (pose %zu).", query_robot, query_pose);
       lcd_->addBowVector(query_vertex, bow_vec);
       it = bow_msgs_.erase(it);
-    } else if (!lcd_->bowExists(lcd::RobotPoseId(query_robot, query_pose - 1))) {
+    } else if (!lcd_->findPreviousBoWVector(query_vertex)) {
       // We cannot detect loop since the BoW of previous frame is missing
       // (Recall we need that to compute nss factor)
       // In this case we skip the message and try again later

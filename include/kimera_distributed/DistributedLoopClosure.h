@@ -91,6 +91,7 @@ class DistributedLoopClosure {
   int vlc_batch_size_;  // Maximum number of VLC frames per robot to request in one batch
   int comm_sleep_time_;  // Sleep time of communication thread
   int detection_batch_size_;  // Maximum number of loop detection to perform in one batch
+  int bow_skip_num_;  // Request every bow_skip_num_ bow vectors
 
   // Map from robot ID to name
   std::map<size_t, std::string> robot_names_;

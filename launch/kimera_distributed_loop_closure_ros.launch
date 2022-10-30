@@ -8,6 +8,7 @@
   <!-- Dataset -->
   <arg name="dataset_name"   default="warty"/>
   <!-- Parameters that control communication due to VLC -->
+  <arg name="bow_skip_num"         default="1"   />
   <arg name="bow_batch_size"       default="100" />
   <arg name="vlc_batch_size"       default="10"/>
   <arg name="comm_sleep_time"      default="5" />
@@ -32,6 +33,7 @@
     <param name="frame_id"               value="$(arg frame_id)" />
     <param name="vocabulary_path"        value="$(arg vocab_path)"/>
     <param name="log_output_path"        value="$(arg log_output_path)/"/>
+    <param name="bow_skip_num"           value="$(arg bow_skip_num)" />
     <param name="bow_batch_size"         value="$(arg bow_batch_size)"/>
     <param name="vlc_batch_size"         value="$(arg vlc_batch_size)"/>
     <param name="comm_sleep_time"        value="$(arg comm_sleep_time)"/>

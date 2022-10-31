@@ -1,11 +1,11 @@
 # ROS messages to send to others
-- /$(arg robot_name)/kimera_vio_ros/bow_query: {queue_size: 10, reliable: true, persistent: false}
+- /$(arg robot_name)/kimera_vio_ros/bow_query: {queue_size: 3, reliable: true, persistent: false}
 - /$(arg robot_name)/kimera_distributed/bow_requests: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/kimera_distributed/vlc_responses: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/kimera_distributed/vlc_requests: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/lifting_matrix: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/dpgo_ros_node/status: {queue_size: 1, reliable: false}
-- /$(arg robot_name)/dpgo_ros_node/command: {queue_size: 5, reliable: true}
+- /$(arg robot_name)/dpgo_ros_node/command: {queue_size: 3, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/anchor: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/dpgo_ros_node/public_poses: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/public_measurements: {queue_size: 1, reliable: false}

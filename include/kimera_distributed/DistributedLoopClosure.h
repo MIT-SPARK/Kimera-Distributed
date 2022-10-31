@@ -280,6 +280,11 @@ class DistributedLoopClosure {
    * @param lc_file
    */
   void loadLoopClosuresFromFile(const std::string &lc_file);
+
+  /**
+   * Randomly sleep from (min_sec, max_sec) seconds
+   */
+  void randomSleep(double min_sec, double max_sec);
 };
 
 }  // namespace kimera_distributed

@@ -518,6 +518,7 @@ void DistributedLoopClosure::runComms() {
       bow_response_pub_.publish(msg);
       ROS_INFO("Published %zu BoWs with %zu waiting.",
                msg.queries.size(), requested_bows_.size());
+      randomSleep(0.5, 2.0);
     }
 
     // Publish VLC frames requested by other robots
@@ -548,11 +549,7 @@ void DistributedLoopClosure::runComms() {
     double avg_sleep_time = (double) comm_sleep_time_;
     double min_sleep_time = 0.5 * avg_sleep_time;
     double max_sleep_time = 1.5 * avg_sleep_time;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> distribution(min_sleep_time, max_sleep_time);
-    double sleep_time = distribution(gen);
-    ros::Duration(sleep_time).sleep();
+    randomSleep(min_sleep_time, max_sleep_time);
   }
 
 }
@@ -577,6 +574,7 @@ void DistributedLoopClosure::requestBowVectors() {
     if (!msg.pose_ids.empty()) {
       ROS_WARN("Processing %lu BoW requests to robot %lu.", msg.pose_ids.size(), robot_id);
       bow_requests_pub_.publish(msg);
+      randomSleep(0.5, 2.0);
     }
   }
 }
@@ -898,6 +896,7 @@ void DistributedLoopClosure::publishVLCRequests(
   }
 
   vlc_requests_pub_.publish(requests_msg);
+  randomSleep(0.5, 2.0);
 }
 
 bool DistributedLoopClosure::requestVLCFrameService(
@@ -1273,6 +1272,19 @@ void DistributedLoopClosure::loadLoopClosuresFromFile(const std::string &lc_file
   }
   infile.close();
   ROS_INFO_STREAM("Loaded " << num_measurements_read << " loop closures from " << lc_file);
+}
+
+void DistributedLoopClosure::randomSleep(double min_sec, double max_sec) {
+  CHECK(min_sec < max_sec);
+  CHECK(min_sec > 0);
+  if (max_sec < 1e-3)
+    return;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> distribution(min_sec, max_sec);
+  double sleep_time = distribution(gen);
+  ROS_INFO("Sleep %f sec...", sleep_time);
+  ros::Duration(sleep_time).sleep();
 }
 
 }  // namespace kimera_distributed

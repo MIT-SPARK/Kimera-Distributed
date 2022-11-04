@@ -508,29 +508,52 @@ void DistributedLoopClosure::runComms() {
 }
 
 void DistributedLoopClosure::requestBowVectors() {
+  // Form BoW vectors that are missing from each robot
+  std::map<lcd::RobotId, std::set<lcd::PoseId>> missing_bow_vectors;
   for (lcd::RobotId robot_id = my_id_; robot_id < num_robots_; ++robot_id) {
-    pose_graph_tools::BowRequests msg;
-    msg.source_robot_id = my_id_;
-    msg.destination_robot_id = robot_id;
     const auto &received_pose_ids = bow_received_.at(robot_id);
     const lcd::PoseId latest_pose_id = bow_latest_[robot_id];
     for (lcd::PoseId pose_id = 0; pose_id < latest_pose_id; pose_id += bow_skip_num_) {
-      if (msg.pose_ids.size() >= bow_batch_size_)
-        break;
       if (received_pose_ids.find(pose_id) == received_pose_ids.end()) {
         if (robot_id == my_id_) {
-          ROS_ERROR("Robot %lu cannot find BoW of itself! Missing %lu (latest = %lu).", robot_id, pose_id, latest_pose_id);
+          // Missing BoW from myself.
+          // This should not happen we should receive BoW directly from VIO
+          ROS_ERROR("Robot %lu cannot find BoW of itself! Missing %lu (latest = %lu).", 
+                    robot_id, pose_id, latest_pose_id);
         } else {
-          msg.pose_ids.push_back(pose_id);
+          // Push to missing bow_vectors
+          if (missing_bow_vectors.find(robot_id) == missing_bow_vectors.end())
+            missing_bow_vectors[robot_id] = std::set<lcd::PoseId>();
+          missing_bow_vectors[robot_id].emplace(pose_id);
         }
       }
     }
-    if (!msg.pose_ids.empty()) {
-      ROS_WARN("Processing %lu BoW requests to robot %lu.", msg.pose_ids.size(), robot_id);
-      bow_requests_pub_.publish(msg);
-      // randomSleep(1.0, 2.0);
+  }
+
+  // Select robot with largest queue size
+  lcd::RobotId selected_robot_id = 0;
+  size_t selected_queue_size = 0;
+  for (const auto& it: missing_bow_vectors) {
+    if (it.second.size() >= selected_queue_size) {
+      selected_queue_size = it.second.size();
+      selected_robot_id = it.first;
     }
   }
+  if (selected_queue_size == 0)
+    return;
+
+  // Publish BoW request to selected robot
+  pose_graph_tools::BowRequests msg;
+  msg.source_robot_id = my_id_;
+  msg.destination_robot_id = selected_robot_id;
+  for (const auto& pose_id: missing_bow_vectors[selected_robot_id]) {
+    if (msg.pose_ids.size() >= bow_batch_size_)
+      break;
+    msg.pose_ids.push_back(pose_id);
+  }
+  ROS_WARN("Processing %lu BoW requests to robot %lu.", msg.pose_ids.size(), selected_robot_id);
+  bow_requests_pub_.publish(msg);
+
 }
 
 void DistributedLoopClosure::publishBowVectors() {
@@ -581,7 +604,7 @@ void DistributedLoopClosure::publishBowVectors() {
 }
 
 void DistributedLoopClosure::requestFrames() {
-  std::unordered_map<size_t, lcd::RobotPoseIdSet> vertex_ids_map;
+  std::unordered_map<lcd::RobotId, lcd::RobotPoseIdSet> vertex_ids_map;
   for (const auto robot_queue : candidate_lc_) {
     // Form list of vertex ids that needs to be requested
     for (const auto& cand : robot_queue.second) {
@@ -590,9 +613,6 @@ void DistributedLoopClosure::requestFrames() {
         if (vertex_ids_map.count(robot_id) == 0) {
           vertex_ids_map[robot_id] = lcd::RobotPoseIdSet();
         }
-        if (vertex_ids_map.at(robot_id).size() >= vlc_batch_size_) {
-          continue;
-        }
         vertex_ids_map.at(robot_id).emplace(cand.vertex_src_);
       }
       if (!lcd_->frameExists(cand.vertex_dst_)) {
@@ -600,17 +620,32 @@ void DistributedLoopClosure::requestFrames() {
         if (vertex_ids_map.count(robot_id) == 0) {
           vertex_ids_map[robot_id] = lcd::RobotPoseIdSet();
         }
-        if (vertex_ids_map.at(robot_id).size() >= vlc_batch_size_) {
-          continue;
-        }
         vertex_ids_map.at(robot_id).emplace(cand.vertex_dst_);
       }
     }
   }
-  // Publish or process request for the set of VLC frames
-  for (const auto& robot_set : vertex_ids_map) {
-    processVLCRequests(robot_set.first, robot_set.second);
+
+  // Process missing VLC frames of myself
+  if (vertex_ids_map.find(my_id_) != vertex_ids_map.end() && 
+      !vertex_ids_map.at(my_id_).empty()) {
+    processVLCRequests(my_id_, vertex_ids_map.at(my_id_));
   }
+
+  // Select a peer robot with most missing frames to send request
+  lcd::RobotId selected_robot_id = 0;
+  size_t selected_queue_size = 0;
+  for (const auto& it: vertex_ids_map) {
+    lcd::RobotId robot_id = it.first;
+    if (robot_id == my_id_)
+      continue;
+    if (it.second.size() >= selected_queue_size) {
+      selected_queue_size = it.second.size();
+      selected_robot_id = robot_id;
+    }
+  }
+  if (selected_queue_size == 0)
+    return;
+  processVLCRequests(selected_robot_id, vertex_ids_map.at(selected_robot_id));
 }
 
 void DistributedLoopClosure::publishFrames() {
@@ -921,7 +956,6 @@ void DistributedLoopClosure::processVLCRequests(
 void DistributedLoopClosure::publishVLCRequests(
     const size_t& robot_id,
     const lcd::RobotPoseIdSet& vertex_ids) {
-  assert(vertex_ids.size() < vlc_batch_size_);
 
   // Create requests msg
   pose_graph_tools::VLCRequests requests_msg;
@@ -933,6 +967,11 @@ void DistributedLoopClosure::publishVLCRequests(
     if (lcd_->frameExists(vertex_id)) {
       continue;
     }
+    // Stop if reached batch size
+    if (requests_msg.pose_ids.size() >= vlc_batch_size_) {
+      break;
+    }
+
     // Double check robot id
     assert(robot_id == vertex_id.first);
 
@@ -945,7 +984,6 @@ void DistributedLoopClosure::publishVLCRequests(
 
 bool DistributedLoopClosure::requestVLCFrameService(
     const lcd::RobotPoseIdSet& vertex_ids) {
-  assert(vertex_ids.size() < vlc_batch_size_);
 
   // Request local VLC frames
   // Populate requested pose ids in ROS service query
@@ -959,6 +997,10 @@ bool DistributedLoopClosure::requestVLCFrameService(
     // Do not request frame that already exists locally
     if (lcd_->frameExists(vertex_id)) {
       continue;
+    }
+    // Stop if reaching batch size
+    if (query.request.pose_ids.size() >= vlc_batch_size_) {
+      break;
     }
     // We can only request via service local frames
     // Frames from other robots have to be requested by publisher

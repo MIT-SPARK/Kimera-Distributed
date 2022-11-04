@@ -1,10 +1,10 @@
 <launch>
-  <arg name="robot_id"                      default="0"/>
-  <arg name="robot_name"                    default="acl_jackal"/>
-  <arg name="num_robots"                    default="1" />
+  <arg name="robot_id"                      />
+  <arg name="robot_name"                    />
+  <arg name="num_robots"                    />
   <!-- Port that reliable UDP runs on. Default (-1) uses arbitrary port number. -->
   <arg name="enet_port"                     default="-1" /> 
-  <arg name="check_remote_subscription"     default="true"/>
+  <arg name="check_remote_subscription"     default="false"/>
   <arg name="service_discovery"             default="false"/>
   <arg name="logging"                       default="true"/>
   <arg name="log_directory"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
@@ -19,6 +19,9 @@
     </node>
 
     <node pkg="reliable_udp_comms" type="remote_topic_manager" name="rtp" output="screen" launch-prefix="">
+      <param name="robot_id"                          value="$(arg robot_id)" />
+      <param name="robot_name"                        value="$(arg robot_name)" />
+      <param name="num_robots"                        value="$(arg num_robots)" />
       <param name="service_discovery"                 value="$(arg service_discovery)" />
       <param name="check_remote_subscription"         value="$(arg check_remote_subscription)" />
       <param name="enet_port"                         value="$(arg enet_port)"/>

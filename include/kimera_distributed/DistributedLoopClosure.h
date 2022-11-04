@@ -53,7 +53,8 @@ class DistributedLoopClosure {
 
   // Submap Atlas
   std::unique_ptr<SubmapAtlas> submap_atlas_;
-  std::mutex submap_atlas_mutex_;
+  // Yulun: commented out the mutex as only one thread is accessing submap_atlas_
+  // std::mutex submap_atlas_mutex_;
 
   // Bag of words vectors
   std::unordered_map<lcd::RobotId, lcd::PoseId> bow_latest_; // Latest BoW received from each robot
@@ -78,12 +79,12 @@ class DistributedLoopClosure {
   std::mutex candidate_lc_mutex_;
   std::queue<lcd::PotentialVLCEdge> queued_lc_;
 
-  // List of Bow frame IDs requested by other robots
-  std::set<lcd::PoseId> requested_bows_;
+  // Keep track of BoW vectors requested by other robots
+  std::map<lcd::RobotId, std::set<lcd::PoseId>> requested_bows_;
   std::mutex requested_bows_mutex_;
 
-  // List of VLC frame IDs requested by other robots
-  std::set<lcd::PoseId> requested_frames_;
+  // Keep track of VLC frames requested by other robots
+  std::map<lcd::RobotId, std::set<lcd::PoseId>> requested_frames_;
   std::mutex requested_frames_mutex_;
 
   // Parameters controlling communication due to VLC request/response
@@ -214,9 +215,19 @@ class DistributedLoopClosure {
   void requestBowVectors();
 
   /**
+   * @brief Publish BoW vectors requested by other robots
+   */
+  void publishBowVectors();
+
+  /**
    * Check and submit VLC requests
    */
   void requestFrames();
+
+  /**
+   * @brief Publish VLC frames requested by other robots
+   */
+  void publishFrames();
 
   /**
    * @brief Detect loop closure using BoW vectors

@@ -314,7 +314,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
   if (submap_atlas_->numSubmaps() == 0 && !msg->nodes.empty()) {
     // Create the first keyframe
     // Start submap critical section
-    std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
+    // std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
 
     gtsam::Rot3 init_rotation(msg->nodes[0].pose.orientation.w,
                               msg->nodes[0].pose.orientation.x,
@@ -347,7 +347,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
       if (submap_atlas_->hasKeyframe(frame_src) &&
           !submap_atlas_->hasKeyframe(frame_dst)) {
         // Start submap critical section
-        std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
+        // std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
         // Check that the next keyframe has the expected id
         int expected_frame_id = submap_atlas_->numKeyframes();
         if (frame_dst != expected_frame_id) {
@@ -387,7 +387,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
 
     {
       // Start submap critical section
-      std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
+      // std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
       // Convert the loop closure to between the corresponding submaps
       const auto keyframe_src = submap_atlas_->getKeyframe(pg_edge.key_from);
       const auto keyframe_dst = submap_atlas_->getKeyframe(pg_edge.key_to);
@@ -491,58 +491,11 @@ void DistributedLoopClosure::runComms() {
       requestFrames();
     }
 
-    // Publish Bow vectors requested by other robots
-    if (!requested_bows_.empty()) {
-      std::unique_lock<std::mutex> requested_bows_lock(requested_bows_mutex_);
-      pose_graph_tools::BowQueries msg;
-      auto it = requested_bows_.begin();
-      while (true) {
-        if (msg.queries.size() >= bow_batch_size_)
-          break;
-        if (it == requested_bows_.end())
-          break;
-        lcd::PoseId pose_id = *it;
-        it = requested_bows_.erase(it);  // remove the current ID and proceed to next one
-        lcd::RobotPoseId requested_robot_pose_id(my_id_, pose_id);
-        if (!lcd_->bowExists(requested_robot_pose_id)) {
-          ROS_ERROR("Requested BoW of frame %lu does not exist!", pose_id);
-          continue;
-        }
-        pose_graph_tools::BowQuery query_msg;
-        query_msg.robot_id = my_id_;
-        query_msg.pose_id = pose_id;
-        pose_graph_tools::BowVectorToMsg(lcd_->getBoWVector(requested_robot_pose_id),
-                                         &(query_msg.bow_vector));
-        msg.queries.push_back(query_msg);
-      }
-      bow_response_pub_.publish(msg);
-      ROS_INFO("Published %zu BoWs with %zu waiting.",
-               msg.queries.size(), requested_bows_.size());
-      randomSleep(1.0, 2.0);
-    }
+    // Publish BoW vectors requested by other robots
+    publishBowVectors();
 
     // Publish VLC frames requested by other robots
-    if (!requested_frames_.empty()) {
-      std::unique_lock<std::mutex> requested_frames_lock(requested_frames_mutex_);
-      auto it = requested_frames_.begin();
-      pose_graph_tools::VLCFrames frames_msg;
-      while (true) {
-        if (frames_msg.frames.size() >= vlc_batch_size_)
-          break;
-        if (it == requested_frames_.end())
-          break;
-        lcd::RobotPoseId vertex_id(my_id_, *it);
-        if (lcd_->frameExists(vertex_id)) {
-          pose_graph_tools::VLCFrameMsg vlc_msg;
-          VLCFrameToMsg(lcd_->getVLCFrame(vertex_id), &vlc_msg);
-          frames_msg.frames.push_back(vlc_msg);
-        }
-        it = requested_frames_.erase(it);  // remove the current ID and proceed to next one
-      }
-      vlc_responses_pub_.publish(frames_msg);
-      ROS_INFO("Published %zu frames with %zu frames waiting.",
-               frames_msg.frames.size(), requested_frames_.size());
-    }
+    publishFrames();
 
     ROS_INFO_STREAM("Total inter-robot loop closures: " << num_inter_robot_loops_);
     
@@ -557,7 +510,8 @@ void DistributedLoopClosure::runComms() {
 void DistributedLoopClosure::requestBowVectors() {
   for (lcd::RobotId robot_id = my_id_; robot_id < num_robots_; ++robot_id) {
     pose_graph_tools::BowRequests msg;
-    msg.robot_id = robot_id;
+    msg.source_robot_id = my_id_;
+    msg.destination_robot_id = robot_id;
     const auto &received_pose_ids = bow_received_.at(robot_id);
     const lcd::PoseId latest_pose_id = bow_latest_[robot_id];
     for (lcd::PoseId pose_id = 0; pose_id < latest_pose_id; pose_id += bow_skip_num_) {
@@ -574,8 +528,55 @@ void DistributedLoopClosure::requestBowVectors() {
     if (!msg.pose_ids.empty()) {
       ROS_WARN("Processing %lu BoW requests to robot %lu.", msg.pose_ids.size(), robot_id);
       bow_requests_pub_.publish(msg);
-      randomSleep(1.0, 2.0);
+      // randomSleep(1.0, 2.0);
     }
+  }
+}
+
+void DistributedLoopClosure::publishBowVectors() {
+  std::unique_lock<std::mutex> requested_bows_lock(requested_bows_mutex_);
+
+  // Select the robot with the largest queue size
+  lcd::RobotId selected_robot_id = 0;
+  size_t selected_queue_size = 0;
+  for (const auto& it: requested_bows_) {
+    if (it.second.size() >= selected_queue_size) {
+      selected_robot_id = it.first;
+      selected_queue_size = it.second.size();
+    }
+  }
+  // ROS_INFO("Maximum num of BOW waiting: %zu (robot %zu).", selected_queue_size, selected_robot_id);
+
+  if (selected_queue_size > 0) {
+    // Send BoW vectors to selected robot
+    pose_graph_tools::BowQueries msg;
+    msg.destination_robot_id = selected_robot_id;
+    std::set<lcd::PoseId>& requested_bows_from_robot = requested_bows_.at(selected_robot_id);
+    auto it = requested_bows_from_robot.begin();
+    while (true) {
+      if (msg.queries.size() >= bow_batch_size_)
+        break;
+      if (it == requested_bows_from_robot.end())
+        break;
+      lcd::PoseId pose_id = *it;
+      it = requested_bows_from_robot.erase(it);  // remove the current ID and proceed to next one
+      lcd::RobotPoseId requested_robot_pose_id(my_id_, pose_id);
+      if (!lcd_->bowExists(requested_robot_pose_id)) {
+        ROS_ERROR("Requested BoW of frame %lu does not exist!", pose_id);
+        continue;
+      }
+      pose_graph_tools::BowQuery query_msg;
+      query_msg.robot_id = my_id_;
+      query_msg.pose_id = pose_id;
+      pose_graph_tools::BowVectorToMsg(lcd_->getBoWVector(requested_robot_pose_id),
+                                       &(query_msg.bow_vector));
+      msg.queries.push_back(query_msg);
+    }
+    bow_response_pub_.publish(msg);
+    ROS_INFO("Published %zu BoWs to robot %zu (%zu waiting).",
+             msg.queries.size(),
+             selected_robot_id,
+             requested_bows_[selected_robot_id].size());
   }
 }
 
@@ -612,10 +613,52 @@ void DistributedLoopClosure::requestFrames() {
   }
 }
 
+void DistributedLoopClosure::publishFrames() {
+  std::unique_lock<std::mutex> requested_frames_lock(requested_frames_mutex_);
+
+  // Select the robot with the largest queue size
+  lcd::RobotId selected_robot_id = 0;
+  size_t selected_queue_size = 0;
+  for (const auto& it: requested_frames_) {
+    if (it.second.size() >= selected_queue_size) {
+      selected_robot_id = it.first;
+      selected_queue_size = it.second.size();
+    }
+  }
+  // ROS_INFO("Maximum num of VLC waiting: %zu (robot %zu).", selected_queue_size, selected_robot_id);
+
+  if (selected_queue_size > 0) {
+    // Send VLC frames to the selected robot
+    pose_graph_tools::VLCFrames frames_msg;
+    frames_msg.destination_robot_id = selected_robot_id;
+    std::set<lcd::PoseId>& requested_frames_from_robot = requested_frames_.at(selected_robot_id);
+    auto it = requested_frames_from_robot.begin();
+    while (true) {
+      if (frames_msg.frames.size() >= vlc_batch_size_)
+        break;
+      if (it == requested_frames_from_robot.end())
+        break;
+      lcd::RobotPoseId vertex_id(my_id_, *it);
+      if (lcd_->frameExists(vertex_id)) {
+        pose_graph_tools::VLCFrameMsg vlc_msg;
+        VLCFrameToMsg(lcd_->getVLCFrame(vertex_id), &vlc_msg);
+        frames_msg.frames.push_back(vlc_msg);
+      }
+      it = requested_frames_from_robot.erase(it);  // remove the current ID and proceed to next one
+    }
+    vlc_responses_pub_.publish(frames_msg);
+    ROS_INFO("Published %zu frames to robot %zu (%zu frames waiting).",
+             frames_msg.frames.size(),
+             selected_robot_id,
+             requested_frames_[selected_robot_id].size());
+  }
+}
+
 void DistributedLoopClosure::detectLoopCallback() {
   std::unique_lock<std::mutex> bow_lock(bow_msgs_mutex_);
   auto it = bow_msgs_.begin();
   int num_detection_performed = 0;
+
   while (num_detection_performed < detection_batch_size_) {
     if (it == bow_msgs_.end()) {
       break;
@@ -777,7 +820,7 @@ void DistributedLoopClosure::verifyLoopCallback() {
 pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
     bool incremental) {
   // Start submap critical section
-  std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
+  // std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
   // Fill in submap-level loop closures
   pose_graph_tools::PoseGraph out_graph;
 
@@ -867,7 +910,7 @@ void DistributedLoopClosure::processVLCRequests(
     {  // start vlc service critical section
       std::unique_lock<std::mutex> service_lock(vlc_service_mutex_);
       if (!requestVLCFrameService(vertex_ids)) {
-        ROS_ERROR("Failed to retrieve local VLC frames on robot %d.", my_id_);
+        ROS_ERROR("Failed to retrieve local VLC frames on robot %zu.", my_id_);
       }
     }
   } else {
@@ -883,7 +926,8 @@ void DistributedLoopClosure::publishVLCRequests(
   // Create requests msg
   pose_graph_tools::VLCRequests requests_msg;
   requests_msg.header.stamp = ros::Time::now();
-  requests_msg.robot_id = robot_id;
+  requests_msg.source_robot_id = my_id_;
+  requests_msg.destination_robot_id = robot_id;
   for (const auto& vertex_id : vertex_ids) {
     // Do not request frame that already exists locally
     if (lcd_->frameExists(vertex_id)) {
@@ -896,7 +940,7 @@ void DistributedLoopClosure::publishVLCRequests(
   }
 
   vlc_requests_pub_.publish(requests_msg);
-  randomSleep(1.0, 2.0);
+  // randomSleep(1.0, 2.0);
 }
 
 bool DistributedLoopClosure::requestVLCFrameService(
@@ -1001,18 +1045,29 @@ size_t DistributedLoopClosure::updateCandidateList() {
 
 void DistributedLoopClosure::bowRequestsCallback(
     const pose_graph_tools::BowRequestsConstPtr &msg) {
-  if (msg->robot_id != my_id_)
+  if (msg->destination_robot_id != my_id_)
     return;
+  if (msg->source_robot_id == my_id_) {
+    ROS_ERROR("Received BoW requests from myself!");
+    return;
+  }
   // Push requested Bow Frame IDs to be transmitted later
   std::unique_lock<std::mutex> requested_bows_lock(requested_bows_mutex_);
+  if (requested_bows_.find(msg->source_robot_id) == requested_bows_.end())
+    requested_bows_[msg->source_robot_id] = std::set<lcd::PoseId>();
   for (const auto& pose_id : msg->pose_ids) {
-    requested_bows_.emplace(pose_id);
+    requested_bows_[msg->source_robot_id].emplace(pose_id);
   }
 }
 
 void DistributedLoopClosure::vlcRequestsCallback(
     const pose_graph_tools::VLCRequestsConstPtr& msg) {
-  if (msg->robot_id != my_id_) {
+  if (msg->destination_robot_id != my_id_) {
+    return;
+  }
+
+  if (msg->source_robot_id == my_id_) {
+    ROS_ERROR("Received VLC requests from myself!");
     return;
   }
 
@@ -1038,8 +1093,10 @@ void DistributedLoopClosure::vlcRequestsCallback(
 
   // Push requested VLC frame IDs to queue to be transmitted later
   std::unique_lock<std::mutex> requested_frames_lock(requested_frames_mutex_);
+  if (requested_frames_.find(msg->source_robot_id) == requested_frames_.end())
+    requested_frames_[msg->source_robot_id] = std::set<lcd::PoseId>();
   for (const auto& pose_id : msg->pose_ids) {
-    requested_frames_.emplace(pose_id);
+    requested_frames_[msg->source_robot_id].emplace(pose_id);
   }
 }
 

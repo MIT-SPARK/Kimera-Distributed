@@ -741,6 +741,7 @@ void DistributedLoopClosure::detectLoop(const lcd::RobotPoseId &vertex_query,
   const lcd::RobotId robot_query = vertex_query.first;
   const lcd::PoseId pose_query = vertex_query.second;
   std::vector<lcd::RobotPoseId> vertex_matches;
+  std::vector<double> match_scores;
   {  // start lcd critical section
     std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
 
@@ -748,9 +749,9 @@ void DistributedLoopClosure::detectLoop(const lcd::RobotPoseId &vertex_query,
     // Detect loop closures with all robots in the database
     // (including myself if inter_robot_only is set to false)
     if (robot_query == my_id_) {
-      if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches)) {
-        for (const auto& vertex_match : vertex_matches) {
-          lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
+      if (lcd_->detectLoop(vertex_query, bow_vec, &vertex_matches, &match_scores)) {
+        for (size_t i = 0; i < vertex_matches.size(); ++i) {
+          lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_matches[i], match_scores[i]);
 
           {  // start candidate critical section. Add to candidate for request
             std::unique_lock<std::mutex> candidate_lock(candidate_lc_mutex_);
@@ -764,9 +765,9 @@ void DistributedLoopClosure::detectLoop(const lcd::RobotPoseId &vertex_query,
     // Detect loop closures ONLY with my trajectory
     if (robot_query != my_id_) {
       if (lcd_->detectLoopWithRobot(
-          my_id_, vertex_query, bow_vec, &vertex_matches)) {
-        for (const auto& vertex_match : vertex_matches) {
-          lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_match);
+          my_id_, vertex_query, bow_vec, &vertex_matches, &match_scores)) {
+        for (size_t i = 0; i < vertex_matches.size(); ++i) {
+          lcd::PotentialVLCEdge potential_edge(vertex_query, vertex_matches[i], match_scores[i]);
 
           {
             // start candidate critical section. Add to candidate for request
@@ -785,6 +786,7 @@ void DistributedLoopClosure::verifyLoopCallback() {
     lcd::PotentialVLCEdge potential_edge = queued_lc_.front();
     const auto& vertex_query = potential_edge.vertex_src_;
     const auto& vertex_match = potential_edge.vertex_dst_;
+    const double match_score = potential_edge.score_;
 
     {  // start lcd critical section
       std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
@@ -838,11 +840,12 @@ void DistributedLoopClosure::verifyLoopCallback() {
           }
           size_t stereo_inliers_count = i_query.size();
           ROS_INFO(
-              "Verified loop (%lu,%lu)-(%lu,%lu). Mono inliers: %zu. Stereo inliers: %zu.",
+              "Verified loop (%lu,%lu)-(%lu,%lu). Normalized BoW score: %f. Mono inliers: %zu. Stereo inliers: %zu.",
               vertex_query.first,
               vertex_query.second,
               vertex_match.first,
               vertex_match.second,
+              match_score,
               mono_inliers_count,
               stereo_inliers_count);
         }
@@ -939,7 +942,7 @@ void DistributedLoopClosure::processVLCRequests(
     return;
   }
 
-  ROS_INFO("Processing %lu VLC requests to robot %lu.", vertex_ids.size(), robot_id);
+  // ROS_INFO("Processing %lu VLC requests to robot %lu.", vertex_ids.size(), robot_id);
   if (robot_id == my_id_) {
     // Directly request from Kimera-VIO-ROS
     {  // start vlc service critical section
@@ -979,7 +982,9 @@ void DistributedLoopClosure::publishVLCRequests(
   }
 
   vlc_requests_pub_.publish(requests_msg);
-  // randomSleep(1.0, 2.0);
+  ROS_INFO("Published %lu VLC requests to robot %lu.", 
+          requests_msg.pose_ids.size(), 
+          robot_id);
 }
 
 bool DistributedLoopClosure::requestVLCFrameService(

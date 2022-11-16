@@ -7,7 +7,7 @@
   <arg name="should_use_sim_time"     default="false"/>
   <arg name="debug"                   default="false"/>
   <arg name="robot_names_config"      default="robot_names"/>
-  <arg name="vocab_path"              default="$(find kimera_core)/vocab/jackal_voc.yml"/>
+  <arg name="vocab_path"              default="$(find kimera_core)/vocab/mit_voc.yml"/>
   <!-- <arg name="vocab_path"              default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/> -->
   <arg name="monitor_bw"              default="true"/>
   <arg name="monitor_latency"         default="false"/>

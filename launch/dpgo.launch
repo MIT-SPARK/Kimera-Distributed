@@ -31,7 +31,7 @@
       <arg name="multirobot_initialization"        value="true"/>
       <arg name="RTR_iterations"                   value="3" />
       <arg name="RTR_tCG_iterations"               value="50" />
-      <arg name="RTR_gradnorm_tol"                 value="1" />
+      <arg name="RTR_gradnorm_tol"                 value="1e-2" />
       <arg name="acceleration"                     value="false" />
       <arg name="relative_change_tolerance"        value="1e-2" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
@@ -44,7 +44,7 @@
       <arg name="robust_init_min_inliers"          value="3" />
       <arg name="robust_opt_warm_start"            value="false" />
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
-      <arg name="robust_opt_inner_iters_per_robot" value="10" />
+      <arg name="robust_opt_inner_iters_per_robot" value="5" />
       <arg name="inter_update_sleep_time"          value="0.5" />
       <arg name="max_distributed_init_steps"       value="30" />
       <arg name="log_directory"                    value="$(arg log_output_path)/" />

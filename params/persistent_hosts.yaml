@@ -5,3 +5,5 @@
 - robot3: {hostname: "192.168.10.133", port: 11414}
 - robot4: {hostname: "192.168.10.143", port: 11415}
 - robot5: {hostname: "192.168.10.153", port: 11416}
+- robot6: {hostname: "192.168.10.163", port: 11417}
+- robot7: {hostname: "192.168.10.173", port: 11418}

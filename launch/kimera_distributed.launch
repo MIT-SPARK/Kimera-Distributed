@@ -39,7 +39,7 @@
       <arg name="comm_sleep_time"           value="5"  />
       <arg name="detection_batch_size"      value="50" />
       <arg name="max_submap_size"           value="100" />
-      <arg name="max_submap_distance"       value="0.5" />
+      <arg name="max_submap_distance"       value="1.0" />
       <arg name="robot_names_config"        value="$(arg robot_names_config)"/>
       <arg name="vocab_path"                value="$(arg vocab_path)"/>
       <arg name="log_output_path"           value="$(arg log_output_path)/"/>

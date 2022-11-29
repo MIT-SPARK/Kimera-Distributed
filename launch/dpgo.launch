@@ -42,9 +42,9 @@
       <arg name="GNC_num_updates"                  value="6"   />
       <arg name="GNC_init_mu"                      value="1e-5" />
       <arg name="robust_init_min_inliers"          value="3" />
-      <arg name="robust_opt_warm_start"            value="true" />
+      <arg name="robust_opt_num_resets"            value="4" />
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
-      <arg name="robust_opt_inner_iters_per_robot" value="8" />
+      <arg name="robust_opt_inner_iters_per_robot" value="10" />
       <arg name="inter_update_sleep_time"          value="0.1" />
       <arg name="max_delayed_iterations"           value="0"  />
       <arg name="max_distributed_init_steps"       value="30" />

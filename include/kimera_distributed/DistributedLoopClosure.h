@@ -99,6 +99,7 @@ class DistributedLoopClosure {
 
   // ROS subscriber
   ros::Subscriber local_pg_sub_;
+  ros::Subscriber internal_vlc_sub_;
   std::vector<ros::Subscriber> bow_sub_;
   std::vector<ros::Subscriber> bow_requests_sub_;
   std::vector<ros::Subscriber> vlc_requests_sub_;
@@ -159,6 +160,11 @@ class DistributedLoopClosure {
    * Callback to process the VLC responses to our requests
    */
   void vlcResponsesCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
+
+  /**
+   * Callback to process internal VLC frames
+   */
+  void internalVLCCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
 
   /**
    * @brief Callback to process the BoW requests from other robots

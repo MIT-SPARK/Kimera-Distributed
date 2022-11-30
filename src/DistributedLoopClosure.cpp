@@ -121,8 +121,13 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Subscriber
   std::string topic = "/" + robot_names_[my_id_] + "/kimera_vio_ros/pose_graph_incremental";
   local_pg_sub_ = nh_.subscribe(topic, 1000, &DistributedLoopClosure::localPoseGraphCallback, this);
+
+  std::string internal_vlc_topic = "/" + robot_names_[my_id_] + "/kimera_vio_ros/vlc_frames";
+  internal_vlc_sub_ = nh_.subscribe(internal_vlc_topic, 1000, &DistributedLoopClosure::internalVLCCallback, this);
+  
   std::string dpgo_topic = "/" + robot_names_[my_id_] + "/dpgo_ros_node/path";
   dpgo_sub_ = nh_.subscribe(dpgo_topic, 3, &DistributedLoopClosure::dpgoCallback, this);
+  
   for (size_t id = 0; id < num_robots_; ++id) {
     if (id < my_id_) {
       std::string vlc_req_topic =
@@ -989,6 +994,7 @@ void DistributedLoopClosure::publishVLCRequests(
 
 bool DistributedLoopClosure::requestVLCFrameService(
     const lcd::RobotPoseIdSet& vertex_ids) {
+  ROS_WARN("Requesting %zu local VLC frames from Kimera-VIO.", vertex_ids.size());
 
   // Request local VLC frames
   // Populate requested pose ids in ROS service query
@@ -1061,6 +1067,33 @@ void DistributedLoopClosure::vlcResponsesCallback(
     }
   }
   // ROS_INFO("Received %d VLC frames. ", msg->frames.size());
+}
+
+void DistributedLoopClosure::internalVLCCallback(
+  const pose_graph_tools::VLCFramesConstPtr& msg) {
+  for (const auto& frame_msg : msg->frames) {
+    lcd::VLCFrame frame;
+    VLCFrameFromMsg(frame_msg, &frame);
+    if (frame.robot_id_ != my_id_) {
+      continue;
+    }
+    
+    // Fill in submap information for this keyframe
+    const auto keyframe = submap_atlas_->getKeyframe(frame.pose_id_);
+    if (!keyframe) {
+      ROS_WARN("Received internal frame %i but submap info is not found.", frame.pose_id_);
+      continue;
+    }
+    frame.submap_id_ = CHECK_NOTNULL(keyframe->getSubmap())->id();
+    frame.T_submap_pose_ = keyframe->getPoseInSubmapFrame();
+
+    // Store new frame
+    lcd::RobotPoseId vertex_id(frame.robot_id_, frame.pose_id_);
+    {  // start lcd critical section
+      std::unique_lock<std::mutex> lcd_lock(lcd_mutex_);
+      lcd_->addVLCFrame(vertex_id, frame);
+    }  // end lcd critical section
+  }
 }
 
 size_t DistributedLoopClosure::updateCandidateList() {

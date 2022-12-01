@@ -17,7 +17,7 @@
 		/$(arg input_ns)/forward/infra2/camera_info
 		/$(arg input_ns)/forward/infra2/image_rect_raw/compressed
 		/$(arg input_ns)/jackal_velocity_controller/odom
-		/tf
+		/tf_static
 		/tf_aggregate">
 
 		<remap from="/$(arg input_ns)/detection_out_topic"                      to="/$(arg output_ns)/detection_out_topic"/>

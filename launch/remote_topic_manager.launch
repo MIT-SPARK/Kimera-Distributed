@@ -5,7 +5,7 @@
   <!-- Port that reliable UDP runs on. Default (-1) uses arbitrary port number. -->
   <arg name="enet_port"                     default="-1" /> 
   <!-- Maximum bandwidth (assumes unlimited bandwidth if set to 0) -->
-  <arg name="max_bandwidth"                 default="5000" />
+  <arg name="max_bandwidth"                 default="10000" />
   <arg name="max_peer_count"                default="20"   />
   <arg name="max_channel_count"             default="255"  />
   <arg name="check_remote_subscription"     default="false"/>

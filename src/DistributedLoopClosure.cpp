@@ -38,6 +38,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       comm_sleep_time_(5),
       detection_batch_size_(20),
       bow_skip_num_(1),
+      backend_update_count_(0),
       last_get_submap_idx_(0),
       last_get_lc_idx_(0) {
   int my_id_int = -1;
@@ -428,7 +429,8 @@ void DistributedLoopClosure::localPoseGraphCallback(
 
 void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
   if (!log_output_) return;
-  std::string file_path = log_output_dir_ + "kimera_distributed_poses.csv";
+  backend_update_count_++;
+  std::string file_path = log_output_dir_ + "kimera_distributed_poses_" + std::to_string(backend_update_count_) + ".csv";
   std::ofstream file;
   file.open(file_path);
   if (!file.is_open()) {

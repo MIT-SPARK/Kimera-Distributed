@@ -97,6 +97,9 @@ class DistributedLoopClosure {
   // Map from robot ID to name
   std::map<size_t, std::string> robot_names_;
 
+  // Number of updates received from back-end
+  int backend_update_count_;
+
   // ROS subscriber
   ros::Subscriber local_pg_sub_;
   ros::Subscriber internal_vlc_sub_;

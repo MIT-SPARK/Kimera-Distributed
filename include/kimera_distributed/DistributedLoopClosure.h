@@ -124,6 +124,10 @@ class DistributedLoopClosure {
   // ROS service
   ros::ServiceServer pose_graph_request_server_;
 
+  // Timer
+  ros::Timer log_timer_;
+  ros::Time start_time_;
+
   // Threads
   std::unique_ptr<std::thread> detection_thread_;
   std::unique_ptr<std::thread> verification_thread_;
@@ -185,6 +189,11 @@ class DistributedLoopClosure {
    * @param msg
    */
   void dpgoCallback(const nav_msgs::PathConstPtr& msg);
+
+  /**
+   * @brief Callback to timer used for periodically logging
+  */
+  void logTimerCallback(const ros::TimerEvent &event);
 
   /**
    * @brief Send submap-level pose graph for distributed optimization

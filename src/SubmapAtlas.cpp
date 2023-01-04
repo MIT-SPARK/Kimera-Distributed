@@ -79,6 +79,20 @@ std::shared_ptr<Submap> SubmapAtlas::createSubmap(
   auto submap = std::make_shared<Submap>(submap_id, timestamp);
   submap->setPoseInOdomFrame(T_odom_submap);
   submaps_.emplace(submap_id, submap);
+
+  if (submap_id == 0) {
+    // Initialize world pose of the first submap
+    submap->setPoseInWorldFrame(T_odom_submap);
+  } else {
+    auto prev_submap = CHECK_NOTNULL(getSubmap(submap_id - 1));
+    // Initialize the world pose by propagating odometry
+    auto T_world_prev = prev_submap->getPoseInWorldFrame();
+    auto T_odom_prev = prev_submap->getPoseInOdomFrame();
+    auto T_prev_curr = T_odom_prev.inverse() * T_odom_submap;
+    auto T_world_curr = T_world_prev * T_prev_curr;
+    submap->setPoseInWorldFrame(T_world_curr);
+  }
+
   return submap;
 }
 

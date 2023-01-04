@@ -53,6 +53,16 @@ class Submap {
    */
   void setPoseInOdomFrame(const gtsam::Pose3& T_odom_submap);
   /**
+   * @brief Get pose of this submap in the world frame
+   * @return
+  */
+  gtsam::Pose3 getPoseInWorldFrame() const;
+  /**
+   * @brief Set pose of this submap in the world frame
+   * @param T_world_submap 
+  */
+  void setPoseInWorldFrame(const gtsam::Pose3& T_world_submap);
+  /**
    * @brief Add a new keyframe to this submap
    * @param keyframe
    */
@@ -74,6 +84,7 @@ class Submap {
   uint64_t stamp_;
   std::unordered_map<int, std::shared_ptr<Keyframe>> keyframes_;  // keyframes that belong to this submap
   gtsam::Pose3 T_odom_submap_;  // the pose of this submap in the odometry frame (Kimera-VIO)
+  gtsam::Pose3 T_world_submap_; // the pose of this submap if the world frame (might not exist)
   double distance_; // cumulative distance traveled in this submap
 };
 

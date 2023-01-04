@@ -26,6 +26,14 @@ void Submap::setPoseInOdomFrame(const gtsam::Pose3 &T_odom_submap) {
   T_odom_submap_ = T_odom_submap;
 }
 
+gtsam::Pose3 Submap::getPoseInWorldFrame() const {
+  return T_world_submap_;
+}
+
+void Submap::setPoseInWorldFrame(const gtsam::Pose3 &T_world_submap) {
+  T_world_submap_ = T_world_submap;
+}
+
 void Submap::addKeyframe(const std::shared_ptr<Keyframe> &keyframe) {
   keyframes_.emplace(keyframe->id(), keyframe);
   // Update distance

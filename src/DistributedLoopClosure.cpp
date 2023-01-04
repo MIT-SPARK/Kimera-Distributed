@@ -198,6 +198,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   pose_graph_request_server_ = nh_.advertiseService(
       "request_pose_graph", &DistributedLoopClosure::requestPoseGraphCallback, this);
 
+  log_timer_ = nh_.createTimer(ros::Duration(10.0), &DistributedLoopClosure::logTimerCallback, this);
+
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
       << my_id_ << "). \n"
@@ -266,6 +268,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Start comms thread
   comms_thread_.reset(new std::thread(&DistributedLoopClosure::runComms, this));
   ROS_INFO("Robot %zu started communication thread.", my_id_);
+
+  start_time_ = ros::Time::now();
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {
@@ -428,24 +432,52 @@ void DistributedLoopClosure::localPoseGraphCallback(
 }
 
 void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
-  if (!log_output_) return;
+  if (msg->poses.empty()) {
+    return;
+  }
+  // Store the optimized poses from dpgo in the submap atlas
+  for (int submap_id = 0; submap_id < msg->poses.size(); ++submap_id) {
+    const auto T_world_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    submap->setPoseInWorldFrame(T_world_submap);
+  }
+  // Update the new (unoptimized) poses in the submap atlas by propagating odometry
+  for (int submap_id = msg->poses.size(); submap_id < submap_atlas_->numSubmaps(); ++submap_id) {
+    const auto submap_curr = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    const auto submap_prev = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id - 1));
+    const auto T_odom_curr = submap_curr->getPoseInOdomFrame();
+    const auto T_odom_prev = submap_prev->getPoseInOdomFrame();
+    const auto T_prev_curr = T_odom_prev.inverse() * T_odom_curr;
+    const auto T_world_curr = submap_prev->getPoseInWorldFrame() * T_prev_curr;
+    submap_curr->setPoseInWorldFrame(T_world_curr);
+  }
   backend_update_count_++;
-  std::string file_path = log_output_dir_ + "kimera_distributed_poses_" + std::to_string(backend_update_count_) + ".csv";
+  ROS_INFO("Received DPGO updates (current count: %i).", backend_update_count_);
+}
+
+void DistributedLoopClosure::logTimerCallback(const ros::TimerEvent &event) {
+  if (!log_output_) return;
+  if (backend_update_count_ == 0) return;
+  auto elapsed_time = ros::Time::now() - start_time_;
+  int elapsed_sec = int(elapsed_time.toSec());
+  std::string file_path = log_output_dir_ + "kimera_distributed_poses_" +
+                          std::to_string(elapsed_sec) + ".csv";
   std::ofstream file;
   file.open(file_path);
   if (!file.is_open()) {
     ROS_ERROR_STREAM("Error opening log file: " << file_path);
     return;
   }
-  file << std::fixed << std::setprecision(15);
+  file << std::fixed << std::setprecision(8);
   file << "ns,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
 
-  // Using the optimized submap poses from dpgo, recover optimized poses for the original VIO keyframes,
-  // and save the results to a log file
-  for (int submap_id = 0; submap_id < msg->poses.size(); ++submap_id) {
-    const auto T_world_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+  // Using the optimized submap poses from dpgo, recover optimized poses for the
+  // original VIO keyframes, and save the results to a log file
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps();
+       ++submap_id) {
     const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
-    for (const int keyframe_id: submap->getKeyframeIDs()) {
+    const auto T_world_submap = submap->getPoseInWorldFrame();
+    for (const int keyframe_id : submap->getKeyframeIDs()) {
       const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
       const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
       const auto T_world_keyframe = T_world_submap * T_submap_keyframe;
@@ -463,7 +495,6 @@ void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
       file << point.z() << "\n";
     }
   }
-
   file.close();
 }
 
@@ -1083,7 +1114,7 @@ void DistributedLoopClosure::internalVLCCallback(
     // Fill in submap information for this keyframe
     const auto keyframe = submap_atlas_->getKeyframe(frame.pose_id_);
     if (!keyframe) {
-      ROS_WARN("Received internal frame %i but submap info is not found.", frame.pose_id_);
+      ROS_WARN("Received internal VLC frame %zu but submap info is not found.", frame.pose_id_);
       continue;
     }
     frame.submap_id_ = CHECK_NOTNULL(keyframe->getSubmap())->id();

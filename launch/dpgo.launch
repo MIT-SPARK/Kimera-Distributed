@@ -32,19 +32,19 @@
       <arg name="multirobot_initialization"        value="true"/>
       <arg name="RTR_iterations"                   value="3" />
       <arg name="RTR_tCG_iterations"               value="50" />
-      <arg name="RTR_gradnorm_tol"                 value="1e-2" />
-      <arg name="relative_change_tolerance"        value="1e-2" />
+      <arg name="RTR_gradnorm_tol"                 value="1.0" />
+      <arg name="relative_change_tolerance"        value="0.2" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
       <arg name="GNC_use_probability"              value="false" />
       <arg name="GNC_quantile"                     value="0.9" />
       <arg name="GNC_barc"                         value="3.0" />
       <arg name="GNC_mu_step"                      value="2.0" />
-      <arg name="GNC_num_updates"                  value="6"   />
       <arg name="GNC_init_mu"                      value="1e-5" />
       <arg name="robust_init_min_inliers"          value="3" />
-      <arg name="robust_opt_num_resets"            value="4" />
+      <arg name="robust_opt_num_weight_updates"    value="3" />
+      <arg name="robust_opt_num_resets"            value="3" />
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
-      <arg name="robust_opt_inner_iters_per_robot" value="10" />
+      <arg name="robust_opt_inner_iters_per_robot" value="50" />
       <arg name="inter_update_sleep_time"          value="0.1" />
       <arg name="max_delayed_iterations"           value="0"  />
       <arg name="max_distributed_init_steps"       value="30" />

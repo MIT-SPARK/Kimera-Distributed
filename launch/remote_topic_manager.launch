@@ -5,7 +5,8 @@
   <!-- Port that reliable UDP runs on. Default (-1) uses arbitrary port number. -->
   <arg name="enet_port"                     default="-1" /> 
   <!-- Maximum bandwidth (assumes unlimited bandwidth if set to 0) -->
-  <arg name="max_bandwidth"                 default="10000" />
+  <arg name="max_bandwidth_incoming"        default="10000" />
+  <arg name="max_bandwidth_outgoing"        default="10000" />
   <arg name="max_peer_count"                default="20"   />
   <arg name="max_channel_count"             default="255"  />
   <arg name="check_remote_subscription"     default="false"/>
@@ -26,7 +27,8 @@
       <param name="robot_id"                          value="$(arg robot_id)" />
       <param name="robot_name"                        value="$(arg robot_name)" />
       <param name="num_robots"                        value="$(arg num_robots)" />
-      <param name="max_bandwidth"                     value="$(arg max_bandwidth)" />
+      <param name="max_bandwidth_incoming"            value="$(arg max_bandwidth_incoming)" />
+      <param name="max_bandwidth_outgoing"            value="$(arg max_bandwidth_outgoing)" />
       <param name="max_peer_count"                    value="$(arg max_peer_count)" />
       <param name="max_channel_count"                 value="$(arg max_channel_count)" />
       <param name="service_discovery"                 value="$(arg service_discovery)" />

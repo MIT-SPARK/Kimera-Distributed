@@ -129,6 +129,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   std::string dpgo_topic = "/" + robot_names_[my_id_] + "/dpgo_ros_node/path";
   dpgo_sub_ = nh_.subscribe(dpgo_topic, 3, &DistributedLoopClosure::dpgoCallback, this);
   
+  std::string connectivity_topic = "/" + robot_names_[my_id_] + "/connected_peer_ids";
+  connectivity_sub_ = nh_.subscribe(connectivity_topic, 5, &DistributedLoopClosure::connectivityCallback, this);
+
   for (size_t id = 0; id < num_robots_; ++id) {
     if (id < my_id_) {
       std::string vlc_req_topic =
@@ -270,6 +273,11 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ROS_INFO("Robot %zu started communication thread.", my_id_);
 
   start_time_ = ros::Time::now();
+  
+  // Initially assume all robots are connected
+  for (size_t robot_id = 0; robot_id < num_robots_; ++robot_id) {
+    robot_connected_[robot_id] = true; 
+  }
 }
 
 DistributedLoopClosure::~DistributedLoopClosure() {
@@ -428,6 +436,21 @@ void DistributedLoopClosure::localPoseGraphCallback(
   if (!sparse_pose_graph.edges.empty() ||
       !sparse_pose_graph.nodes.empty()) {
     pose_graph_pub_.publish(sparse_pose_graph);
+  }
+}
+
+void DistributedLoopClosure::connectivityCallback(
+    const std_msgs::UInt16MultiArrayConstPtr &msg) {
+  std::set<unsigned> connected_ids(msg->data.begin(), msg->data.end());
+  for (unsigned robot_id = 0; robot_id < num_robots_; ++robot_id) {
+    if (robot_id == my_id_) {
+      robot_connected_[robot_id] = true;
+    } else if (connected_ids.find(robot_id) != connected_ids.end()) {
+      robot_connected_[robot_id] = true;
+    } else {
+      // ROS_WARN("Robot %u is disconnected.", robot_id);
+      robot_connected_[robot_id] = false;
+    }
   }
 }
 
@@ -615,9 +638,11 @@ void DistributedLoopClosure::requestBowVectors() {
   lcd::RobotId selected_robot_id = 0;
   size_t selected_queue_size = 0;
   for (const auto& it: missing_bow_vectors) {
-    if (it.second.size() >= selected_queue_size) {
-      selected_queue_size = it.second.size();
-      selected_robot_id = it.first;
+    lcd::RobotId robot_id = it.first;
+    size_t robot_queue_size = it.second.size();
+    if (robot_connected_[robot_id] && robot_queue_size >= selected_queue_size) {
+      selected_queue_size = robot_queue_size;
+      selected_robot_id = robot_id;
     }
   }
   if (selected_queue_size == 0)
@@ -644,9 +669,11 @@ void DistributedLoopClosure::publishBowVectors() {
   lcd::RobotId selected_robot_id = 0;
   size_t selected_queue_size = 0;
   for (const auto& it: requested_bows_) {
-    if (it.second.size() >= selected_queue_size) {
-      selected_robot_id = it.first;
-      selected_queue_size = it.second.size();
+    lcd::RobotId robot_id = it.first;
+    size_t robot_queue_size = it.second.size();
+    if (robot_connected_[robot_id] && robot_queue_size >= selected_queue_size) {
+      selected_robot_id = robot_id;
+      selected_queue_size = robot_queue_size;
     }
   }
   // ROS_INFO("Maximum num of BOW waiting: %zu (robot %zu).", selected_queue_size, selected_robot_id);
@@ -717,7 +744,7 @@ void DistributedLoopClosure::requestFrames() {
   size_t selected_queue_size = 0;
   for (const auto& it: vertex_ids_map) {
     lcd::RobotId robot_id = it.first;
-    if (robot_id == my_id_)
+    if (robot_id == my_id_ || !robot_connected_[robot_id])
       continue;
     if (it.second.size() >= selected_queue_size) {
       selected_queue_size = it.second.size();
@@ -736,9 +763,11 @@ void DistributedLoopClosure::publishFrames() {
   lcd::RobotId selected_robot_id = 0;
   size_t selected_queue_size = 0;
   for (const auto& it: requested_frames_) {
-    if (it.second.size() >= selected_queue_size) {
-      selected_robot_id = it.first;
-      selected_queue_size = it.second.size();
+    lcd::RobotId robot_id = it.first;
+    size_t robot_queue_size = it.second.size();
+    if (robot_connected_[robot_id] && robot_queue_size >= selected_queue_size) {
+      selected_robot_id = robot_id;
+      selected_queue_size = robot_queue_size;
     }
   }
   // ROS_INFO("Maximum num of VLC waiting: %zu (robot %zu).", selected_queue_size, selected_robot_id);

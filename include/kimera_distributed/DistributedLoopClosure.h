@@ -26,6 +26,7 @@
 #include <kimera_multi_lcd/LoopClosureDetector.h>
 #include <kimera_distributed/utils.h>
 #include <kimera_distributed/SubmapAtlas.h>
+#include <std_msgs/UInt16MultiArray.h>
 
 namespace lcd = kimera_multi_lcd;
 
@@ -97,6 +98,9 @@ class DistributedLoopClosure {
   // Map from robot ID to name
   std::map<size_t, std::string> robot_names_;
 
+  // Record if robot is currently connected
+  std::map<size_t, bool> robot_connected_;
+
   // Number of updates received from back-end
   int backend_update_count_;
 
@@ -108,6 +112,7 @@ class DistributedLoopClosure {
   std::vector<ros::Subscriber> vlc_requests_sub_;
   std::vector<ros::Subscriber> vlc_responses_sub_;
   ros::Subscriber dpgo_sub_;
+  ros::Subscriber connectivity_sub_;
 
   // ROS publisher
   ros::Publisher loop_closure_pub_;
@@ -195,6 +200,11 @@ class DistributedLoopClosure {
    * @brief Callback to timer used for periodically logging
   */
   void logTimerCallback(const ros::TimerEvent &event);
+
+  /**
+   * @brief Subscriber callback that listens to the list of currently connected robots
+  */
+  void connectivityCallback(const std_msgs::UInt16MultiArrayConstPtr &msg);
 
   /**
    * @brief Send submap-level pose graph for distributed optimization

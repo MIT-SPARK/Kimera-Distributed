@@ -134,8 +134,9 @@ class DistributedLoopClosure {
   std::unique_ptr<std::thread> comms_thread_;
 
   // Logging
-  std::ofstream keyframe_pose_file_;        // log received keyframe poses
+  std::ofstream odometry_file_;           // log received odometry poses from VIO
   std::ofstream loop_closure_file_;       // log inter-robot loop closures
+  std::ofstream lcd_log_file_;            // log loop closure statistics
  private:
   /**
    * @brief Run place recognition / loop detection spin
@@ -273,11 +274,6 @@ class DistributedLoopClosure {
    * Update the candidate list and verification queue
    */
   size_t updateCandidateList();
-
-  /**
-   * Log communication stats to file
-   */
-  void logCommStat(const std::string& filename);
   /**
    * @brief Create log files
    */
@@ -287,11 +283,15 @@ class DistributedLoopClosure {
    */
   void closeLogFiles();
   /**
-   * @brief Log a keyframe to file
+   * @brief Log latest LCD statistics
+  */
+  void logLcdStat();
+  /**
+   * @brief Log a keyframe pose in odometry frame
    * @param symbol_frame
    * @param T_odom_frame
    */
-  void logKeyframePose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame);
+  void logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame);
   /**
    * @brief Log a loop closure to file
    * @param symbol_src
@@ -299,6 +299,17 @@ class DistributedLoopClosure {
    * @param T_src_dst
    */
   void logLoopClosure(const gtsam::Symbol &symbol_src, const gtsam::Symbol &symbol_dst, const gtsam::Pose3 &T_src_dst);
+  /**
+   * @brief Save the latest pose estimates to the world frame
+   * @brief filename Output file
+  */
+  void savePosesInWorldFrame(const std::string &filename) const;
+  /**
+   * @brief Save the current submap atlas to file.
+   * This function saves the poses of all keyframes in their respective submaps
+   * @param filename Output file
+  */
+  void saveSubmapAtlas(const std::string &filename) const;
   /**
    * @brief Load keyframe poses from a file
    * @param pose_file

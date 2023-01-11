@@ -336,7 +336,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
     gtsam::Pose3 init_pose(init_rotation, init_position);
 
     submap_atlas_->createKeyframe(0, init_pose, ts);
-    logKeyframePose(gtsam::Symbol(robot_id_to_prefix.at(my_id_), 0),
+    logOdometryPose(gtsam::Symbol(robot_id_to_prefix.at(my_id_), 0),
                     init_pose);
     incremental_pub = false;
   }
@@ -377,7 +377,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
 
         // Save keyframe pose to file
         gtsam::Symbol symbol_dst(robot_id_to_prefix.at(my_id_), frame_dst);
-        logKeyframePose(symbol_dst, T_odom_dst);
+        logOdometryPose(symbol_dst, T_odom_dst);
       }
     } else if (pg_edge.robot_from == my_id_ &&
         pg_edge.robot_to == my_id_ &&
@@ -457,15 +457,24 @@ void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
 
 void DistributedLoopClosure::logTimerCallback(const ros::TimerEvent &event) {
   if (!log_output_) return;
-  if (backend_update_count_ == 0) return;
-  auto elapsed_time = ros::Time::now() - start_time_;
-  int elapsed_sec = int(elapsed_time.toSec());
-  std::string file_path = log_output_dir_ + "kimera_distributed_poses_" +
-                          std::to_string(elapsed_sec) + ".csv";
+  logLcdStat();
+  // Save latest submap atlas
+  saveSubmapAtlas(log_output_dir_ + "kimera_distributed_submaps.csv");
+  // Save latest trajectory estimates in the world frame
+  if (backend_update_count_ > 0) {
+    auto elapsed_time = ros::Time::now() - start_time_;
+    int elapsed_sec = int(elapsed_time.toSec());
+    std::string file_path = log_output_dir_ + "kimera_distributed_poses_" +
+                            std::to_string(elapsed_sec) + ".csv";
+    savePosesInWorldFrame(file_path);
+  }
+}
+
+void DistributedLoopClosure::savePosesInWorldFrame(const std::string &filename) const {
   std::ofstream file;
-  file.open(file_path);
+  file.open(filename);
   if (!file.is_open()) {
-    ROS_ERROR_STREAM("Error opening log file: " << file_path);
+    ROS_ERROR_STREAM("Error opening log file: " << filename);
     return;
   }
   file << std::fixed << std::setprecision(8);
@@ -486,6 +495,40 @@ void DistributedLoopClosure::logTimerCallback(const ros::TimerEvent &event) {
       gtsam::Point3 point = T_world_keyframe.translation();
       file << keyframe->stamp() << ",";
       file << keyframe->id() << ",";
+      file << quat.x() << ",";
+      file << quat.y() << ",";
+      file << quat.z() << ",";
+      file << quat.w() << ",";
+      file << point.x() << ",";
+      file << point.y() << ",";
+      file << point.z() << "\n";
+    }
+  }
+  file.close();
+}
+
+void DistributedLoopClosure::saveSubmapAtlas(const std::string &filename) const {
+  std::ofstream file;
+  file.open(filename);
+  if (!file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << filename);
+    return;
+  }
+  file << std::fixed << std::setprecision(8);
+  file << "keyframe_stamp,keyframe_id,submap_id,qx,qy,qz,qw,tx,ty,tz\n";
+
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps();
+       ++submap_id) {
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    for (const int keyframe_id : submap->getKeyframeIDs()) {
+      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
+      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
+      // Save to log
+      gtsam::Quaternion quat = T_submap_keyframe.rotation().toQuaternion();
+      gtsam::Point3 point = T_submap_keyframe.translation();
+      file << keyframe->stamp() << ",";
+      file << keyframe_id << ",";
+      file << submap_id << ",";
       file << quat.x() << ",";
       file << quat.y() << ",";
       file << quat.z() << ",";
@@ -965,11 +1008,6 @@ bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGrap
   CHECK_EQ(request.robot_id, my_id_);
   response.pose_graph = getSubmapPoseGraph();
 
-  // Log all loop closures to file
-  if (log_output_) {
-    logCommStat(log_output_dir_ + "lcd_log.csv");
-  }
-
   return true;
 }
 
@@ -1220,38 +1258,17 @@ void DistributedLoopClosure::publishLoopClosure(
   loop_closure_pub_.publish(msg_edge);
 }
 
-void DistributedLoopClosure::logCommStat(const std::string& filename) {
-  std::ofstream file;
-  file.open(filename);
-  if (!file.is_open()) {
-    ROS_ERROR_STREAM("Error opening log file: " << filename);
-    return;
-  }
-  // Header
-  file << "total_verifications_mono, total_verifications, "
-          "successful_verifications, total_bow_bytes, "
-          "total_vlc_bytes\n";
-  file << lcd_->getNumGeomVerificationsMono() << ",";
-  file << lcd_->getNumGeomVerifications() << ",";
-  file << keyframe_loop_closures_.size() << ",";
-  file << std::accumulate(
-              received_bow_bytes_.begin(), received_bow_bytes_.end(), 0)
-       << ",";
-  file << std::accumulate(
-              received_vlc_bytes_.begin(), received_vlc_bytes_.end(), 0)
-       << "\n";
-  file.close();
-}
-
 void DistributedLoopClosure::createLogFiles() {
   std::string pose_file_path = log_output_dir_ + "keyframe_poses.csv";
   std::string inter_lc_file_path = log_output_dir_ + "loop_closures.csv";
-  keyframe_pose_file_.open(pose_file_path);
-  if (!keyframe_pose_file_.is_open())
+  std::string lcd_file_path = log_output_dir_ + "lcd_log.csv";
+  
+  odometry_file_.open(pose_file_path);
+  if (!odometry_file_.is_open())
     ROS_ERROR_STREAM("Error opening log file: " << pose_file_path);
-  keyframe_pose_file_ << std::fixed << std::setprecision(15);
-  keyframe_pose_file_ << "robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
-  keyframe_pose_file_.flush();
+  odometry_file_ << std::fixed << std::setprecision(15);
+  odometry_file_ << "robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
+  odometry_file_.flush();
 
   loop_closure_file_.open(inter_lc_file_path);
   if (!loop_closure_file_.is_open())
@@ -1259,31 +1276,59 @@ void DistributedLoopClosure::createLogFiles() {
   loop_closure_file_ << std::fixed << std::setprecision(15);
   loop_closure_file_ << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
   loop_closure_file_.flush();
+
+  lcd_log_file_.open(lcd_file_path);
+  if (!lcd_log_file_.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << lcd_file_path);
+  }
+  lcd_log_file_ << std::fixed << std::setprecision(15);
+  lcd_log_file_
+      << "elapsed_sec, bow_matches, mono_verifications, stereo_verifications, "
+         "num_loop_closures, total_bow_bytes, "
+         "total_vlc_bytes\n";
+  lcd_log_file_.flush();
 }
 
 void DistributedLoopClosure::closeLogFiles() {
-  if (keyframe_pose_file_.is_open())
-    keyframe_pose_file_.close();
+  if (odometry_file_.is_open())
+    odometry_file_.close();
   if (loop_closure_file_.is_open())
     loop_closure_file_.close();
+  if (lcd_log_file_.is_open()) {
+    lcd_log_file_.close();
+  }
 }
 
-void DistributedLoopClosure::logKeyframePose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame) {
-  if (keyframe_pose_file_.is_open()) {
+void DistributedLoopClosure::logLcdStat() {
+  if (lcd_log_file_.is_open()) {
+    auto elapsed_sec = (ros::Time::now() - start_time_).toSec();
+    lcd_log_file_ << elapsed_sec << ",";
+    lcd_log_file_ << lcd_->totalBoWMatches() << ",";
+    lcd_log_file_ << lcd_->getNumGeomVerificationsMono() << ",";
+    lcd_log_file_ << lcd_->getNumGeomVerifications() << ",";
+    lcd_log_file_ << keyframe_loop_closures_.size() << ",";
+    lcd_log_file_ << std::accumulate(received_bow_bytes_.begin(), received_bow_bytes_.end(), 0) << ",";
+    lcd_log_file_ << std::accumulate(received_vlc_bytes_.begin(), received_vlc_bytes_.end(), 0) << "\n";
+    lcd_log_file_.flush();
+  }
+}
+
+void DistributedLoopClosure::logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame) {
+  if (odometry_file_.is_open()) {
     gtsam::Quaternion quat = T_odom_frame.rotation().toQuaternion();
     gtsam::Point3 point = T_odom_frame.translation();
     const uint32_t robot_id = robot_prefix_to_id.at(symbol_frame.chr());
     const uint32_t frame_id = symbol_frame.index();
-    keyframe_pose_file_ << robot_id << ",";
-    keyframe_pose_file_ << frame_id << ",";
-    keyframe_pose_file_ << quat.x() << ",";
-    keyframe_pose_file_ << quat.y() << ",";
-    keyframe_pose_file_ << quat.z() << ",";
-    keyframe_pose_file_ << quat.w() << ",";
-    keyframe_pose_file_ << point.x() << ",";
-    keyframe_pose_file_ << point.y() << ",";
-    keyframe_pose_file_ << point.z() << "\n";
-    keyframe_pose_file_.flush();
+    odometry_file_ << robot_id << ",";
+    odometry_file_ << frame_id << ",";
+    odometry_file_ << quat.x() << ",";
+    odometry_file_ << quat.y() << ",";
+    odometry_file_ << quat.z() << ",";
+    odometry_file_ << quat.w() << ",";
+    odometry_file_ << point.x() << ",";
+    odometry_file_ << point.y() << ",";
+    odometry_file_ << point.z() << "\n";
+    odometry_file_.flush();
   }
 }
 

@@ -1288,7 +1288,7 @@ void DistributedLoopClosure::publishLoopClosure(
 }
 
 void DistributedLoopClosure::createLogFiles() {
-  std::string pose_file_path = log_output_dir_ + "keyframe_poses.csv";
+  std::string pose_file_path = log_output_dir_ + "odometry_poses.csv";
   std::string inter_lc_file_path = log_output_dir_ + "loop_closures.csv";
   std::string lcd_file_path = log_output_dir_ + "lcd_log.csv";
   

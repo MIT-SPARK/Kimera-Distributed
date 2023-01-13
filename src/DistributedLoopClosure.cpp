@@ -640,6 +640,7 @@ void DistributedLoopClosure::requestBowVectors() {
   for (const auto& it: missing_bow_vectors) {
     lcd::RobotId robot_id = it.first;
     size_t robot_queue_size = it.second.size();
+    ROS_WARN("Missing %zu bow vectors from robot %lu.", robot_queue_size, robot_id);
     if (robot_connected_[robot_id] && robot_queue_size >= selected_queue_size) {
       selected_queue_size = robot_queue_size;
       selected_robot_id = robot_id;
@@ -841,9 +842,9 @@ void DistributedLoopClosure::detectLoopCallback() {
       it = bow_msgs_.erase(it); // Erase this message and move on to next one
     }
   }
-  if (!bow_msgs_.empty()) {
-    ROS_INFO("Performed %d loop detection (%zu pending).", num_detection_performed, bow_msgs_.size());
-  }
+  // if (!bow_msgs_.empty()) {
+    // ROS_INFO("Performed %d loop detection (%zu pending).", num_detection_performed, bow_msgs_.size());
+  //}
 }
 
 void DistributedLoopClosure::detectLoop(const lcd::RobotPoseId &vertex_query,
@@ -1312,7 +1313,7 @@ void DistributedLoopClosure::createLogFiles() {
   }
   lcd_log_file_ << std::fixed << std::setprecision(15);
   lcd_log_file_
-      << "elapsed_sec, bow_matches, mono_verifications, stereo_verifications, "
+      << "stamp_ns, bow_matches, mono_verifications, stereo_verifications, "
          "num_loop_closures, total_bow_bytes, "
          "total_vlc_bytes\n";
   lcd_log_file_.flush();
@@ -1330,8 +1331,8 @@ void DistributedLoopClosure::closeLogFiles() {
 
 void DistributedLoopClosure::logLcdStat() {
   if (lcd_log_file_.is_open()) {
-    auto elapsed_sec = (ros::Time::now() - start_time_).toSec();
-    lcd_log_file_ << elapsed_sec << ",";
+    // auto elapsed_sec = (ros::Time::now() - start_time_).toSec();
+    lcd_log_file_ << ros::Time::now().toNSec() << ",";
     lcd_log_file_ << lcd_->totalBoWMatches() << ",";
     lcd_log_file_ << lcd_->getNumGeomVerificationsMono() << ",";
     lcd_log_file_ << lcd_->getNumGeomVerifications() << ",";

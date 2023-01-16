@@ -5,8 +5,8 @@
   <!-- Port that reliable UDP runs on. Default (-1) uses arbitrary port number. -->
   <arg name="enet_port"                     default="-1" /> 
   <!-- Maximum bandwidth (assumes unlimited bandwidth if set to 0) -->
-  <arg name="max_bandwidth_incoming"        default="10000" />
-  <arg name="max_bandwidth_outgoing"        default="10000" />
+  <arg name="max_bandwidth_incoming"        default="10000000" />
+  <arg name="max_bandwidth_outgoing"        default="1000000" />
   <arg name="max_peer_count"                default="20"   />
   <arg name="max_channel_count"             default="255"  />
   <arg name="check_remote_subscription"     default="false"/>
@@ -14,6 +14,14 @@
   <arg name="logging"                       default="true"/>
   <arg name="log_directory"                 default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />
   <arg name="robot_names_config"            default="robot_names"/>
+  <!-- Configurations for running centralized -->
+  <!-- base_station_hostname and base_station_port must be provided if centralized_mode is true -->
+  <arg name="centralized_mode"              default="false"/>
+  <arg name="base_station_hostname"         default="" />
+  <arg name="base_station_port"             default="-1" />
+  <!-- Simulate communication schedule -->
+  <arg name="simulate_communication"        default="false" />
+  <arg name="communication_schedule_file"   default="" />
   <!-- Uncomment below to enable debug printing -->
   <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find reliable_udp_comms)/launch/rosconsole.conf"/> -->
 
@@ -40,6 +48,11 @@
       <param name="simulation"                        value="false"/>
       <param name="logging"                           value="$(arg logging)" />
       <param name="log_directory"                     value="$(arg log_directory)" />
+      <param name="centralized_mode"                  value="$(arg centralized_mode)" />
+      <param name="base_station_hostname"             value="$(arg base_station_hostname)" />
+      <param name="base_station_port"                 value="$(arg base_station_port)" />
+      <param name="simulate_communication"            value="$(arg simulate_communication)" />
+      <param name="communication_schedule_file"       value="$(arg communication_schedule_file)" />
 
       <!-- Load topics to be transmited to other robots -->
       <rosparam param="input_topics" file="$(find kimera_distributed)/params/rtm_input_topics_robot.yaml" subst_value="true" />

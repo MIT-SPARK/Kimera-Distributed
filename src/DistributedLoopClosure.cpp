@@ -40,7 +40,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       bow_skip_num_(1),
       backend_update_count_(0),
       last_get_submap_idx_(0),
-      last_get_lc_idx_(0) {
+      last_get_lc_idx_(0),
+      bow_backlog_(0),
+      vlc_backlog_(0) {
   int my_id_int = -1;
   int num_robots_int = -1;
   ros::param::get("~robot_id", my_id_int);
@@ -50,6 +52,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   assert(num_robots_int > 0);
   my_id_ = my_id_int;
   num_robots_ = num_robots_int;
+  num_loops_with_robot_.assign(num_robots_, 0);
 
   // Used for logging
   received_bow_bytes_.clear();
@@ -635,11 +638,13 @@ void DistributedLoopClosure::requestBowVectors() {
   }
 
   // Select robot with largest queue size
+  bow_backlog_ = 0;
   lcd::RobotId selected_robot_id = 0;
   size_t selected_queue_size = 0;
   for (const auto& it: missing_bow_vectors) {
     lcd::RobotId robot_id = it.first;
     size_t robot_queue_size = it.second.size();
+    bow_backlog_ += robot_queue_size;
     ROS_WARN("Missing %zu bow vectors from robot %lu.", robot_queue_size, robot_id);
     if (robot_connected_[robot_id] && robot_queue_size >= selected_queue_size) {
       selected_queue_size = robot_queue_size;
@@ -745,10 +750,11 @@ void DistributedLoopClosure::requestFrames() {
   size_t selected_queue_size = 0;
   for (const auto& it: vertex_ids_map) {
     lcd::RobotId robot_id = it.first;
+    size_t robot_queue_size = it.second.size();
     if (robot_id == my_id_ || !robot_connected_[robot_id])
       continue;
-    if (it.second.size() >= selected_queue_size) {
-      selected_queue_size = it.second.size();
+    if (robot_queue_size >= selected_queue_size) {
+      selected_queue_size = robot_queue_size;
       selected_robot_id = robot_id;
     }
   }
@@ -942,12 +948,20 @@ void DistributedLoopClosure::verifyLoopCallback() {
           // This ensures that there is at most one loop closure between every pair of submaps
           // This is a temporary solution, and will be removed once submap frontend is implemented.
           if (!hasBetweenFactor(submap_loop_closures_, submap_from, submap_to)) {
-            logLoopClosure(keyframe_from, keyframe_to, T_query_match);
             keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 keyframe_from, keyframe_to, T_query_match, noise));
             submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 submap_from, submap_to, T_s1_s2, noise));
+            // Logging
+            logLoopClosure(keyframe_from, keyframe_to, T_query_match);
             num_inter_robot_loops_++;
+            lcd::RobotId other_robot = 0;
+            if (vertex_query.first == my_id_) {
+              other_robot = vertex_match.first;
+            } else {
+              other_robot = vertex_query.first;
+            }
+            num_loops_with_robot_[other_robot] += 1;
           }
           size_t stereo_inliers_count = i_query.size();
           ROS_INFO(
@@ -1201,12 +1215,20 @@ size_t DistributedLoopClosure::updateCandidateList() {
   // return total number of candidates still missing VLC frames
   size_t total_candidates = 0;
   size_t ready_candidates = 0;
+  // Recompute backlog on missing VLC frames
+  vlc_backlog_ = 0;
   // start candidate list critical section
   std::unique_lock<std::mutex> candidate_lock(candidate_lc_mutex_);
   for (const auto& robot_queue : candidate_lc_) {
     // Create new vector of candidates still missing VLC frames
     std::vector<lcd::PotentialVLCEdge> unresolved_candidates;
     for (const auto& candidate : robot_queue.second) {
+      if (!lcd_->frameExists(candidate.vertex_src_)) {
+        vlc_backlog_++;
+      }
+      if (!lcd_->frameExists(candidate.vertex_dst_)) {
+        vlc_backlog_++;
+      }
       if (lcd_->frameExists(candidate.vertex_src_) &&
           lcd_->frameExists(candidate.vertex_dst_)) {
         queued_lc_.push(candidate);
@@ -1314,8 +1336,7 @@ void DistributedLoopClosure::createLogFiles() {
   lcd_log_file_ << std::fixed << std::setprecision(15);
   lcd_log_file_
       << "stamp_ns, bow_matches, mono_verifications, stereo_verifications, "
-         "num_loop_closures, total_bow_bytes, "
-         "total_vlc_bytes\n";
+         "num_loop_closures, bow_bytes, vlc_bytes, bow_backlog, vlc_backlog, num_loops_with_robots\n";
   lcd_log_file_.flush();
 }
 
@@ -1338,7 +1359,13 @@ void DistributedLoopClosure::logLcdStat() {
     lcd_log_file_ << lcd_->getNumGeomVerifications() << ",";
     lcd_log_file_ << keyframe_loop_closures_.size() << ",";
     lcd_log_file_ << std::accumulate(received_bow_bytes_.begin(), received_bow_bytes_.end(), 0) << ",";
-    lcd_log_file_ << std::accumulate(received_vlc_bytes_.begin(), received_vlc_bytes_.end(), 0) << "\n";
+    lcd_log_file_ << std::accumulate(received_vlc_bytes_.begin(), received_vlc_bytes_.end(), 0) << ",";
+    lcd_log_file_ << bow_backlog_ << ",";
+    lcd_log_file_ << vlc_backlog_ << ",";
+    for (size_t robot_id = 0; robot_id < num_robots_; ++robot_id) {
+      lcd_log_file_ << num_loops_with_robot_[robot_id] << ",";
+    }
+    lcd_log_file_ << "\n";
     lcd_log_file_.flush();
   }
 }

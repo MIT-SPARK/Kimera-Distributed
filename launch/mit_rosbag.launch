@@ -4,7 +4,7 @@
 	<arg name="output_ns" default="sobek" />
 	<arg name="rate"      default="1.0"   />
 
-	<node pkg="rosbag" type="play" name="player" output="screen" 
+	<node pkg="rosbag" type="play" name="player_$(arg output_ns)" output="screen" 
 		args="$(arg bagfile) --clock -r $(arg rate) --pause -s0.1 --topics
 		/$(arg input_ns)/detection_out_topic
 		/$(arg input_ns)/forward/color/camera_info

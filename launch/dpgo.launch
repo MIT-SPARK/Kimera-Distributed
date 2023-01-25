@@ -47,7 +47,8 @@
       <arg name="robust_opt_inner_iters_per_robot" value="50" />
       <arg name="inter_update_sleep_time"          value="0.1" />
       <arg name="max_delayed_iterations"           value="0"  />
-      <arg name="max_distributed_init_steps"       value="10" />
+      <arg name="max_distributed_init_steps"       value="20" />
+      <arg name="synchronize_measurements"         value="false" />
       <arg name="log_directory"                    value="$(arg log_output_path)/" />
     </include> 
 

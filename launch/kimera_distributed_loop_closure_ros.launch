@@ -11,7 +11,9 @@
   <arg name="bow_skip_num"         default="1"   />
   <arg name="bow_batch_size"       default="100" />
   <arg name="vlc_batch_size"       default="10"/>
+  <arg name="loop_batch_size"      default="100"/>
   <arg name="comm_sleep_time"      default="5" />
+  <arg name="loop_sync_sleep_time" default="5"/>
   <arg name="detection_batch_size" default="30" />
   <!-- Debug -->
   <arg name="debug"              default="false" />
@@ -36,6 +38,8 @@
     <param name="bow_skip_num"           value="$(arg bow_skip_num)" />
     <param name="bow_batch_size"         value="$(arg bow_batch_size)"/>
     <param name="vlc_batch_size"         value="$(arg vlc_batch_size)"/>
+    <param name="loop_batch_size"        value="$(arg loop_batch_size)"/>
+    <param name="loop_sync_sleep_time"   value="$(arg loop_sync_sleep_time)"/>
     <param name="comm_sleep_time"        value="$(arg comm_sleep_time)"/>
     <param name="detection_batch_size"   value="$(arg detection_batch_size)" />
     <param name="run_offline"            value="$(arg run_offline)" />

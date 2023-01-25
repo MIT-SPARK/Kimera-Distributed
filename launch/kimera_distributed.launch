@@ -36,6 +36,8 @@
       <arg name="bow_skip_num"              value="$(arg bow_skip_num)" />
       <arg name="bow_batch_size"            value="50" />
       <arg name="vlc_batch_size"            value="10" />
+      <arg name="loop_batch_size"           value="50" />
+      <arg name="loop_sync_sleep_time"      value="10" />
       <arg name="comm_sleep_time"           value="5"  />
       <arg name="detection_batch_size"      value="50" />
       <arg name="max_submap_size"           value="100" />

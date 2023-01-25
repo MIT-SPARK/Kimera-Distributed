@@ -35,7 +35,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       num_inter_robot_loops_(0),
       bow_batch_size_(100),
       vlc_batch_size_(10),
+      loop_batch_size_(100),
       comm_sleep_time_(5),
+      loop_sync_sleep_time_(5),
       detection_batch_size_(20),
       bow_skip_num_(1),
       backend_update_count_(0),
@@ -102,7 +104,9 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   // Load parameters controlling VLC communication
   ros::param::get("~bow_batch_size", bow_batch_size_);
   ros::param::get("~vlc_batch_size", vlc_batch_size_);
+  ros::param::get("~loop_batch_size", loop_batch_size_);
   ros::param::get("~comm_sleep_time", comm_sleep_time_);
+  ros::param::get("~loop_sync_sleep_time", loop_sync_sleep_time_);
 
   // Load robot names and initialize candidate lc queues
   for (size_t id = 0; id < num_robots_; id++) {
@@ -148,6 +152,12 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       ros::Subscriber bow_req_sub = nh_.subscribe(
           bow_req_topic, 1, &DistributedLoopClosure::bowRequestsCallback, this);
       bow_requests_sub_.push_back(bow_req_sub);
+
+      std::string loop_topic = 
+          "/" + robot_names_[id] + "/kimera_distributed/loop_closures";
+      ros::Subscriber loop_sub = nh_.subscribe(
+        loop_topic, 100, &DistributedLoopClosure::loopClosureCallback, this);
+      loop_sub_.push_back(loop_sub);
     }
 
     if (id >= my_id_) {
@@ -166,15 +176,16 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       ros::Subscriber resp_sub = nh_.subscribe(
           resp_topic, 10, &DistributedLoopClosure::vlcResponsesCallback, this);
       vlc_responses_sub_.push_back(resp_sub);
+
+      std::string ack_topic = 
+          "/" + robot_names_[id] + "/kimera_distributed/loop_ack";
+      ros::Subscriber ack_sub = nh_.subscribe(
+        ack_topic, 100, &DistributedLoopClosure::loopAcknowledgementCallback, this);
+      loop_ack_sub_.push_back(ack_sub);
     }
   }
 
   // Publisher
-  std::string loop_closure_topic =
-      "/" + robot_names_[my_id_] + "/kimera_distributed/loop_closure";
-  loop_closure_pub_ = nh_.advertise<pose_graph_tools::PoseGraphEdge>(
-      loop_closure_topic, 1000, false);
-
   std::string bow_response_topic =
       "/" + robot_names_[my_id_] + "/kimera_vio_ros/bow_query";
   bow_response_pub_ =
@@ -199,6 +210,14 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       "/" + robot_names_[my_id_] + "/kimera_distributed/vlc_requests";
   vlc_requests_pub_ =
       nh_.advertise<pose_graph_tools::VLCRequests>(req_topic, 10, true);
+
+  std::string loop_topic = 
+      "/" + robot_names_[my_id_] + "/kimera_distributed/loop_closures";
+  loop_pub_ = nh_.advertise<pose_graph_tools::LoopClosures>(loop_topic, 100, true);
+
+  std::string ack_topic = 
+      "/" + robot_names_[my_id_] + "/kimera_distributed/loop_ack";
+  loop_ack_pub_= nh_.advertise<pose_graph_tools::LoopClosuresAck>(ack_topic, 100, true);
 
   // ROS service
   pose_graph_request_server_ = nh_.advertiseService(
@@ -246,6 +265,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "maximum submap size = " << submap_params.max_submap_size << "\n"
       << "maximum submap distance = " << submap_params.max_submap_distance << "\n"
       << "loop detection batch size = " << detection_batch_size_ << "\n"
+      << "loop synchronization batch size = " << loop_batch_size_ << "\n"
+      << "loop synchronization sleep time = " << loop_sync_sleep_time_<< "\n"
       << "BoW vector skip num = " << bow_skip_num_ 
       << "\n");
 
@@ -276,6 +297,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
   ROS_INFO("Robot %zu started communication thread.", my_id_);
 
   start_time_ = ros::Time::now();
+  next_loop_sync_time_ = ros::Time::now();
   
   // Initially assume all robots are connected
   for (size_t robot_id = 0; robot_id < num_robots_; ++robot_id) {
@@ -604,6 +626,14 @@ void DistributedLoopClosure::runComms() {
     // Publish VLC frames requested by other robots
     publishFrames();
 
+    // Publish new inter-robot loop closures, if any
+    if(ros::Time::now().toSec() > next_loop_sync_time_.toSec()) {
+      initializeLoopPublishers();
+      publishQueuedLoops();
+      next_loop_sync_time_ += ros::Duration(loop_sync_sleep_time_);
+    }
+    
+    // Print stats
     ROS_INFO_STREAM("Total inter-robot loop closures: " << num_inter_robot_loops_);
     
     double avg_sleep_time = (double) comm_sleep_time_;
@@ -946,13 +976,18 @@ void DistributedLoopClosure::verifyLoopCallback() {
 
           // Add this loop closure if no loop closure exists between the two submaps
           // This ensures that there is at most one loop closure between every pair of submaps
-          // This is a temporary solution, and will be removed once submap frontend is implemented.
-          if (!hasBetweenFactor(submap_loop_closures_, submap_from, submap_to)) {
+          lcd::EdgeID submap_edge_id(frame1.robot_id_, frame1.submap_id_, frame2.robot_id_, frame2.submap_id_);
+          bool loop_exists = (submap_loop_closures_ids_.find(submap_edge_id) != submap_loop_closures_ids_.end());
+          if (!loop_exists) {
+            submap_loop_closures_ids_.emplace(submap_edge_id);
+            // Add new loop to queue for synchronization with other robots
+            submap_loop_closures_queue_[submap_edge_id] = gtsam::BetweenFactor<gtsam::Pose3>(
+                submap_from, submap_to, T_s1_s2, noise);
+            // submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+                // submap_from, submap_to, T_s1_s2, noise));
+            // Logging
             keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 keyframe_from, keyframe_to, T_query_match, noise));
-            submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
-                submap_from, submap_to, T_s1_s2, noise));
-            // Logging
             logLoopClosure(keyframe_from, keyframe_to, T_query_match);
             num_inter_robot_loops_++;
             lcd::RobotId other_robot = 0;
@@ -1053,6 +1088,135 @@ bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGrap
   response.pose_graph = getSubmapPoseGraph();
 
   return true;
+}
+
+void DistributedLoopClosure::initializeLoopPublishers() {
+  // Publish empty loops and acks
+  pose_graph_tools::LoopClosures loop_msg;
+  pose_graph_tools::LoopClosuresAck ack_msg;
+  loop_msg.publishing_robot_id = my_id_;
+  ack_msg.publishing_robot_id = my_id_;
+  for (lcd::RobotId robot_id = 0; robot_id < num_robots_; ++robot_id) {
+    if (robot_id != my_id_) {
+      loop_msg.destination_robot_id = robot_id;
+      loop_pub_.publish(loop_msg);
+
+      ack_msg.destination_robot_id = robot_id;
+      loop_ack_pub_.publish(ack_msg);
+    }
+  }
+}
+
+void DistributedLoopClosure::publishQueuedLoops() {
+  std::map<lcd::RobotId, size_t> robot_queue_sizes;
+  std::map<lcd::RobotId, pose_graph_tools::LoopClosures> msg_map;
+  auto it = submap_loop_closures_queue_.begin();
+  lcd::RobotId other_robot = 0;
+  while (it != submap_loop_closures_queue_.end()) {
+    const lcd::EdgeID &edge_id = it->first;
+    const auto &factor = it->second;
+    if (edge_id.robot_src == my_id_) {
+      other_robot = edge_id.robot_dst;
+    } else {
+      other_robot = edge_id.robot_src;
+    }
+    if (other_robot == my_id_) {
+      // This is a intra-robot loop closure and no need to synchronize
+      submap_loop_closures_.add(factor);
+      it = submap_loop_closures_queue_.erase(it);
+    } else {
+      // This is a inter-robot loop closure 
+      if (robot_queue_sizes.find(other_robot) == robot_queue_sizes.end()) {
+        robot_queue_sizes[other_robot] = 0;
+        pose_graph_tools::LoopClosures msg;
+        msg.publishing_robot_id = my_id_;
+        msg.destination_robot_id = other_robot;
+        msg_map[other_robot] = msg;
+      }
+      robot_queue_sizes[other_robot]++;
+      if (msg_map[other_robot].edges.size() < loop_batch_size_) {
+        pose_graph_tools::PoseGraphEdge edge_msg;
+        edge_msg.robot_from = edge_id.robot_src;
+        edge_msg.robot_to = edge_id.robot_dst;
+        edge_msg.key_from = edge_id.frame_src;
+        edge_msg.key_to = edge_id.frame_dst;
+        edge_msg.pose = GtsamPoseToRos(factor.measured());
+        // TODO: write covariance
+        msg_map[other_robot].edges.push_back(edge_msg);
+      }
+      ++it;
+    }
+  }
+
+  // Select the connected robot with largest queue size to synchronize
+  lcd::RobotId selected_robot_id = 0;
+  size_t selected_queue_size = 0;
+  for (auto &it : robot_queue_sizes) {
+    lcd::RobotId robot_id = it.first;
+    size_t queue_size = it.second;
+    if (robot_connected_[robot_id] && queue_size >= selected_queue_size) {
+      selected_robot_id = robot_id;
+      selected_queue_size = queue_size;
+    }
+  }
+  if (selected_queue_size > 0) {
+    ROS_WARN("Published %zu loops to robot %zu.", msg_map[selected_robot_id].edges.size(), selected_robot_id);
+    loop_pub_.publish(msg_map[selected_robot_id]);
+  }
+}
+
+void DistributedLoopClosure::loopClosureCallback(const pose_graph_tools::LoopClosuresConstPtr &msg) {
+  if (msg->destination_robot_id != my_id_) {
+    return;
+  }
+  size_t loops_added = 0;
+  pose_graph_tools::LoopClosuresAck ack_msg;
+  ack_msg.publishing_robot_id = my_id_;
+  ack_msg.destination_robot_id = msg->publishing_robot_id;
+  for (const auto &edge: msg->edges) {
+    const lcd::EdgeID submap_edge_id(edge.robot_from, edge.key_from, edge.robot_to, edge.key_to);
+    // For each incoming loop closure, only add locally if does not exist
+    bool edge_exists = (submap_loop_closures_ids_.find(submap_edge_id) != submap_loop_closures_ids_.end());
+    if (!edge_exists) {
+      loops_added++;
+      submap_loop_closures_ids_.emplace(submap_edge_id);
+      gtsam::Symbol submap_from(robot_id_to_prefix.at(edge.robot_from), edge.key_from);
+      gtsam::Symbol submap_to(robot_id_to_prefix.at(edge.robot_to), edge.key_to);
+      const auto pose = RosPoseToGtsam(edge.pose);
+      // TODO: read covariance from message
+      static const gtsam::SharedNoiseModel& noise = gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+      submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(submap_from, submap_to, pose, noise));
+    }
+    // Always acknowledge all received loops
+    ack_msg.robot_src.push_back(edge.robot_from);
+    ack_msg.robot_dst.push_back(edge.robot_to);
+    ack_msg.frame_src.push_back(edge.key_from);
+    ack_msg.frame_dst.push_back(edge.key_to);
+  }
+  if (loops_added > 0) {
+    ROS_WARN("Received %zu new loop closures from robot %i.", loops_added, msg->publishing_robot_id);
+    loop_ack_pub_.publish(ack_msg);
+  }
+}
+
+void DistributedLoopClosure::loopAcknowledgementCallback(const pose_graph_tools::LoopClosuresAckConstPtr &msg) {
+  if (msg->destination_robot_id != my_id_) {
+    return;
+  }
+  size_t loops_acked = 0;
+  for (size_t i = 0; i < msg->robot_src.size(); ++i) {
+    const lcd::EdgeID edge_id(msg->robot_src[i], msg->frame_src[i], msg->robot_dst[i], msg->frame_dst[i]);
+    if (submap_loop_closures_queue_.find(edge_id) != submap_loop_closures_queue_.end()) {
+      loops_acked++;
+      // Move acknowledged loop closure from queue to factor graph
+      // which will be shared with the back-end
+      submap_loop_closures_.add(submap_loop_closures_queue_.at(edge_id));
+      submap_loop_closures_queue_.erase(edge_id);
+    }
+  }
+  if (loops_acked > 0) {
+    ROS_WARN("Received %zu loop acks from robot %i.", loops_acked, msg->publishing_robot_id);
+  }
 }
 
 void DistributedLoopClosure::processVLCRequests(
@@ -1301,13 +1465,6 @@ void DistributedLoopClosure::vlcRequestsCallback(
   for (const auto& pose_id : msg->pose_ids) {
     requested_frames_[msg->source_robot_id].emplace(pose_id);
   }
-}
-
-void DistributedLoopClosure::publishLoopClosure(
-    const lcd::VLCEdge& loop_closure_edge) {
-  pose_graph_tools::PoseGraphEdge msg_edge;
-  VLCEdgeToMsg(loop_closure_edge, &msg_edge);
-  loop_closure_pub_.publish(msg_edge);
 }
 
 void DistributedLoopClosure::createLogFiles() {

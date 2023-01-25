@@ -23,6 +23,8 @@
 #include <pose_graph_tools/VLCRequests.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/PoseGraphQuery.h>
+#include <pose_graph_tools/LoopClosures.h>
+#include <pose_graph_tools/LoopClosuresAck.h>
 #include <kimera_multi_lcd/LoopClosureDetector.h>
 #include <kimera_distributed/utils.h>
 #include <kimera_distributed/SubmapAtlas.h>
@@ -72,6 +74,10 @@ class DistributedLoopClosure {
   int num_inter_robot_loops_;
   gtsam::NonlinearFactorGraph keyframe_loop_closures_;
   gtsam::NonlinearFactorGraph submap_loop_closures_;
+  // New loop closures to be synchronized with other robots
+  std::map<lcd::EdgeID, gtsam::BetweenFactor<gtsam::Pose3>, lcd::CompareEdgeID> submap_loop_closures_queue_;
+  // Edge IDs of all established loop closures
+  std::set<lcd::EdgeID, lcd::CompareEdgeID> submap_loop_closures_ids_;
 
   // List of potential loop closures
   // that require to request VLC frames
@@ -91,7 +97,9 @@ class DistributedLoopClosure {
   // Parameters controlling communication due to VLC request/response
   int bow_batch_size_;  // Maximum number of Bow vectors per robot to request in one batch
   int vlc_batch_size_;  // Maximum number of VLC frames per robot to request in one batch
+  int loop_batch_size_; // Maximum number of loop closures to synchronize in one batch
   int comm_sleep_time_;  // Sleep time of communication thread
+  int loop_sync_sleep_time_; // Sleep time of loop synchronization
   int detection_batch_size_;  // Maximum number of loop detection to perform in one batch
   int bow_skip_num_;  // Request every bow_skip_num_ bow vectors
 
@@ -111,16 +119,19 @@ class DistributedLoopClosure {
   std::vector<ros::Subscriber> bow_requests_sub_;
   std::vector<ros::Subscriber> vlc_requests_sub_;
   std::vector<ros::Subscriber> vlc_responses_sub_;
+  std::vector<ros::Subscriber> loop_sub_;
+  std::vector<ros::Subscriber> loop_ack_sub_;
   ros::Subscriber dpgo_sub_;
   ros::Subscriber connectivity_sub_;
 
   // ROS publisher
-  ros::Publisher loop_closure_pub_;
   ros::Publisher vlc_responses_pub_;
   ros::Publisher vlc_requests_pub_;
   ros::Publisher pose_graph_pub_;
   ros::Publisher bow_requests_pub_;
   ros::Publisher bow_response_pub_;
+  ros::Publisher loop_pub_;
+  ros::Publisher loop_ack_pub_;
 
   // For incremental publishing
   size_t last_get_submap_idx_;
@@ -132,6 +143,7 @@ class DistributedLoopClosure {
   // Timer
   ros::Timer log_timer_;
   ros::Time start_time_;
+  ros::Time next_loop_sync_time_;
 
   // Threads
   std::unique_ptr<std::thread> detection_thread_;
@@ -193,6 +205,16 @@ class DistributedLoopClosure {
   void vlcRequestsCallback(const pose_graph_tools::VLCRequestsConstPtr& msg);
 
   /**
+   * Callback to process new inter-robot loop closures
+  */
+  void loopClosureCallback(const pose_graph_tools::LoopClosuresConstPtr &msg);
+
+  /**
+   * Callback to process new inter-robot loop closures
+  */
+  void loopAcknowledgementCallback(const pose_graph_tools::LoopClosuresAckConstPtr &msg);
+
+  /**
    * @brief Callback to receive optimized submap poses from dpgo
    * @param msg
    */
@@ -219,9 +241,14 @@ class DistributedLoopClosure {
       pose_graph_tools::PoseGraphQuery::Response& response);
 
   /**
-   * Publish detected loop closure
+   * Initialize loop closures
    */
-  void publishLoopClosure(const lcd::VLCEdge& loop_closure_edge);
+  void initializeLoopPublishers();
+
+  /**
+   * Publish queued loop closures to be synchronized with other robots
+   */
+  void publishQueuedLoops();
 
   /**
    * Publish VLC requests

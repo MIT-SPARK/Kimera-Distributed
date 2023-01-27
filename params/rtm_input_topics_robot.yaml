@@ -1,5 +1,5 @@
 # ROS messages to send to others
-- /$(arg robot_name)/kimera_vio_ros/bow_query: {queue_size: 1, reliable: true, persistent: false}
+- /$(arg robot_name)/kimera_vio_ros/bow_query: {queue_size: 20, reliable: true, persistent: false}
 - /$(arg robot_name)/kimera_distributed/bow_requests: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/kimera_distributed/vlc_responses: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/kimera_distributed/vlc_requests: {queue_size: 1, reliable: true}

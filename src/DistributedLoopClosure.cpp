@@ -113,8 +113,8 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     std::string robot_name = "kimera" + std::to_string(id);
     ros::param::get("~robot" + std::to_string(id) + "_name", robot_name);
     robot_names_[id] = robot_name;
-
     candidate_lc_[id] = std::vector<lcd::PotentialVLCEdge>{};
+    loop_pub_initialized_[id] = false;
   }
 
   // Initialize LCD
@@ -298,6 +298,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
 
   start_time_ = ros::Time::now();
   next_loop_sync_time_ = ros::Time::now();
+  next_latest_bow_pub_time_ = ros::Time::now();
   
   // Initially assume all robots are connected
   for (size_t robot_id = 0; robot_id < num_robots_; ++robot_id) {
@@ -632,6 +633,13 @@ void DistributedLoopClosure::runComms() {
       publishQueuedLoops();
       next_loop_sync_time_ += ros::Duration(loop_sync_sleep_time_);
     }
+
+    // Once a while publish latest BoW vector 
+    // This is needed for other robots to request potentially missing BoW 
+    if (ros::Time::now().toSec() > next_latest_bow_pub_time_.toSec()) {
+      publishLatestBowVector();
+      next_latest_bow_pub_time_ += ros::Duration(30);  // TODO: make into parameter
+    }
     
     // Print stats
     ROS_INFO_STREAM("Total inter-robot loop closures: " << num_inter_robot_loops_);
@@ -745,6 +753,26 @@ void DistributedLoopClosure::publishBowVectors() {
              selected_robot_id,
              requested_bows_[selected_robot_id].size());
   }
+}
+
+void DistributedLoopClosure::publishLatestBowVector() {
+  int pose_id = lcd_->latestPoseIdWithBoW(my_id_);
+  if (pose_id != -1) {
+    lcd::RobotPoseId latest_id(my_id_, pose_id);
+    pose_graph_tools::BowQuery query_msg;
+    query_msg.robot_id = my_id_;
+    query_msg.pose_id = pose_id;
+    pose_graph_tools::BowVectorToMsg(lcd_->getBoWVector(latest_id),
+                                     &(query_msg.bow_vector));
+
+    pose_graph_tools::BowQueries msg;
+    msg.queries.push_back(query_msg);
+    for (lcd::RobotId robot_id = 0; robot_id < my_id_; ++robot_id) {
+      msg.destination_robot_id = robot_id;
+      bow_response_pub_.publish(msg);
+    }
+  }
+  ROS_INFO("Published latest BoW vector.");
 }
 
 void DistributedLoopClosure::requestFrames() {
@@ -1097,12 +1125,16 @@ void DistributedLoopClosure::initializeLoopPublishers() {
   loop_msg.publishing_robot_id = my_id_;
   ack_msg.publishing_robot_id = my_id_;
   for (lcd::RobotId robot_id = 0; robot_id < num_robots_; ++robot_id) {
-    if (robot_id != my_id_) {
+    if (robot_id != my_id_ && 
+        !loop_pub_initialized_[robot_id] &&
+        robot_connected_[robot_id]) {
       loop_msg.destination_robot_id = robot_id;
       loop_pub_.publish(loop_msg);
 
       ack_msg.destination_robot_id = robot_id;
       loop_ack_pub_.publish(ack_msg);
+
+      loop_pub_initialized_[robot_id] = true;
     }
   }
 }

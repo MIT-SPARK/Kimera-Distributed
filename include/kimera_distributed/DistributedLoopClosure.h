@@ -109,6 +109,9 @@ class DistributedLoopClosure {
   // Record if robot is currently connected
   std::map<size_t, bool> robot_connected_;
 
+  // Record if loop closure publisher is initialized
+  std::map<size_t, bool> loop_pub_initialized_;
+
   // Number of updates received from back-end
   int backend_update_count_;
 
@@ -144,6 +147,7 @@ class DistributedLoopClosure {
   ros::Timer log_timer_;
   ros::Time start_time_;
   ros::Time next_loop_sync_time_;
+  ros::Time next_latest_bow_pub_time_;
 
   // Threads
   std::unique_ptr<std::thread> detection_thread_;
@@ -276,6 +280,11 @@ class DistributedLoopClosure {
    * @brief Publish BoW vectors requested by other robots
    */
   void publishBowVectors();
+
+  /**
+   * @brief Publish the latest BoW vector of this robot
+  */
+  void publishLatestBowVector();
 
   /**
    * Check and submit VLC requests

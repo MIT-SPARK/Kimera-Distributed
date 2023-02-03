@@ -371,7 +371,8 @@ void DistributedLoopClosure::localPoseGraphCallback(
 
     submap_atlas_->createKeyframe(0, init_pose, ts);
     logOdometryPose(gtsam::Symbol(robot_id_to_prefix.at(my_id_), 0),
-                    init_pose);
+                    init_pose, 
+                    ts);
     incremental_pub = false;
   }
 
@@ -411,7 +412,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
 
         // Save keyframe pose to file
         gtsam::Symbol symbol_dst(robot_id_to_prefix.at(my_id_), frame_dst);
-        logOdometryPose(symbol_dst, T_odom_dst);
+        logOdometryPose(symbol_dst, T_odom_dst, node_ts);
       }
     } else if (pg_edge.robot_from == my_id_ &&
         pg_edge.robot_to == my_id_ &&
@@ -1508,7 +1509,7 @@ void DistributedLoopClosure::createLogFiles() {
   if (!odometry_file_.is_open())
     ROS_ERROR_STREAM("Error opening log file: " << pose_file_path);
   odometry_file_ << std::fixed << std::setprecision(15);
-  odometry_file_ << "robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
+  odometry_file_ << "stamp_ns,robot_index,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
   odometry_file_.flush();
 
   loop_closure_file_.open(inter_lc_file_path);
@@ -1559,12 +1560,13 @@ void DistributedLoopClosure::logLcdStat() {
   }
 }
 
-void DistributedLoopClosure::logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame) {
+void DistributedLoopClosure::logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame, uint64_t ts) {
   if (odometry_file_.is_open()) {
     gtsam::Quaternion quat = T_odom_frame.rotation().toQuaternion();
     gtsam::Point3 point = T_odom_frame.translation();
     const uint32_t robot_id = robot_prefix_to_id.at(symbol_frame.chr());
     const uint32_t frame_id = symbol_frame.index();
+    odometry_file_ << ts << ",";
     odometry_file_ << robot_id << ",";
     odometry_file_ << frame_id << ",";
     odometry_file_ << quat.x() << ",";

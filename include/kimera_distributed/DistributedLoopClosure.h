@@ -338,8 +338,9 @@ class DistributedLoopClosure {
    * @brief Log a keyframe pose in odometry frame
    * @param symbol_frame
    * @param T_odom_frame
+   * @param timestamp in ns
    */
-  void logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame);
+  void logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame, uint64_t ts);
   /**
    * @brief Log a loop closure to file
    * @param symbol_src

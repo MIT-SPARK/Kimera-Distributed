@@ -509,7 +509,7 @@ void DistributedLoopClosure::logTimerCallback(const ros::TimerEvent &event) {
   if (!log_output_) return;
   logLcdStat();
   // Save latest submap atlas
-  saveSubmapAtlas(log_output_dir_ + "kimera_distributed_submaps.csv");
+  saveSubmapAtlas(log_output_dir_);
   // Save latest trajectory estimates in the world frame
   if (backend_update_count_ > 0) {
     auto elapsed_time = ros::Time::now() - start_time_;
@@ -557,15 +557,17 @@ void DistributedLoopClosure::savePosesInWorldFrame(const std::string &filename) 
   file.close();
 }
 
-void DistributedLoopClosure::saveSubmapAtlas(const std::string &filename) const {
-  std::ofstream file;
-  file.open(filename);
-  if (!file.is_open()) {
-    ROS_ERROR_STREAM("Error opening log file: " << filename);
+void DistributedLoopClosure::saveSubmapAtlas(const std::string &directory) const {
+  // Store keyframes in their respective submap frames
+  std::string keyframe_path = directory + "kimera_distributed_keyframes.csv";
+  std::ofstream keyframe_file;
+  keyframe_file.open(keyframe_path);
+  if (!keyframe_file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << keyframe_path);
     return;
   }
-  file << std::fixed << std::setprecision(8);
-  file << "keyframe_stamp,keyframe_id,submap_id,qx,qy,qz,qw,tx,ty,tz\n";
+  keyframe_file << std::fixed << std::setprecision(8);
+  keyframe_file << "keyframe_stamp_ns,keyframe_id,submap_id,qx,qy,qz,qw,tx,ty,tz\n";
 
   for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps();
        ++submap_id) {
@@ -576,19 +578,45 @@ void DistributedLoopClosure::saveSubmapAtlas(const std::string &filename) const 
       // Save to log
       gtsam::Quaternion quat = T_submap_keyframe.rotation().toQuaternion();
       gtsam::Point3 point = T_submap_keyframe.translation();
-      file << keyframe->stamp() << ",";
-      file << keyframe_id << ",";
-      file << submap_id << ",";
-      file << quat.x() << ",";
-      file << quat.y() << ",";
-      file << quat.z() << ",";
-      file << quat.w() << ",";
-      file << point.x() << ",";
-      file << point.y() << ",";
-      file << point.z() << "\n";
+      keyframe_file << keyframe->stamp() << ",";
+      keyframe_file << keyframe_id << ",";
+      keyframe_file << submap_id << ",";
+      keyframe_file << quat.x() << ",";
+      keyframe_file << quat.y() << ",";
+      keyframe_file << quat.z() << ",";
+      keyframe_file << quat.w() << ",";
+      keyframe_file << point.x() << ",";
+      keyframe_file << point.y() << ",";
+      keyframe_file << point.z() << "\n";
     }
   }
-  file.close();
+  keyframe_file.close();
+
+  // Store submaps in the robot's local odometry frame
+  std::string submap_path = directory + "kimera_distributed_submaps.csv";
+  std::ofstream submap_file;
+  submap_file.open(submap_path);
+  if (!submap_file.is_open()) {
+    ROS_ERROR_STREAM("Error opening log file: " << submap_path);
+    return;
+  }
+  submap_file << std::fixed << std::setprecision(8);
+  submap_file << "submap_stamp_ns,submap_id,qx,qy,qz,qw,tx,ty,tz\n";
+  for (int submap_id = 0; submap_id < submap_atlas_ ->numSubmaps(); ++submap_id) {
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    gtsam::Quaternion quat = submap->getPoseInOdomFrame().rotation().toQuaternion();
+    gtsam::Point3 point = submap->getPoseInOdomFrame().translation();
+    submap_file << submap->stamp() << ",";
+    submap_file << submap_id << ",";
+    submap_file << quat.x() << ",";
+    submap_file << quat.y() << ",";
+    submap_file << quat.z() << ",";
+    submap_file << quat.w() << ",";
+    submap_file << point.x() << ",";
+    submap_file << point.y() << ",";
+    submap_file << point.z() << "\n";
+  }
+  submap_file.close();
 }
 
 void DistributedLoopClosure::runDetection() {

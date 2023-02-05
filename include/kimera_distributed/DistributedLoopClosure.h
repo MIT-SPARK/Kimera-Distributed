@@ -355,10 +355,12 @@ class DistributedLoopClosure {
   void savePosesInWorldFrame(const std::string &filename) const;
   /**
    * @brief Save the current submap atlas to file.
-   * This function saves the poses of all keyframes in their respective submaps
-   * @param filename Output file
+   * This function saves two file:
+   * 1) kimera_distributed_keyframes.csv: the poses of all keyframes in their respective submaps
+   * 2) kimera_distributed_submaps.csv: the poses of all submaps in the robot's odometry frame
+   * @param directory Output directory
   */
-  void saveSubmapAtlas(const std::string &filename) const;
+  void saveSubmapAtlas(const std::string &directory) const;
   /**
    * @brief Load keyframe poses from a file
    * @param pose_file

@@ -49,6 +49,7 @@
       <arg name="max_delayed_iterations"           value="0"  />
       <arg name="max_distributed_init_steps"       value="20" />
       <arg name="synchronize_measurements"         value="false" />
+      <arg name="visualize_loop_closures"          value="false" />
       <arg name="log_directory"                    value="$(arg log_output_path)/" />
     </include> 
 

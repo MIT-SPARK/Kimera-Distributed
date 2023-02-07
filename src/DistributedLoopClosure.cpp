@@ -660,7 +660,14 @@ void DistributedLoopClosure::runComms() {
     if(ros::Time::now().toSec() > next_loop_sync_time_.toSec()) {
       initializeLoopPublishers();
       publishQueuedLoops();
-      next_loop_sync_time_ += ros::Duration(loop_sync_sleep_time_);
+
+      // Generate a random sleep time 
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_real_distribution<double> distribution(0.5 * loop_sync_sleep_time_, 
+                                                          1.5 * loop_sync_sleep_time_);
+      double sleep_time = distribution(gen);
+      next_loop_sync_time_ += ros::Duration(sleep_time);
     }
 
     // Once a while publish latest BoW vector 

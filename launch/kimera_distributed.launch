@@ -17,6 +17,10 @@
   <!-- BoW vector publishing for Kimera-Multi -->
   <arg name="bow_skip_num"            default="2" />
 
+  <!-- Offline mode -->
+  <arg name="run_offline"             default="false"/>
+  <arg name="offline_dir"             default=""/>
+
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
   <arg name="log_output" default="true" />
@@ -32,7 +36,8 @@
       <arg name="num_robots"                value="$(arg num_robots)" />
       <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="debug"                     value="$(arg debug)" />
-      <arg name="run_offline"               value="false" />
+      <arg name="run_offline"               value="$(arg run_offline)" />
+      <arg name="offline_dir"               value="$(arg offline_dir)" />
       <arg name="bow_skip_num"              value="$(arg bow_skip_num)" />
       <arg name="bow_batch_size"            value="50" />
       <arg name="vlc_batch_size"            value="10" />

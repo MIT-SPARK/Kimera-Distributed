@@ -21,6 +21,7 @@
   <arg name="launch_prefix"      value=""    unless="$(arg debug)"/>
   <!-- Run offline -->
   <arg name="run_offline"          default="false" />
+  <arg name="offline_dir"          default=""/>
   <!-- Submap setup -->
   <arg name="max_submap_size"      default="100" />
   <arg name="max_submap_distance"  default="0.5" />
@@ -43,6 +44,7 @@
     <param name="comm_sleep_time"        value="$(arg comm_sleep_time)"/>
     <param name="detection_batch_size"   value="$(arg detection_batch_size)" />
     <param name="run_offline"            value="$(arg run_offline)" />
+    <param name="offline_dir"            value="$(arg offline_dir)" />
     <param name="max_submap_size"        value="$(arg max_submap_size)"/>
     <param name="max_submap_distance"    value="$(arg max_submap_distance)"/>
     <rosparam file="$(find kimera_distributed)/params/visual_loopclosure_$(arg dataset_name).yaml"/>

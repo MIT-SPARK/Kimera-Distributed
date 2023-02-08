@@ -1161,6 +1161,11 @@ bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGrap
   CHECK_EQ(request.robot_id, my_id_);
   response.pose_graph = getSubmapPoseGraph();
 
+  if (run_offline_ && !offline_keyframe_loop_closures_.empty()) {
+    ROS_WARN("[requestPoseGraphCallback] Found %zu offline loop closures not yet processed.", 
+      offline_keyframe_loop_closures_.size());
+  }
+
   return true;
 }
 

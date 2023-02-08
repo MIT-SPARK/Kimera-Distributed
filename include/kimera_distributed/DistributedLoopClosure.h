@@ -79,6 +79,10 @@ class DistributedLoopClosure {
   // Edge IDs of all established loop closures
   std::set<lcd::EdgeID, lcd::CompareEdgeID> submap_loop_closures_ids_;
 
+  // Data structures for offline mode
+  gtsam::NonlinearFactorGraph offline_keyframe_loop_closures_;
+  std::map<lcd::RobotPoseId, pose_graph_tools::VLCFrameMsg> offline_robot_pose_msg_;
+
   // List of potential loop closures
   // that require to request VLC frames
   std::mutex vlc_service_mutex_;
@@ -371,7 +375,14 @@ class DistributedLoopClosure {
    * @param lc_file
    */
   void loadLoopClosuresFromFile(const std::string &lc_file);
-
+  /**
+   * @brief Publish submap information required by offline mode
+  */
+  void publishSubmapOfflineInfo();
+  /**
+   * @brief Process loop closures loaded from file
+  */
+  void processOfflineLoopClosures();
   /**
    * Randomly sleep from (min_sec, max_sec) seconds
    */

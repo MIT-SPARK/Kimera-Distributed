@@ -280,7 +280,10 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     loadOdometryFromFile(offline_dir + "odometry_poses.csv");
     // Load original loop closures between keyframes
     loadLoopClosuresFromFile(offline_dir + "loop_closures.csv");
-    // TODO: publish submap poses
+    // publish submap poses
+    for (int count = 0; count < 3; ++count) {
+      publishSubmapOfflineInfo();
+    }
   } else {
     // Run online. In this case initialize log files to record keyframe poses and loop closures.
     if (log_output_) {
@@ -1419,8 +1422,14 @@ void DistributedLoopClosure::vlcResponsesCallback(
     if (frame.robot_id_ != my_id_) {
       received_vlc_bytes_.push_back(computeVLCFramePayloadBytes(frame_msg));
     }
+    if (run_offline_) {
+      offline_robot_pose_msg_[vertex_id] = frame_msg;
+    }
   }
   // ROS_INFO("Received %d VLC frames. ", msg->frames.size());
+  if (run_offline_) {
+    processOfflineLoopClosures();
+  }
 }
 
 void DistributedLoopClosure::internalVLCCallback(
@@ -1787,6 +1796,75 @@ void DistributedLoopClosure::randomSleep(double min_sec, double max_sec) {
   double sleep_time = distribution(gen);
   // ROS_INFO("Sleep %f sec...", sleep_time);
   ros::Duration(sleep_time).sleep();
+}
+
+void DistributedLoopClosure::publishSubmapOfflineInfo() {
+  pose_graph_tools::VLCFrames msg;
+  // Fill in keyframe poses in submaps
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps();
+       ++submap_id) {
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    for (const int keyframe_id : submap->getKeyframeIDs()) {
+      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
+      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
+      pose_graph_tools::VLCFrameMsg frame_msg;
+      frame_msg.robot_id = my_id_;
+      frame_msg.pose_id = keyframe_id;
+      frame_msg.submap_id = submap_id;
+      frame_msg.T_submap_pose = GtsamPoseToRos(T_submap_keyframe);
+      lcd::RobotPoseId vertex_id(my_id_, keyframe_id);
+      offline_robot_pose_msg_[vertex_id] = frame_msg;
+      msg.frames.push_back(frame_msg);
+    }
+  }
+  for (lcd::RobotId robot_id = 0; robot_id < my_id_; ++robot_id) {
+    msg.destination_robot_id = robot_id;
+    vlc_responses_pub_.publish(msg);
+    ros::Duration(1).sleep();
+  }
+}
+
+void DistributedLoopClosure::processOfflineLoopClosures() {
+  gtsam::NonlinearFactorGraph remaining_loop_closures_;
+  size_t num_loops_processed = 0;
+  for (const auto &factor : offline_keyframe_loop_closures_) {
+    gtsam::Symbol front(factor->front());
+    gtsam::Symbol back(factor->back());
+    lcd::PoseId pose_from = front.index();
+    lcd::PoseId pose_to = back.index();
+    lcd::RobotId robot_from = robot_prefix_to_id.at(front.chr());
+    lcd::RobotId robot_to = robot_prefix_to_id.at(back.chr());
+    lcd::RobotPoseId vertex_from(robot_from, pose_from);
+    lcd::RobotPoseId vertex_to(robot_to, pose_to);
+    if (offline_robot_pose_msg_.find(vertex_from) != offline_robot_pose_msg_.end() && 
+        offline_robot_pose_msg_.find(vertex_to) != offline_robot_pose_msg_.end()) {
+      num_loops_processed++;
+      const auto &msg_from = offline_robot_pose_msg_.at(vertex_from);
+      const auto &msg_to = offline_robot_pose_msg_.at(vertex_to);
+      const lcd::EdgeID submap_edge_id(robot_from, msg_from.submap_id, robot_to, msg_to.submap_id);
+      bool loop_exist = (submap_loop_closures_ids_.find(submap_edge_id) != submap_loop_closures_ids_.end());
+      if (!loop_exist) {
+        const gtsam::BetweenFactor<gtsam::Pose3>& factor_pose3 = *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factor);
+        submap_loop_closures_ids_.emplace(submap_edge_id);
+        // Extract relative transformation between submaps
+        gtsam::Pose3 T_s1_f1 = RosPoseToGtsam(msg_from.T_submap_pose);
+        gtsam::Pose3 T_s2_f2 = RosPoseToGtsam(msg_to.T_submap_pose);
+        gtsam::Pose3 T_f1_f2 = factor_pose3.measured();
+        gtsam::Pose3 T_s1_s2 = T_s1_f1 * T_f1_f2 * (T_s2_f2.inverse());
+        // Add new loop to queue for synchronization with other robots
+        gtsam::Symbol submap_from(robot_id_to_prefix.at(robot_from), msg_from.submap_id);
+        gtsam::Symbol submap_to(robot_id_to_prefix.at(robot_to), msg_to.submap_id);
+        static const gtsam::SharedNoiseModel& noise = gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+        submap_loop_closures_queue_[submap_edge_id] = gtsam::BetweenFactor<gtsam::Pose3>(
+            submap_from, submap_to, T_s1_s2, noise);
+      }
+    } else {
+      // Keyframe info is not yet available
+      remaining_loop_closures_.add(factor);
+    }
+  }
+  ROS_INFO("Processed %zu offline loop closures.", num_loops_processed);
+  offline_keyframe_loop_closures_ = remaining_loop_closures_;
 }
 
 }  // namespace kimera_distributed

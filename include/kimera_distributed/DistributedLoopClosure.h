@@ -365,7 +365,7 @@ class DistributedLoopClosure {
    * @brief Load keyframe poses from a file
    * @param pose_file
    */
-  void loadKeyframeFromFile(const std::string &pose_file);
+  void loadOdometryFromFile(const std::string &pose_file);
   /**
    * @brief Load loop closures (between keyframes from file)
    * @param lc_file

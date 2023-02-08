@@ -271,9 +271,16 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
       << "\n");
 
   if (run_offline_) {
-    // Run offline. Load keyframe and loop closures from file.
-    loadKeyframeFromFile(log_output_dir_ + "keyframe_poses.csv");
-    loadLoopClosuresFromFile(log_output_dir_ + "loop_closures.csv");
+    std::string offline_dir;
+    if(!ros::param::get("~offline_dir", offline_dir)) {
+      ROS_ERROR("Offline directory is missing!");
+      ros::shutdown();
+    }
+    // Load odometry
+    loadOdometryFromFile(offline_dir + "odometry_poses.csv");
+    // Load original loop closures between keyframes
+    loadLoopClosuresFromFile(offline_dir + "loop_closures.csv");
+    // TODO: publish submap poses
   } else {
     // Run online. In this case initialize log files to record keyframe poses and loop closures.
     if (log_output_) {
@@ -1640,7 +1647,7 @@ void DistributedLoopClosure::logLoopClosure(const gtsam::Symbol &symbol_src,
   }
 }
 
-void DistributedLoopClosure::loadKeyframeFromFile(const std::string &pose_file) {
+void DistributedLoopClosure::loadOdometryFromFile(const std::string &pose_file) {
   std::ifstream infile(pose_file);
   if (!infile.is_open()) {
     ROS_ERROR("Could not open specified file!");
@@ -1650,6 +1657,7 @@ void DistributedLoopClosure::loadKeyframeFromFile(const std::string &pose_file) 
   size_t num_poses_read = 0;
 
   // Scalars that will be filled
+  uint64_t stamp_ns;
   uint32_t robot_id;
   uint32_t frame_id;
   double qx, qy, qz, qw;
@@ -1665,6 +1673,8 @@ void DistributedLoopClosure::loadKeyframeFromFile(const std::string &pose_file) 
   while (std::getline(infile, line)) {
     std::istringstream ss(line);
 
+    std::getline(ss, token, ',');
+    stamp_ns = std::stoull(token);
     std::getline(ss, token, ',');
     robot_id = std::stoi(token);
     std::getline(ss, token, ',');
@@ -1697,8 +1707,7 @@ void DistributedLoopClosure::loadKeyframeFromFile(const std::string &pose_file) 
                            << submap_atlas_->numKeyframes()
                            << ", received=" << frame_id);
     }
-    // TODO(Yun) read and write timestamp
-    submap_atlas_->createKeyframe(frame_id, T_odom_keyframe, 0);
+    submap_atlas_->createKeyframe(frame_id, T_odom_keyframe, stamp_ns);
     num_poses_read++;
   }
   infile.close();
@@ -1706,16 +1715,11 @@ void DistributedLoopClosure::loadKeyframeFromFile(const std::string &pose_file) 
 }
 
 void DistributedLoopClosure::loadLoopClosuresFromFile(const std::string &lc_file) {
-  if (submap_atlas_->params().max_submap_size != 1) {
-    ROS_ERROR("Loading loop closure from file only supports max_submap_size=1");
-    ros::shutdown();
-  }
   std::ifstream infile(lc_file);
   if (!infile.is_open()) {
     ROS_ERROR("Could not open specified file!");
     ros::shutdown();
   }
-
   size_t num_measurements_read = 0;
 
   // Scalars that will be filled
@@ -1758,14 +1762,14 @@ void DistributedLoopClosure::loadLoopClosuresFromFile(const std::string &lc_file
     std::getline(ss, token, ',');
     tz = std::stod(token);
 
-    gtsam::Symbol submap_from(robot_id_to_prefix.at(robot_from), pose_from);
-    gtsam::Symbol submap_to(robot_id_to_prefix.at(robot_to), pose_to);
+    gtsam::Symbol keyframe_from(robot_id_to_prefix.at(robot_from), pose_from);
+    gtsam::Symbol keyframe_to(robot_id_to_prefix.at(robot_to), pose_to);
     gtsam::Pose3 T_f1_f2;
     T_f1_f2 = gtsam::Pose3(gtsam::Rot3(qw,qx,qy,qz), gtsam::Point3(tx,ty,tz));
     static const gtsam::SharedNoiseModel& noise =
         gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
-    submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
-        submap_from, submap_to, T_f1_f2, noise));
+    offline_keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+        keyframe_from, keyframe_to, T_f1_f2, noise));
     num_measurements_read++;
   }
   infile.close();

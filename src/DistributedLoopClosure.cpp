@@ -1863,7 +1863,7 @@ void DistributedLoopClosure::processOfflineLoopClosures() {
       remaining_loop_closures_.add(factor);
     }
   }
-  ROS_INFO("Processed %zu offline loop closures.", num_loops_processed);
+  ROS_INFO("Processed %zu offline loop closures, remaining %zu.", num_loops_processed, remaining_loop_closures_.size());
   offline_keyframe_loop_closures_ = remaining_loop_closures_;
 }
 

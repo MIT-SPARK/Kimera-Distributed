@@ -347,11 +347,9 @@ class DistributedLoopClosure {
   void logOdometryPose(const gtsam::Symbol &symbol_frame, const gtsam::Pose3 &T_odom_frame, uint64_t ts);
   /**
    * @brief Log a loop closure to file
-   * @param symbol_src
-   * @param symbol_dst
-   * @param T_src_dst
+   * @param keyframe_edge The loop closure between two keyframes
    */
-  void logLoopClosure(const gtsam::Symbol &symbol_src, const gtsam::Symbol &symbol_dst, const gtsam::Pose3 &T_src_dst);
+  void logLoopClosure(const lcd::VLCEdge &keyframe_edge);
   /**
    * @brief Save the latest pose estimates to the world frame
    * @brief filename Output file

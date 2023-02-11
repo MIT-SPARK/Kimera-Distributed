@@ -1032,9 +1032,15 @@ void DistributedLoopClosure::verifyLoopCallback() {
         // Perform stereo RANSAC, using relative rotation estimate from mono RANSAC as prior
         if (lcd_->recoverPose(
                 vertex_query, vertex_match, &i_query, &i_match, &T_query_match, &monoR_query_match)) {
+          size_t stereo_inliers_count = i_query.size();
+          // Get loop closure between keyframes (for logging purpose)
+          lcd::VLCEdge keyframe_edge(vertex_query, vertex_match, T_query_match);
+          keyframe_edge.normalized_bow_score_ = match_score;
+          keyframe_edge.mono_inliers_ = mono_inliers_count;
+          keyframe_edge.stereo_inliers_ = stereo_inliers_count;
+          keyframe_edge.stamp_ns_ = ros::Time::now().toNSec();
           const auto frame1 = lcd_->getVLCFrame(vertex_query);
           const auto frame2 = lcd_->getVLCFrame(vertex_match);
-          // Get loop closure between keyframes (for debug purpose)
           gtsam::Symbol keyframe_from(robot_id_to_prefix.at(frame1.robot_id_), frame1.pose_id_);
           gtsam::Symbol keyframe_to(robot_id_to_prefix.at(frame2.robot_id_), frame2.pose_id_);
           static const gtsam::SharedNoiseModel& noise =
@@ -1062,7 +1068,7 @@ void DistributedLoopClosure::verifyLoopCallback() {
             // Logging
             keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 keyframe_from, keyframe_to, T_query_match, noise));
-            logLoopClosure(keyframe_from, keyframe_to, T_query_match);
+            logLoopClosure(keyframe_edge);
             num_inter_robot_loops_++;
             lcd::RobotId other_robot = 0;
             if (vertex_query.first == my_id_) {
@@ -1072,7 +1078,6 @@ void DistributedLoopClosure::verifyLoopCallback() {
             }
             num_loops_with_robot_[other_robot] += 1;
           }
-          size_t stereo_inliers_count = i_query.size();
           ROS_INFO(
               "Verified loop (%lu,%lu)-(%lu,%lu). Normalized BoW score: %f. Mono inliers: %zu. Stereo inliers: %zu.",
               vertex_query.first,
@@ -1572,7 +1577,7 @@ void DistributedLoopClosure::createLogFiles() {
   if (!loop_closure_file_.is_open())
     ROS_ERROR_STREAM("Error opening log file: " << inter_lc_file_path);
   loop_closure_file_ << std::fixed << std::setprecision(15);
-  loop_closure_file_ << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz\n";
+  loop_closure_file_ << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz,norm_bow_score,mono_inliers,stereo_inliers,stamp_ns\n";
   loop_closure_file_.flush();
 
   lcd_log_file_.open(lcd_file_path);
@@ -1636,16 +1641,14 @@ void DistributedLoopClosure::logOdometryPose(const gtsam::Symbol &symbol_frame, 
   }
 }
 
-void DistributedLoopClosure::logLoopClosure(const gtsam::Symbol &symbol_src,
-                                            const gtsam::Symbol &symbol_dst,
-                                            const gtsam::Pose3 &T_src_dst) {
+void DistributedLoopClosure::logLoopClosure(const lcd::VLCEdge &keyframe_edge) {
   if (loop_closure_file_.is_open()) {
-    gtsam::Quaternion quat = T_src_dst.rotation().toQuaternion();
-    gtsam::Point3 point = T_src_dst.translation();
-    const uint32_t robot_src = robot_prefix_to_id.at(symbol_src.chr());
-    const uint32_t frame_src = symbol_src.index();
-    const uint32_t robot_dst = robot_prefix_to_id.at(symbol_dst.chr());
-    const uint32_t frame_dst = symbol_dst.index();
+    gtsam::Quaternion quat = keyframe_edge.T_src_dst_.rotation().toQuaternion();
+    gtsam::Point3 point = keyframe_edge.T_src_dst_.translation();
+    const lcd::RobotId robot_src = keyframe_edge.vertex_src_.first;
+    const lcd::PoseId frame_src = keyframe_edge.vertex_src_.second;
+    const lcd::RobotId robot_dst = keyframe_edge.vertex_dst_.first; 
+    const lcd::PoseId frame_dst = keyframe_edge.vertex_dst_.second;
     loop_closure_file_ << robot_src << ",";
     loop_closure_file_ << frame_src << ",";
     loop_closure_file_ << robot_dst << ",";
@@ -1656,7 +1659,11 @@ void DistributedLoopClosure::logLoopClosure(const gtsam::Symbol &symbol_src,
     loop_closure_file_ << quat.w() << ",";
     loop_closure_file_ << point.x() << ",";
     loop_closure_file_ << point.y() << ",";
-    loop_closure_file_ << point.z() << "\n";
+    loop_closure_file_ << point.z() << ",";
+    loop_closure_file_ << keyframe_edge.normalized_bow_score_ << ",";
+    loop_closure_file_ << keyframe_edge.mono_inliers_ << ",";
+    loop_closure_file_ << keyframe_edge.stereo_inliers_ << ",";
+    loop_closure_file_ << keyframe_edge.stamp_ns_ << "\n";
     loop_closure_file_.flush();
   }
 }

@@ -1166,9 +1166,17 @@ bool DistributedLoopClosure::requestPoseGraphCallback(pose_graph_tools::PoseGrap
   CHECK_EQ(request.robot_id, my_id_);
   response.pose_graph = getSubmapPoseGraph();
 
-  if (run_offline_ && !offline_keyframe_loop_closures_.empty()) {
-    ROS_WARN("[requestPoseGraphCallback] Found %zu offline loop closures not yet processed.", 
-      offline_keyframe_loop_closures_.size());
+  if (run_offline_) {
+    if (!offline_keyframe_loop_closures_.empty()) {
+      ROS_WARN("[requestPoseGraphCallback] %zu offline loop closures not yet processed.", 
+        offline_keyframe_loop_closures_.size());
+      return false;
+    }
+    if (!submap_loop_closures_queue_.empty()) {
+      ROS_WARN("[requestPoseGraphCallback] %zu loop closures to be synchronized.", 
+        submap_loop_closures_queue_.size());
+      return false;
+    }
   }
 
   return true;
@@ -1281,10 +1289,8 @@ void DistributedLoopClosure::loopClosureCallback(const pose_graph_tools::LoopClo
     ack_msg.frame_src.push_back(edge.key_from);
     ack_msg.frame_dst.push_back(edge.key_to);
   }
-  if (loops_added > 0) {
-    ROS_WARN("Received %zu new loop closures from robot %i.", loops_added, msg->publishing_robot_id);
-    loop_ack_pub_.publish(ack_msg);
-  }
+  ROS_WARN("Received %zu loop closures from robot %i (%zu new).", msg->edges.size(), msg->publishing_robot_id, loops_added);
+  loop_ack_pub_.publish(ack_msg);
 }
 
 void DistributedLoopClosure::loopAcknowledgementCallback(const pose_graph_tools::LoopClosuresAckConstPtr &msg) {

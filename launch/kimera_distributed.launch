@@ -17,6 +17,14 @@
   <!-- BoW vector publishing for Kimera-Multi -->
   <arg name="bow_skip_num"            default="2" />
 
+  <!-- Loop closure sync settings -->
+  <arg name="loop_batch_size"         default="50" />
+  <arg name="loop_sync_sleep_time"    default="10" />
+
+  <!-- Submap settings -->
+  <arg name="max_submap_distance"     default="2" />
+  <arg name="max_submap_size"         default="100" />
+
   <!-- Offline mode -->
   <arg name="run_offline"             default="false"/>
   <arg name="offline_dir"             default=""/>
@@ -41,12 +49,12 @@
       <arg name="bow_skip_num"              value="$(arg bow_skip_num)" />
       <arg name="bow_batch_size"            value="50" />
       <arg name="vlc_batch_size"            value="10" />
-      <arg name="loop_batch_size"           value="50" />
-      <arg name="loop_sync_sleep_time"      value="10" />
+      <arg name="loop_batch_size"           value="$(arg loop_batch_size)" />
+      <arg name="loop_sync_sleep_time"      value="$(arg loop_sync_sleep_time)" />
       <arg name="comm_sleep_time"           value="5"  />
       <arg name="detection_batch_size"      value="50" />
-      <arg name="max_submap_size"           value="100" />
-      <arg name="max_submap_distance"       value="2.0" />
+      <arg name="max_submap_size"           value="$(arg max_submap_size)" />
+      <arg name="max_submap_distance"       value="$(arg max_submap_distance)" />
       <arg name="robot_names_config"        value="$(arg robot_names_config)"/>
       <arg name="vocab_path"                value="$(arg vocab_path)"/>
       <arg name="log_output_path"           value="$(arg log_output_path)/"/>

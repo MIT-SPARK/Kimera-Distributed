@@ -16,6 +16,9 @@
   <arg name="log_output" default="true" />
   <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
 
+  <!-- DPGO settings -->
+  <arg name="rel_change_tol"     default="0.2" />
+
   <!-- Launch robot in its unique namespace -->
   <group ns="$(arg robot_name)">
     <!-- Launch dpgo_ros -->
@@ -33,7 +36,7 @@
       <arg name="RTR_iterations"                   value="3" />
       <arg name="RTR_tCG_iterations"               value="50" />
       <arg name="RTR_gradnorm_tol"                 value="1.0" />
-      <arg name="relative_change_tolerance"        value="0.2" />
+      <arg name="relative_change_tolerance"        value="$(arg rel_change_tol)" />
       <arg name="robust_cost_type"                 value="GNC_TLS" />
       <arg name="GNC_use_probability"              value="false" />
       <arg name="GNC_quantile"                     value="0.9" />

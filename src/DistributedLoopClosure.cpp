@@ -436,6 +436,7 @@ void DistributedLoopClosure::localPoseGraphCallback(
     // Read loop closure between the keyframes
     lcd::VLCEdge keyframe_loop_closure;
     VLCEdgeFromMsg(pg_edge, &keyframe_loop_closure);
+    logLoopClosure(keyframe_loop_closure);
     const auto T_f1_f2 = keyframe_loop_closure.T_src_dst_;
     static const gtsam::SharedNoiseModel& noise =
         gtsam::noiseModel::Isotropic::Variance(6, 1e-2);

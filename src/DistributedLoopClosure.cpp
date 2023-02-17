@@ -513,10 +513,19 @@ void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
   }
   backend_update_count_++;
   ROS_INFO("Received DPGO updates (current count: %i).", backend_update_count_);
+
+  if (run_offline_) {
+    auto elapsed_time = ros::Time::now() - start_time_;
+    int elapsed_sec = int(elapsed_time.toSec());
+    std::string file_path = log_output_dir_ + "kimera_distributed_poses_" +
+                            std::to_string(elapsed_sec) + ".csv";
+    savePosesInWorldFrame(file_path);
+  }
 }
 
 void DistributedLoopClosure::logTimerCallback(const ros::TimerEvent &event) {
   if (!log_output_) return;
+  if (run_offline_) return;
   logLcdStat();
   // Save latest submap atlas
   saveSubmapAtlas(log_output_dir_);

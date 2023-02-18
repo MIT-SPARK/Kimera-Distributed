@@ -516,6 +516,7 @@ void DistributedLoopClosure::dpgoCallback(const nav_msgs::PathConstPtr &msg) {
   ROS_INFO("Received DPGO updates (current count: %i).", backend_update_count_);
 
   if (run_offline_) {
+    saveSubmapAtlas(log_output_dir_);
     auto elapsed_time = ros::Time::now() - start_time_;
     int elapsed_sec = int(elapsed_time.toSec());
     std::string file_path = log_output_dir_ + "kimera_distributed_poses_" +

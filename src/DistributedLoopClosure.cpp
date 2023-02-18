@@ -284,6 +284,7 @@ DistributedLoopClosure::DistributedLoopClosure(const ros::NodeHandle& n)
     for (int count = 0; count < 3; ++count) {
       publishSubmapOfflineInfo();
     }
+    processOfflineLoopClosures();
   } else {
     // Run online. In this case initialize log files to record keyframe poses and loop closures.
     if (log_output_) {

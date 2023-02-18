@@ -19,6 +19,7 @@
   <!-- DPGO settings -->
   <arg name="RTR_gradnorm_tol"   default="1.0" />
   <arg name="rel_change_tol"     default="0.2" />
+  <arg name="gnc_inner_iters"    default="50" />
 
   <!-- Launch robot in its unique namespace -->
   <group ns="$(arg robot_name)">
@@ -48,10 +49,11 @@
       <arg name="robust_opt_num_weight_updates"    value="3" />
       <arg name="robust_opt_num_resets"            value="3" />
       <arg name="robust_opt_min_convergence_ratio" value="0.0" />
-      <arg name="robust_opt_inner_iters_per_robot" value="50" />
+      <arg name="robust_opt_inner_iters_per_robot" value="$(arg gnc_inner_iters)" />
       <arg name="inter_update_sleep_time"          value="0.1" />
       <arg name="max_delayed_iterations"           value="0"  />
       <arg name="max_distributed_init_steps"       value="20" />
+      <arg name="timeout_threshold"                value="15" />
       <arg name="synchronize_measurements"         value="false" />
       <arg name="visualize_loop_closures"          value="false" />
       <arg name="enable_recovery"                  value="false" />

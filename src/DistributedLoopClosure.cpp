@@ -1044,6 +1044,7 @@ void DistributedLoopClosure::verifyLoopCallback() {
         // Perform stereo RANSAC, using relative rotation estimate from mono RANSAC as prior
         if (lcd_->recoverPose(
                 vertex_query, vertex_match, &i_query, &i_match, &T_query_match, &monoR_query_match)) {
+
           size_t stereo_inliers_count = i_query.size();
           // Get loop closure between keyframes (for logging purpose)
           lcd::VLCEdge keyframe_edge(vertex_query, vertex_match, T_query_match);
@@ -1057,6 +1058,19 @@ void DistributedLoopClosure::verifyLoopCallback() {
           gtsam::Symbol keyframe_to(robot_id_to_prefix.at(frame2.robot_id_), frame2.pose_id_);
           static const gtsam::SharedNoiseModel& noise =
               gtsam::noiseModel::Isotropic::Variance(6, 1e-2);
+
+          // Log loop closure between keyframes
+          keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+              keyframe_from, keyframe_to, T_query_match, noise));
+          logLoopClosure(keyframe_edge);
+          num_inter_robot_loops_++;
+          lcd::RobotId other_robot = 0;
+          if (vertex_query.first == my_id_) {
+            other_robot = vertex_match.first;
+          } else {
+            other_robot = vertex_query.first;
+          }
+          num_loops_with_robot_[other_robot] += 1;
 
           // Get loop closure between the corresponding two submaps
           const auto T_s1_f1 = frame1.T_submap_pose_;
@@ -1086,18 +1100,6 @@ void DistributedLoopClosure::verifyLoopCallback() {
                 submap_from, submap_to, T_s1_s2, noise);
             // submap_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
                 // submap_from, submap_to, T_s1_s2, noise));
-            // Logging
-            keyframe_loop_closures_.add(gtsam::BetweenFactor<gtsam::Pose3>(
-                keyframe_from, keyframe_to, T_query_match, noise));
-            logLoopClosure(keyframe_edge);
-            num_inter_robot_loops_++;
-            lcd::RobotId other_robot = 0;
-            if (vertex_query.first == my_id_) {
-              other_robot = vertex_match.first;
-            } else {
-              other_robot = vertex_query.first;
-            }
-            num_loops_with_robot_[other_robot] += 1;
           }
           ROS_INFO(
               "Verified loop (%lu,%lu)-(%lu,%lu). Normalized BoW score: %f. Mono inliers: %zu. Stereo inliers: %zu.",

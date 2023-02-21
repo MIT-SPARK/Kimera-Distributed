@@ -17,9 +17,10 @@
   <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
 
   <!-- DPGO settings -->
-  <arg name="RTR_gradnorm_tol"   default="1.0" />
-  <arg name="rel_change_tol"     default="0.2" />
-  <arg name="gnc_inner_iters"    default="50" />
+  <arg name="RTR_gradnorm_tol"            default="1.0" />
+  <arg name="rel_change_tol"              default="0.2" />
+  <arg name="gnc_inner_iters"             default="50" />
+  <arg name="synchronize_measurements"    default="false" />
 
   <!-- Launch robot in its unique namespace -->
   <group ns="$(arg robot_name)">
@@ -54,7 +55,7 @@
       <arg name="max_delayed_iterations"           value="0"  />
       <arg name="max_distributed_init_steps"       value="20" />
       <arg name="timeout_threshold"                value="15" />
-      <arg name="synchronize_measurements"         value="false" />
+      <arg name="synchronize_measurements"         value="$(arg synchronize_measurements)" />
       <arg name="visualize_loop_closures"          value="false" />
       <arg name="enable_recovery"                  value="false" />
       <arg name="log_directory"                    value="$(arg log_output_path)/" />

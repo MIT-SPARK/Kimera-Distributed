@@ -17,6 +17,8 @@
   <!-- BoW vector publishing for Kimera-Multi -->
   <arg name="bow_skip_num"            default="2" />
 
+  <!-- Loop Closure alpha -->
+  <arg name="alpha"                   default="0.5"/>
   <!-- Loop closure sync settings -->
   <arg name="loop_batch_size"         default="50" />
   <arg name="loop_sync_sleep_time"    default="10" />
@@ -47,6 +49,7 @@
       <arg name="run_offline"               value="$(arg run_offline)" />
       <arg name="offline_dir"               value="$(arg offline_dir)" />
       <arg name="bow_skip_num"              value="$(arg bow_skip_num)" />
+      <arg name="alpha"                     value="$(arg alpha)" />
       <arg name="bow_batch_size"            value="50" />
       <arg name="vlc_batch_size"            value="10" />
       <arg name="loop_batch_size"           value="$(arg loop_batch_size)" />

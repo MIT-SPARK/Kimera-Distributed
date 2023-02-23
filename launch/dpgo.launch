@@ -17,7 +17,7 @@
   <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
 
   <!-- DPGO settings -->
-  <arg name="RTR_gradnorm_tol"            default="1.0" />
+  <arg name="RTR_gradnorm_tol"            default="0.5" />
   <arg name="rel_change_tol"              default="0.2" />
   <arg name="gnc_inner_iters"             default="50" />
   <arg name="synchronize_measurements"    default="false" />

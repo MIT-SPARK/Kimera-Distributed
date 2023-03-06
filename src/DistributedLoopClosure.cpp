@@ -8,11 +8,12 @@
 #include <kimera_distributed/prefix.h>
 
 #include <DBoW2/DBoW2.h>
+#include <glog/logging.h>
 #include <gtsam/geometry/Pose3.h>
+#include <kimera_multi_lcd/utils.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/VLCFrameQuery.h>
 #include <pose_graph_tools/utils.h>
-#include <glog/logging.h>
 #include <ros/console.h>
 #include <ros/ros.h>
 
@@ -801,8 +802,8 @@ void DistributedLoopClosure::publishBowVectors() {
       pose_graph_tools::BowQuery query_msg;
       query_msg.robot_id = my_id_;
       query_msg.pose_id = pose_id;
-      pose_graph_tools::BowVectorToMsg(lcd_->getBoWVector(requested_robot_pose_id),
-                                       &(query_msg.bow_vector));
+      kimera_multi_lcd::BowVectorToMsg(
+          lcd_->getBoWVector(requested_robot_pose_id), &(query_msg.bow_vector));
       msg.queries.push_back(query_msg);
     }
     bow_response_pub_.publish(msg);
@@ -820,7 +821,7 @@ void DistributedLoopClosure::publishLatestBowVector() {
     pose_graph_tools::BowQuery query_msg;
     query_msg.robot_id = my_id_;
     query_msg.pose_id = pose_id;
-    pose_graph_tools::BowVectorToMsg(lcd_->getBoWVector(latest_id),
+    kimera_multi_lcd::BowVectorToMsg(lcd_->getBoWVector(latest_id),
                                      &(query_msg.bow_vector));
 
     pose_graph_tools::BowQueries msg;
@@ -936,7 +937,7 @@ void DistributedLoopClosure::detectLoopCallback() {
     lcd::PoseId query_pose = msg.pose_id;
     lcd::RobotPoseId query_vertex(query_robot, query_pose);
     DBoW2::BowVector bow_vec;
-    pose_graph_tools::BowVectorFromMsg(msg.bow_vector, &bow_vec);
+    kimera_multi_lcd::BowVectorFromMsg(msg.bow_vector, &bow_vec);
 
     if (query_pose <= 2 * bow_skip_num_) {
       // We cannot detect loop for the very first few frames

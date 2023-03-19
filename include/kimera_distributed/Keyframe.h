@@ -37,52 +37,45 @@ class Keyframe {
    * @brief Get submap
    * @return
    */
-  std::shared_ptr<Submap> getSubmap() const {
-    return submap_;
-  }
+  std::shared_ptr<Submap> getSubmap() const { return submap_; }
   /**
    * @brief Set submap
    * @param submap
    */
-  void setSubmap(const std::shared_ptr<Submap> &submap) {
-    submap_ = submap;
-  }
+  void setSubmap(const std::shared_ptr<Submap>& submap) { submap_ = submap; }
   /**
    * @brief Get the pose of this frame in the submap reference frame
    * @return
    */
-  gtsam::Pose3 getPoseInSubmapFrame() const {
-    return T_submap_keyframe_;
-  }
+  gtsam::Pose3 getPoseInSubmapFrame() const { return T_submap_keyframe_; }
   /**
    * @brief Set the pose of this keyframe in the submap frame
    * @param T_submap_keyframe
    */
-  void setPoseInSubmapFrame(const gtsam::Pose3 &T_submap_keyframe) {
+  void setPoseInSubmapFrame(const gtsam::Pose3& T_submap_keyframe) {
     T_submap_keyframe_ = T_submap_keyframe;
   }
   /**
    * @brief Get the pose of this keyframe in the odometry frame
    * @return
    */
-  gtsam::Pose3 getPoseInOdomFrame() const {
-    return T_odom_keyframe_;
-  }
+  gtsam::Pose3 getPoseInOdomFrame() const { return T_odom_keyframe_; }
   /**
    * @brief Set pose of this keyframe in the odometry frame
    * @param T_odom_keyframe
    */
-  void setPoseInOdomFrame(const gtsam::Pose3 &T_odom_keyframe) {
+  void setPoseInOdomFrame(const gtsam::Pose3& T_odom_keyframe) {
     T_odom_keyframe_ = T_odom_keyframe;
   }
+
  private:
-  const int id_;  // unique id associated with this keyframe
-  const uint64_t stamp_;  // const timestamp of this keyframe in ns
+  const int id_;                    // unique id associated with this keyframe
+  const uint64_t stamp_;            // const timestamp of this keyframe in ns
   std::shared_ptr<Submap> submap_;  // pointer to the submap that contains this KF
   gtsam::Pose3 T_odom_keyframe_;    // pose of this keyframe in the odometry frame
   gtsam::Pose3 T_submap_keyframe_;  // pose of this keyframe in the submap frame
 };
 
-}
+}  // namespace kimera_distributed
 
-#endif //KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_KEYFRAME_H_
+#endif  // KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_KEYFRAME_H_

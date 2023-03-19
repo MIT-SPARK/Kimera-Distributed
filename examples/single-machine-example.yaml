@@ -7,18 +7,18 @@ environment:
   ROBOT3: "sparkal2"
   ROBOT4: "hathor"
   ROBOT5: "thoth"
-  # ROBOT6: "apis"
-  # ROBOT7: "sobek"
-  ROSBAG0: "/media/yunchang/YUN_SanDisk2/MIT_10_14_2022/mit_red.bag"
-  ROSBAG1: "/media/yunchang/YUN_SanDisk2/MIT_10_14_2022/mit_orange.bag"
-  ROSBAG2: "/media/yunchang/YUN_SanDisk2/MIT_10_14_2022/mit_green_cut.bag"
-  ROSBAG3: "/media/yunchang/YUN_SanDisk2/MIT_10_14_2022/mit_cyan_new.bag"
-  ROSBAG4: "/media/yunchang/YUN_SanDisk2/MIT_10_14_2022/mit_pink_new.bag"
-  ROSBAG5: "/media/yunchang/YUN_SanDisk2/MIT_10_14_2022/mit_purple_new.bag"
-  # ROSBAG6: "/media/yunchang/YUN_SanDisk_3/1208_data/apis_test3.bag"
-  # ROSBAG7: "/media/yunchang/YUN_SanDisk_3/1208_data/sobek_test3.bag"
-  RATE: "0.8"
-  NUM_ROBOTS: "6"
+  ROBOT6: "apis"
+  ROBOT7: "sobek"
+  ROSBAG0: "/media/yunchang/YUN_SanDisk2/MIT_12_07/acl_jackal_test3.bag"
+  ROSBAG1: "/media/yunchang/YUN_SanDisk2/MIT_12_07/acl_jackal2_test3.bag"
+  ROSBAG2: "/media/yunchang/YUN_SanDisk2/MIT_12_07/sparkal1_test3.bag"
+  ROSBAG3: "/media/yunchang/YUN_SanDisk2/MIT_12_07/sparkal2_test3.bag"
+  ROSBAG4: "/media/yunchang/YUN_SanDisk2/MIT_12_07/hathor_test3.bag"
+  ROSBAG5: "/media/yunchang/YUN_SanDisk2/MIT_12_07/thoth_test3.bag"
+  ROSBAG6: "/media/yunchang/YUN_SanDisk2/MIT_12_07/apis_test3.bag"
+  ROSBAG7: "/media/yunchang/YUN_SanDisk2/MIT_12_07/sobek_test3.bag"
+  RATE: "1.0"
+  NUM_ROBOTS: "8"
   BOW_SKIP_NUM: "5"
   MESH: "false"
   SEMANTICS: "false"
@@ -50,13 +50,13 @@ windows:
     - roslaunch kimera_distributed kimera_distributed.launch robot_id:=3 robot_name:=$ROBOT3 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT3/distributed
     - roslaunch kimera_distributed kimera_distributed.launch robot_id:=4 robot_name:=$ROBOT4 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT4/distributed
     - roslaunch kimera_distributed kimera_distributed.launch robot_id:=5 robot_name:=$ROBOT5 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT5/distributed
-    # - roslaunch kimera_distributed kimera_distributed.launch robot_id:=6 robot_name:=$ROBOT6 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT6/distributed
-    # - roslaunch kimera_distributed kimera_distributed.launch robot_id:=7 robot_name:=$ROBOT7 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT7/distributed
+    - roslaunch kimera_distributed kimera_distributed.launch robot_id:=6 robot_name:=$ROBOT6 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT6/distributed
+    - roslaunch kimera_distributed kimera_distributed.launch robot_id:=7 robot_name:=$ROBOT7 num_robots:=$NUM_ROBOTS dataset_name:=Jackal log_output_path:=$LOG_DIR/$ROBOT7/distributed
 
 - window_name: dpgo
   layout: tiled
   shell_command_before:
-    -source ~/catkin_ws/devel/setup.bash
+    - source ~/catkin_ws/devel/setup.bash
     - sleep 10;
 
   panes:
@@ -66,8 +66,8 @@ windows:
     - roslaunch kimera_distributed dpgo.launch robot_id:=3 robot_name:=$ROBOT3 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=false log_output_path:=$LOG_DIR/$ROBOT3/distributed
     - roslaunch kimera_distributed dpgo.launch robot_id:=4 robot_name:=$ROBOT4 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=false log_output_path:=$LOG_DIR/$ROBOT4/distributed
     - roslaunch kimera_distributed dpgo.launch robot_id:=5 robot_name:=$ROBOT5 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=false log_output_path:=$LOG_DIR/$ROBOT5/distributed
-    # - roslaunch kimera_distributed dpgo.launch robot_id:=6 robot_name:=$ROBOT6 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=true log_output_path:=$LOG_DIR/$ROBOT6/distributed
-    # - roslaunch kimera_distributed dpgo.launch robot_id:=7 robot_name:=$ROBOT7 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=true log_output_path:=$LOG_DIR/$ROBOT7/distributed
+    - roslaunch kimera_distributed dpgo.launch robot_id:=6 robot_name:=$ROBOT6 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=true log_output_path:=$LOG_DIR/$ROBOT6/distributed
+    - roslaunch kimera_distributed dpgo.launch robot_id:=7 robot_name:=$ROBOT7 num_robots:=$NUM_ROBOTS dataset_name:=Jackal multi_master:=true log_output_path:=$LOG_DIR/$ROBOT7/distributed
 
 - window_name: vio
   layout: tiled  
@@ -82,8 +82,8 @@ windows:
     - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT3 robot_id:=3 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
     - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT4 robot_id:=4 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
     - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT5 robot_id:=5 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
-    # - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT6 robot_id:=6 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
-    # - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT7 robot_id:=7 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT6 robot_id:=6 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
+    - roslaunch kimera_core kimera_vio_jackal.launch robot_name:=$ROBOT7 robot_id:=7 use_d455:=true multirobot:=true lcd_no_optimize:=true use_external_odom:=true replay:=true should_use_sim_time:=true
 
 - window_name: data
   focus: true  
@@ -93,12 +93,12 @@ windows:
     - sleep 10;
 
   panes:
-    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG0 input_ns:=$ROBOT1 output_ns:=$ROBOT0 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG0 input_ns:=$ROBOT0 output_ns:=$ROBOT0 rate:=$RATE
     - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG1 input_ns:=$ROBOT1 output_ns:=$ROBOT1 rate:=$RATE
-    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG2 input_ns:=$ROBOT1 output_ns:=$ROBOT2 rate:=$RATE
-    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG3 input_ns:=$ROBOT1 output_ns:=$ROBOT3 rate:=$RATE
-    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG4 input_ns:=$ROBOT1 output_ns:=$ROBOT4 rate:=$RATE
-    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG5 input_ns:=$ROBOT1 output_ns:=$ROBOT5 rate:=$RATE
-    # - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG6 input_ns:=$ROBOT1 output_ns:=$ROBOT6 rate:=$RATE
-    # - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG7 input_ns:=$ROBOT1 output_ns:=$ROBOT7 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG2 input_ns:=$ROBOT2 output_ns:=$ROBOT2 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG3 input_ns:=$ROBOT3 output_ns:=$ROBOT3 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG4 input_ns:=$ROBOT4 output_ns:=$ROBOT4 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG5 input_ns:=$ROBOT5 output_ns:=$ROBOT5 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG6 input_ns:=$ROBOT6 output_ns:=$ROBOT6 rate:=$RATE
+    - roslaunch kimera_distributed mit_rosbag.launch bagfile:=$ROSBAG7 input_ns:=$ROBOT7 output_ns:=$ROBOT7 rate:=$RATE
     - rosnode kill -a \

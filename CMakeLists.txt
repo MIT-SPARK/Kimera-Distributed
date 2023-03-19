@@ -16,8 +16,7 @@ find_package(Boost REQUIRED
   chrono
 )
 
-find_package(opengv REQUIRED)
-find_package(KimeraRPGO REQUIRED)
+find_package(GTSAM REQUIRED)
 find_package(DBoW2 REQUIRED)
 if(NOT TARGET DBoW2::DBoW2)
   add_library(DBoW2::DBoW2 INTERFACE IMPORTED)
@@ -33,36 +32,21 @@ cs_add_library(${PROJECT_NAME}
   src/Submap.cpp
   src/SubmapAtlas.cpp
   src/DistributedLoopClosure.cpp
-  src/DistributedPcm.cpp
+  src/DistributedLoopClosureRos.cpp
   src/utils.cpp
-  src/NavSatFixExportNode.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
-  KimeraRPGO
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
   ${OpenCV_LIBRARIES}
   gtsam
-  opengv
   DBoW2::DBoW2
 )
 
 cs_add_executable(kimera_distributed_loop_closure_node
   src/DistributedLoopClosureNode.cpp)
 target_link_libraries(kimera_distributed_loop_closure_node ${PROJECT_NAME})
-
-cs_add_executable(kimera_distributed_pcm_node
-  src/DistributedPcmNode.cpp)
-target_link_libraries(kimera_distributed_pcm_node ${PROJECT_NAME})
-
-cs_add_executable(publish_initial_rel_pose_node
-  src/PublishInitialRelPoseNode.cpp)
-target_link_libraries(publish_initial_rel_pose_node ${PROJECT_NAME})
-
-cs_add_executable(navsatfix_export_node
-  src/NavSatFixExportNode.cpp)
-target_link_libraries(navsatfix_export_node ${PROJECT_NAME})
 
 catkin_add_gtest(test_utils test/test_utils.cpp)
 target_link_libraries(test_utils ${PROJECT_NAME} -ltbb)

@@ -7,11 +7,11 @@
 #ifndef KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_SUBMAP_H_
 #define KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_SUBMAP_H_
 
-#include "kimera_distributed/Keyframe.h"
 #include <gtsam/geometry/Pose3.h>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <memory>
+#include "kimera_distributed/Keyframe.h"
 
 namespace kimera_distributed {
 
@@ -55,12 +55,12 @@ class Submap {
   /**
    * @brief Get pose of this submap in the world frame
    * @return
-  */
+   */
   gtsam::Pose3 getPoseInWorldFrame() const;
   /**
    * @brief Set pose of this submap in the world frame
-   * @param T_world_submap 
-  */
+   * @param T_world_submap
+   */
   void setPoseInWorldFrame(const gtsam::Pose3& T_world_submap);
   /**
    * @brief Add a new keyframe to this submap
@@ -82,12 +82,15 @@ class Submap {
  private:
   const int id_;  // unique id of this submap
   uint64_t stamp_;
-  std::unordered_map<int, std::shared_ptr<Keyframe>> keyframes_;  // keyframes that belong to this submap
-  gtsam::Pose3 T_odom_submap_;  // the pose of this submap in the odometry frame (Kimera-VIO)
-  gtsam::Pose3 T_world_submap_; // the pose of this submap if the world frame (might not exist)
-  double distance_; // cumulative distance traveled in this submap
+  std::unordered_map<int, std::shared_ptr<Keyframe>>
+      keyframes_;  // keyframes that belong to this submap
+  gtsam::Pose3
+      T_odom_submap_;  // the pose of this submap in the odometry frame (Kimera-VIO)
+  gtsam::Pose3
+      T_world_submap_;  // the pose of this submap if the world frame (might not exist)
+  double distance_;     // cumulative distance traveled in this submap
 };
 
-}
+}  // namespace kimera_distributed
 
-#endif //KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_SUBMAP_H_
+#endif  // KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_SUBMAP_H_

@@ -19,7 +19,7 @@ class SubmapAtlas {
   class Parameters {
    public:
     Parameters() : max_submap_size(10), max_submap_distance(1.0) {}
-    int max_submap_size;  // maximum number of keyframes in a given submap
+    int max_submap_size;         // maximum number of keyframes in a given submap
     double max_submap_distance;  // maximum cumulative distance in a given submap
   };
   /**
@@ -96,6 +96,7 @@ class SubmapAtlas {
    * @return
    */
   std::shared_ptr<Submap> getLatestSubmap();
+
  private:
   Parameters params_;
   std::unordered_map<int, std::shared_ptr<Keyframe>> keyframes_;
@@ -107,6 +108,6 @@ class SubmapAtlas {
   bool shouldCreateNewSubmap();
 };
 
-}
+}  // namespace kimera_distributed
 
-#endif //KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_SUBMAPATLAS_H_
+#endif  // KIMERA_DISTRIBUTED_INCLUDE_KIMERA_DISTRIBUTED_SUBMAPATLAS_H_

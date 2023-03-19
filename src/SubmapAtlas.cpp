@@ -8,21 +8,19 @@
 
 namespace kimera_distributed {
 
-SubmapAtlas::SubmapAtlas(const Parameters &params) : params_(params) {}
+SubmapAtlas::SubmapAtlas(const Parameters& params) : params_(params) {}
 
-SubmapAtlas::Parameters SubmapAtlas::params() const {
-  return params_;
-}
+SubmapAtlas::Parameters SubmapAtlas::params() const { return params_; }
 
-int SubmapAtlas::numKeyframes() const { return (int) keyframes_.size(); }
+int SubmapAtlas::numKeyframes() const { return (int)keyframes_.size(); }
 
-int SubmapAtlas::numSubmaps() const { return (int) submaps_.size(); }
+int SubmapAtlas::numSubmaps() const { return (int)submaps_.size(); }
 
 std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(
     int keyframe_id,
     const gtsam::Pose3& T_odom_keyframe,
     const uint64_t& timestamp) {
-  if(hasKeyframe(keyframe_id)) {
+  if (hasKeyframe(keyframe_id)) {
     ROS_WARN_STREAM("Keyframe " << keyframe_id << " already exists!");
     return getKeyframe(keyframe_id);
   }
@@ -40,7 +38,7 @@ std::shared_ptr<Keyframe> SubmapAtlas::createKeyframe(
 
   // Add this keyframe to the submap
   auto submap = getLatestSubmap();
-  const auto &T_odom_submap = submap->getPoseInOdomFrame();
+  const auto& T_odom_submap = submap->getPoseInOdomFrame();
   gtsam::Pose3 T_submap_keyframe = T_odom_submap.inverse() * T_odom_keyframe;
   keyframe->setPoseInSubmapFrame(T_submap_keyframe);
   keyframe->setSubmap(submap);
@@ -54,7 +52,7 @@ bool SubmapAtlas::hasKeyframe(int keyframe_id) const {
 }
 
 std::shared_ptr<Keyframe> SubmapAtlas::getKeyframe(int keyframe_id) {
-  const auto &it = keyframes_.find(keyframe_id);
+  const auto& it = keyframes_.find(keyframe_id);
   if (it == keyframes_.end())
     return nullptr;
   else
@@ -71,10 +69,9 @@ std::shared_ptr<Keyframe> SubmapAtlas::getLatestKeyframe() {
   }
 }
 
-std::shared_ptr<Submap> SubmapAtlas::createSubmap(
-    int submap_id,
-    const gtsam::Pose3& T_odom_submap,
-    const uint64_t& timestamp) {
+std::shared_ptr<Submap> SubmapAtlas::createSubmap(int submap_id,
+                                                  const gtsam::Pose3& T_odom_submap,
+                                                  const uint64_t& timestamp) {
   CHECK(!hasSubmap(submap_id));
   auto submap = std::make_shared<Submap>(submap_id, timestamp);
   submap->setPoseInOdomFrame(T_odom_submap);
@@ -101,7 +98,7 @@ bool SubmapAtlas::hasSubmap(int submap_id) const {
 }
 
 std::shared_ptr<Submap> SubmapAtlas::getSubmap(int submap_id) {
-  const auto &it = submaps_.find(submap_id);
+  const auto& it = submaps_.find(submap_id);
   if (it == submaps_.end())
     return nullptr;
   else
@@ -119,15 +116,11 @@ std::shared_ptr<Submap> SubmapAtlas::getLatestSubmap() {
 }
 
 bool SubmapAtlas::shouldCreateNewSubmap() {
-  if (submaps_.empty())
-    return true;
-  if (getLatestSubmap()->numKeyframes() >= params_.max_submap_size)
-    return true;
-  if (getLatestSubmap()->distance() > params_.max_submap_distance)
-    return true;
+  if (submaps_.empty()) return true;
+  if (getLatestSubmap()->numKeyframes() >= params_.max_submap_size) return true;
+  if (getLatestSubmap()->distance() > params_.max_submap_distance) return true;
 
   return false;
 }
 
-}
-
+}  // namespace kimera_distributed

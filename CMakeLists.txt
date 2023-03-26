@@ -48,8 +48,18 @@ cs_add_executable(kimera_distributed_loop_closure_node
   src/DistributedLoopClosureNode.cpp)
 target_link_libraries(kimera_distributed_loop_closure_node ${PROJECT_NAME})
 
-catkin_add_gtest(test_utils test/test_utils.cpp)
-target_link_libraries(test_utils ${PROJECT_NAME} -ltbb)
+# Unit tests 
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/test)
+
+catkin_add_gtest(${PROJECT_NAME}-test_utils test/test_utils.cpp)
+target_link_libraries(${PROJECT_NAME}-test_utils ${PROJECT_NAME})
+
+catkin_add_gtest(${PROJECT_NAME}-test_submap test/test_submap.cpp)
+target_link_libraries(${PROJECT_NAME}-test_submap ${PROJECT_NAME})
+
+catkin_add_gtest(${PROJECT_NAME}-test_submap_atlas test/test_submap_atlas.cpp)
+target_link_libraries(${PROJECT_NAME}-test_submap_atlas ${PROJECT_NAME})
+
 
 cs_install()
 

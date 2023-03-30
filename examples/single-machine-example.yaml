@@ -1,4 +1,4 @@
-session_name: mit-campus-experiment
+session_name: kimera-distributed-example
 
 environment:
   ROBOT0: "acl_jackal"

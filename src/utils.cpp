@@ -4,6 +4,7 @@
  * Authors: Yulun Tian (yulun@mit.edu)
  */
 
+#include <gtsam/linear/NoiseModel.h>
 #include <kimera_distributed/utils.h>
 #include <ros/console.h>
 #include <cassert>

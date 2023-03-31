@@ -7,9 +7,8 @@
   <arg name="should_use_sim_time"     default="false"/>
   <arg name="debug"                   default="false"/>
   <arg name="robot_names_config"      default="robot_names"/>
-  <arg name="vocab_path"              default="$(find kimera_core)/vocab/mit_voc.yml"/>
-  <!-- <arg name="vocab_path"              default="$(find kimera_vio)/vocabulary/ORBvoc.yml"/> -->
-  <arg name="monitor_bw"              default="true"/>
+  <arg name="vocab_path"              default="$(find kimera_multi_lcd)/vocab/mit_voc.yml"/>
+  <arg name="monitor_bw"              default="false"/>
   <arg name="monitor_latency"         default="false"/>
   <arg name="logging"                 default="true"/>
   <arg name="log_directory"           default="$(find kimera_distributed)/logs/kimera$(arg robot_id)" />

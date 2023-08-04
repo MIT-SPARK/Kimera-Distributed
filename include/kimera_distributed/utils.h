@@ -29,6 +29,8 @@ const std::map<uint32_t, char> robot_id_to_prefix = {
     {5, 'f'},
     {6, 'g'},
     {7, 'h'},
+    {8, 'i'},
+    {9, 'j'}
 };
 
 const std::map<char, uint32_t> robot_prefix_to_id = {
@@ -40,6 +42,8 @@ const std::map<char, uint32_t> robot_prefix_to_id = {
     {'f', 5},
     {'g', 6},
     {'h', 7},
+    {'i', 8},
+    {'j', 9}
 };
 
 gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform);

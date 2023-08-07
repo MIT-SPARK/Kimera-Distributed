@@ -94,6 +94,23 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
   ros::param::get("~comm_sleep_time", config.comm_sleep_time_);
   ros::param::get("~loop_sync_sleep_time", config.loop_sync_sleep_time_);
 
+  // TF
+  if (!ros::param::get("~odom_frame_id", odom_frame_id_)) {
+    ROS_ERROR("Odometry frame ID is missing!");
+    ros::shutdown();
+  }
+  if (!ros::param::get("~world_frame_id", world_frame_id_)) {
+    ROS_ERROR("World frame ID is missing!");
+    ros::shutdown();
+  }
+  tf_world_odom_.transform.translation.x = 0;
+  tf_world_odom_.transform.translation.y = 0;
+  tf_world_odom_.transform.translation.z = 0;
+  tf_world_odom_.transform.rotation.w = 1.0;
+  tf_world_odom_.transform.rotation.x = 0;
+  tf_world_odom_.transform.rotation.y = 0;
+  tf_world_odom_.transform.rotation.z = 0;
+
   // Load robot names and initialize candidate lc queues
   for (size_t id = 0; id < config.num_robots_; id++) {
     std::string robot_name = "kimera" + std::to_string(id);
@@ -216,6 +233,9 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
   log_timer_ = nh_.createTimer(
       ros::Duration(10.0), &DistributedLoopClosureRos::logTimerCallback, this);
 
+  tf_timer_ = nh_.createTimer(
+      ros::Duration(1.0), &DistributedLoopClosureRos::tfTimerCallback, this);
+
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
       << config_.my_id_ << "). \n"
@@ -329,6 +349,19 @@ void DistributedLoopClosureRos::connectivityCallback(
 
 void DistributedLoopClosureRos::dpgoCallback(const nav_msgs::PathConstPtr& msg) {
   processOptimizedPath(msg);
+  // Update TF
+  if (!msg->poses.empty()) {
+    const auto initial_pose_stamped = msg->poses[0];
+    gtsam::Pose3 pose = getOdomInWorldFrame();
+    tf_world_odom_.transform.translation.x = pose.x();
+    tf_world_odom_.transform.translation.y = pose.y();
+    tf_world_odom_.transform.translation.z = pose.z();
+    const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
+    tf_world_odom_.transform.rotation.w = quat.w();
+    tf_world_odom_.transform.rotation.x = quat.x();
+    tf_world_odom_.transform.rotation.y = quat.y();
+    tf_world_odom_.transform.rotation.z = quat.z();
+  }
   if (config_.run_offline_) {
     saveSubmapAtlas(config_.log_output_dir_);
     auto elapsed_time = ros::Time::now() - start_time_;
@@ -353,6 +386,13 @@ void DistributedLoopClosureRos::logTimerCallback(const ros::TimerEvent& event) {
                             std::to_string(elapsed_sec) + ".csv";
     savePosesInWorldFrame(file_path);
   }
+}
+
+void DistributedLoopClosureRos::tfTimerCallback(const ros::TimerEvent& event) {
+  tf_world_odom_.header.stamp = ros::Time::now();
+  tf_world_odom_.header.frame_id = world_frame_id_;
+  tf_world_odom_.child_frame_id = odom_frame_id_;
+  tf_broadcaster_.sendTransform(tf_world_odom_);
 }
 
 void DistributedLoopClosureRos::runDetection() {

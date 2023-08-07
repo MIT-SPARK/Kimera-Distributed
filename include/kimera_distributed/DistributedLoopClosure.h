@@ -120,6 +120,10 @@ class DistributedLoopClosure {
 
  protected:
   /**
+   * @brief Compute the transformation T_world_odom
+   */
+  gtsam::Pose3 getOdomInWorldFrame() const;
+  /**
    * Callback to process bag of word vectors received from robots
    */
   void processBow(const pose_graph_tools::BowQueriesConstPtr& query_msg);

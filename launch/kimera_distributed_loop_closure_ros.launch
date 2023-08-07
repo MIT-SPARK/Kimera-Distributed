@@ -5,6 +5,9 @@
   <arg name="robot_id" default="0"/>
   <arg name="robot_name" default="kimera"/>
   <arg name="frame_id" default="map"/>
+  <arg name="world_frame_id"      default="world"/>
+  <arg name="odom_frame_id"      default="odom"/>
+
   <!-- Dataset -->
   <arg name="dataset_name"   default="warty"/>
   <!-- Parameters that control communication due to VLC -->
@@ -35,6 +38,8 @@
     <param name="robot_id"               value="$(arg robot_id)"/>
     <param name="num_robots"             value="$(arg num_robots)" />
     <param name="frame_id"               value="$(arg frame_id)" />
+    <param name="world_frame_id"         value="$(arg world_frame_id)" />
+    <param name="odom_frame_id"          value="$(arg odom_frame_id)" />
     <param name="vocabulary_path"        value="$(arg vocab_path)"/>
     <param name="alpha"                  value="$(arg alpha)"/>
     <param name="log_output_path"        value="$(arg log_output_path)/"/>

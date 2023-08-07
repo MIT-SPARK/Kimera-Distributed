@@ -42,6 +42,8 @@
       <arg name="robot_id"                  value="$(arg robot_id)" />
       <arg name="robot_name"                value="$(arg robot_name)" />
       <arg name="frame_id"                  value="$(arg robot_name)/map"/>
+      <arg name="world_frame_id"            value="world"/>
+      <arg name="odom_frame_id"             value="$(arg robot_name)/odom"/>
       <arg name="num_robots"                value="$(arg num_robots)" />
       <arg name="dataset_name"              value="$(arg dataset_name)" />
       <arg name="debug"                     value="$(arg debug)" />

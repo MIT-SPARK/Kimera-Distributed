@@ -30,6 +30,8 @@
 #include <pose_graph_tools/VLCRequests.h>
 #include <std_msgs/UInt16MultiArray.h>
 
+#include <tf/transform_broadcaster.h>
+
 namespace lcd = kimera_multi_lcd;
 
 namespace kimera_distributed {
@@ -69,11 +71,20 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
 
   // Timer
   ros::Timer log_timer_;
+  ros::Timer tf_timer_;
   ros::Time start_time_;
   ros::Time next_loop_sync_time_;
   ros::Time next_latest_bow_pub_time_;
 
+  // TF broadcaster from world to robot's odom frame
+  tf::TransformBroadcaster tf_broadcaster_;
+
  private:
+
+  std::string odom_frame_id_;
+  std::string world_frame_id_;
+  geometry_msgs::TransformStamped tf_world_odom_;
+
   /**
    * @brief Run place recognition / loop detection spin
    */
@@ -142,6 +153,11 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
    * @brief Callback to timer used for periodically logging
    */
   void logTimerCallback(const ros::TimerEvent& event);
+
+  /**
+   * @brief Callback to timer used for periodically publishing TF
+   */
+  void tfTimerCallback(const ros::TimerEvent& event);
 
   /**
    * @brief Subscriber callback that listens to the list of currently connected robots

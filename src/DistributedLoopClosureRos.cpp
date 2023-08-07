@@ -351,7 +351,6 @@ void DistributedLoopClosureRos::dpgoCallback(const nav_msgs::PathConstPtr& msg) 
   processOptimizedPath(msg);
   // Update TF
   if (!msg->poses.empty()) {
-    const auto initial_pose_stamped = msg->poses[0];
     gtsam::Pose3 pose = getOdomInWorldFrame();
     tf_world_odom_.transform.translation.x = pose.x();
     tf_world_odom_.transform.translation.y = pose.y();

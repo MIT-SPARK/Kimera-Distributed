@@ -238,9 +238,14 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
   void publishOdomToWorld();
   
   /**
-   * @brief Publish TF between world and base
+   * @brief Publish TF between world and latest keyframe
    */
   void publishLatestKFToWorld();
+
+  /**
+   * @brief Publish TF between odom and latest keyframe
+   */
+  void publishLatestKFToOdom();
 };
 
 }  // namespace kimera_distributed

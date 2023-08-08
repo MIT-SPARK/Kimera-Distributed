@@ -395,9 +395,20 @@ void DistributedLoopClosureRos::publishLatestKFToWorld() {
   tf_broadcaster_.sendTransform(tf_world_base);
 }
 
+void DistributedLoopClosureRos::publishLatestKFToOdom() {
+  geometry_msgs::TransformStamped tf_odom_base;
+  tf_odom_base.header.stamp = ros::Time::now();
+  tf_odom_base.header.frame_id = odom_frame_id_;
+  tf_odom_base.child_frame_id = latest_kf_frame_id_;
+
+  const gtsam::Pose3 T_odom_base = getLatestKFInOdomFrame();
+  GtsamPoseToRosTf(T_odom_base, &tf_odom_base.transform);
+  tf_broadcaster_.sendTransform(tf_odom_base);
+}
+
 void DistributedLoopClosureRos::tfTimerCallback(const ros::TimerEvent& event) {
   publishOdomToWorld();
-  publishLatestKFToWorld();
+  publishLatestKFToOdom();  // Currently for debugging
 }
 
 void DistributedLoopClosureRos::runDetection() {

@@ -14,6 +14,7 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <nav_msgs/Path.h>
+#include <geometry_msgs/Transform.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/console.h>
 #include <string>
@@ -48,6 +49,7 @@ const std::map<char, uint32_t> robot_prefix_to_id = {
 
 gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform);
 geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform);
+void GtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
 
 // Convert gtsam posegaph to PoseGraph msg
 pose_graph_tools::PoseGraph GtsamGraphToRos(

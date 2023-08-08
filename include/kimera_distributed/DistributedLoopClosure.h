@@ -124,6 +124,12 @@ class DistributedLoopClosure {
    */
   gtsam::Pose3 getOdomInWorldFrame() const;
   /**
+   * @brief Compute the transformation T_world_KF
+   * KF denotes the coordinate of the latest keyframe in the submap atlas
+   * This function is currently only used for debugging
+   */
+  gtsam::Pose3 getLatestKFInWorldFrame() const;
+  /**
    * Callback to process bag of word vectors received from robots
    */
   void processBow(const pose_graph_tools::BowQueriesConstPtr& query_msg);

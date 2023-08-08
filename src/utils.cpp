@@ -3,7 +3,7 @@
  *
  * Authors: Yulun Tian (yulun@mit.edu)
  */
-
+#include <glog/logging.h>
 #include <gtsam/linear/NoiseModel.h>
 #include <kimera_distributed/utils.h>
 #include <ros/console.h>
@@ -38,6 +38,18 @@ geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform) {
   pose.orientation.w = orientation.w();
 
   return pose;
+}
+
+void GtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf) {
+  CHECK_NOTNULL(tf);
+  tf->translation.x = pose.x();
+  tf->translation.y = pose.y();
+  tf->translation.z = pose.z();
+  const gtsam::Quaternion& quat = pose.rotation().toQuaternion();
+  tf->rotation.w = quat.w();
+  tf->rotation.x = quat.x();
+  tf->rotation.y = quat.y();
+  tf->rotation.z = quat.z();
 }
 
 // Convert gtsam posegaph to PoseGraph msg

@@ -80,10 +80,10 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
   tf::TransformBroadcaster tf_broadcaster_;
 
  private:
-
+  std::string latest_kf_frame_id_;
   std::string odom_frame_id_;
   std::string world_frame_id_;
-  geometry_msgs::TransformStamped tf_world_odom_;
+  
 
   /**
    * @brief Run place recognition / loop detection spin
@@ -231,6 +231,16 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
    * Randomly sleep from (min_sec, max_sec) seconds
    */
   void randomSleep(double min_sec, double max_sec);
+
+  /**
+   * @brief Publish TF between world and odom
+   */
+  void publishOdomToWorld();
+  
+  /**
+   * @brief Publish TF between world and base
+   */
+  void publishLatestKFToWorld();
 };
 
 }  // namespace kimera_distributed

@@ -885,6 +885,19 @@ gtsam::Pose3 DistributedLoopClosure::getOdomInWorldFrame() const {
   return T_world_odom;
 }
 
+gtsam::Pose3 DistributedLoopClosure::getLatestKFInWorldFrame() const {
+  gtsam::Pose3 T_world_kf = gtsam::Pose3::identity();
+  const auto keyframe = submap_atlas_->getLatestKeyframe();
+  if (keyframe) {
+    const auto submap = keyframe->getSubmap();
+    CHECK_NOTNULL(submap);
+    const gtsam::Pose3 T_submap_kf = keyframe->getPoseInSubmapFrame();
+    const gtsam::Pose3 T_world_submap = submap->getPoseInWorldFrame();
+    T_world_kf = T_world_submap * T_submap_kf;
+  }
+  return T_world_kf;
+}
+
 void DistributedLoopClosure::createLogFiles() {
   std::string pose_file_path = config_.log_output_dir_ + "odometry_poses.csv";
   std::string inter_lc_file_path = config_.log_output_dir_ + "loop_closures.csv";

@@ -59,6 +59,26 @@ std::shared_ptr<Keyframe> SubmapAtlas::getKeyframe(int keyframe_id) {
     return it->second;
 }
 
+std::shared_ptr<Keyframe> SubmapAtlas::getKeyframeFromStamp(const uint64_t& timestamp,
+                                                            const uint64_t& tolNs) {
+  int best_keyframe_id = 0;
+  uint64_t best_stamp_diff = 2 * tolNs;
+  for (const auto& it: keyframes_) {
+    const auto keyframe_id = it.first;
+    const uint64_t keyframe_stamp = it.second->stamp();
+    const uint64_t stamp_diff = (keyframe_stamp < timestamp) ? (timestamp-keyframe_stamp) : (keyframe_stamp-timestamp);
+    if (stamp_diff <= best_stamp_diff) {
+      best_stamp_diff = stamp_diff;
+      best_keyframe_id = keyframe_id;
+    }
+  }
+  if (best_stamp_diff > tolNs) {
+    return nullptr;
+  } else {
+    return getKeyframe(best_keyframe_id);
+  }
+}
+
 std::shared_ptr<Keyframe> SubmapAtlas::getLatestKeyframe() {
   if (keyframes_.empty())
     return nullptr;

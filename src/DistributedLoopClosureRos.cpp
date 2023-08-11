@@ -94,6 +94,20 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
   ros::param::get("~comm_sleep_time", config.comm_sleep_time_);
   ros::param::get("~loop_sync_sleep_time", config.loop_sync_sleep_time_);
 
+  // TF
+  if (!ros::param::get("~latest_kf_frame_id", latest_kf_frame_id_)) {
+    ROS_ERROR("Latest KF frame ID is missing!");
+    ros::shutdown();
+  }
+  if (!ros::param::get("~odom_frame_id", odom_frame_id_)) {
+    ROS_ERROR("Odometry frame ID is missing!");
+    ros::shutdown();
+  }
+  if (!ros::param::get("~world_frame_id", world_frame_id_)) {
+    ROS_ERROR("World frame ID is missing!");
+    ros::shutdown();
+  }
+
   // Load robot names and initialize candidate lc queues
   for (size_t id = 0; id < config.num_robots_; id++) {
     std::string robot_name = "kimera" + std::to_string(id);
@@ -215,6 +229,9 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
 
   log_timer_ = nh_.createTimer(
       ros::Duration(10.0), &DistributedLoopClosureRos::logTimerCallback, this);
+
+  tf_timer_ = nh_.createTimer(
+      ros::Duration(1.0), &DistributedLoopClosureRos::tfTimerCallback, this);
 
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
@@ -353,6 +370,45 @@ void DistributedLoopClosureRos::logTimerCallback(const ros::TimerEvent& event) {
                             std::to_string(elapsed_sec) + ".csv";
     savePosesInWorldFrame(file_path);
   }
+}
+
+void DistributedLoopClosureRos::publishOdomToWorld() {
+  geometry_msgs::TransformStamped tf_world_odom;
+  tf_world_odom.header.stamp = ros::Time::now();
+  tf_world_odom.header.frame_id = world_frame_id_;
+  tf_world_odom.child_frame_id = odom_frame_id_;
+
+  const gtsam::Pose3 T_world_odom = getOdomInWorldFrame();
+  GtsamPoseToRosTf(T_world_odom, &tf_world_odom.transform);
+  tf_broadcaster_.sendTransform(tf_world_odom);
+  
+}
+
+void DistributedLoopClosureRos::publishLatestKFToWorld() {
+  geometry_msgs::TransformStamped tf_world_base;
+  tf_world_base.header.stamp = ros::Time::now();
+  tf_world_base.header.frame_id = world_frame_id_;
+  tf_world_base.child_frame_id = latest_kf_frame_id_;
+
+  const gtsam::Pose3 T_world_base = getLatestKFInWorldFrame();
+  GtsamPoseToRosTf(T_world_base, &tf_world_base.transform);
+  tf_broadcaster_.sendTransform(tf_world_base);
+}
+
+void DistributedLoopClosureRos::publishLatestKFToOdom() {
+  geometry_msgs::TransformStamped tf_odom_base;
+  tf_odom_base.header.stamp = ros::Time::now();
+  tf_odom_base.header.frame_id = odom_frame_id_;
+  tf_odom_base.child_frame_id = latest_kf_frame_id_;
+
+  const gtsam::Pose3 T_odom_base = getLatestKFInOdomFrame();
+  GtsamPoseToRosTf(T_odom_base, &tf_odom_base.transform);
+  tf_broadcaster_.sendTransform(tf_odom_base);
+}
+
+void DistributedLoopClosureRos::tfTimerCallback(const ros::TimerEvent& event) {
+  publishOdomToWorld();
+  publishLatestKFToOdom();  // Currently for debugging
 }
 
 void DistributedLoopClosureRos::runDetection() {

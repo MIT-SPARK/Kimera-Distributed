@@ -871,7 +871,7 @@ size_t DistributedLoopClosure::updateCandidateList() {
 }
 
 gtsam::Pose3 DistributedLoopClosure::getOdomInWorldFrame() const {
-  gtsam::Pose3 T_world_odom = gtsam::Pose3::identity();
+  gtsam::Pose3 T_world_odom = gtsam::Pose3();
   const auto keyframe = submap_atlas_->getLatestKeyframe();
   if (keyframe) {
     const auto submap = keyframe->getSubmap();
@@ -886,7 +886,7 @@ gtsam::Pose3 DistributedLoopClosure::getOdomInWorldFrame() const {
 }
 
 gtsam::Pose3 DistributedLoopClosure::getLatestKFInWorldFrame() const {
-  gtsam::Pose3 T_world_kf = gtsam::Pose3::identity();
+  gtsam::Pose3 T_world_kf = gtsam::Pose3();
   const auto keyframe = submap_atlas_->getLatestKeyframe();
   if (keyframe) {
     const auto submap = keyframe->getSubmap();
@@ -899,7 +899,7 @@ gtsam::Pose3 DistributedLoopClosure::getLatestKFInWorldFrame() const {
 }
 
 gtsam::Pose3 DistributedLoopClosure::getLatestKFInOdomFrame() const {
-  gtsam::Pose3 T_odom_kf = gtsam::Pose3::identity();
+  gtsam::Pose3 T_odom_kf = gtsam::Pose3();
   const auto keyframe = submap_atlas_->getLatestKeyframe();
   if (keyframe) {
     T_odom_kf = keyframe->getPoseInOdomFrame();  

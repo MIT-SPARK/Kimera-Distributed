@@ -5,6 +5,7 @@
 - /$(arg robot_name)/kimera_distributed/vlc_requests: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/kimera_distributed/loop_closures: {queue_size: 20, reliable: true}
 - /$(arg robot_name)/kimera_distributed/loop_ack: {queue_size: 20, reliable: true}
+- /$(arg robot_name)/kimera_distributed/pose_corrector: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/lifting_matrix: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/status: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/command: {queue_size: 20, reliable: true}
@@ -13,6 +14,7 @@
 - /$(arg robot_name)/dpgo_ros_node/public_measurements: {queue_size: 10, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/measurement_weights: {queue_size: 10, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/path: {queue_size: 1, reliable: true}
+- /$(arg robot_name)/kimera_distributed/optimized_path: {queue_size: 1, reliable: true}
 - /$(arg robot_name)/dpgo_ros_node/loop_closures: {queue_size: 1, reliable: true}
 # - /$(arg robot_name)/kimera_pgmo/optimized_mesh: {queue_size: 1, reliable: false}
 - /$(arg robot_name)/landmarks: {queue_size: 1, reliable: false}

@@ -101,6 +101,9 @@ class DistributedLoopClosure {
   // Number of updates received from back-end
   int backend_update_count_;
 
+  // Pose corrector
+  gtsam::Pose3 T_world_dpgo_;
+
   // For incremental publishing
   size_t last_get_submap_idx_;
   size_t last_get_lc_idx_;
@@ -236,10 +239,15 @@ class DistributedLoopClosure {
    */
   void logLoopClosure(const lcd::VLCEdge& keyframe_edge);
   /**
+   * @brief Compute the latest pose estimates to the world frame
+   * @brief nodes Pointer of Values type to populate
+   */
+  void computePosesInWorldFrame(gtsam::Values::shared_ptr nodes) const;
+  /**
    * @brief Save the latest pose estimates to the world frame
    * @brief filename Output file
    */
-  void savePosesInWorldFrame(const std::string& filename) const;
+  void savePosesToFile(const std::string& filename, const gtsam::Values& nodes) const;
   /**
    * @brief Save the current submap atlas to file.
    * This function saves two file:

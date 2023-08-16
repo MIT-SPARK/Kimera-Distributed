@@ -133,6 +133,11 @@ bool DistributedLoopClosure::processLocalPoseGraph(
                                 msg->nodes[0].pose.position.z);
     gtsam::Pose3 init_pose(init_rotation, init_position);
 
+    if (config_.my_id_ == 0) {
+      // Implicit assumption: first pose of the first robot in DPGO is set to identity
+      T_world_dpgo_ = init_pose;
+    }
+
     submap_atlas_->createKeyframe(0, init_pose, ts);
     logOdometryPose(
         gtsam::Symbol(robot_id_to_prefix.at(config_.my_id_), 0), init_pose, ts);
@@ -230,7 +235,8 @@ void DistributedLoopClosure::processOptimizedPath(const nav_msgs::PathConstPtr& 
   }
   // Store the optimized poses from dpgo in the submap atlas
   for (int submap_id = 0; submap_id < msg->poses.size(); ++submap_id) {
-    const auto T_world_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+    const auto T_dpgo_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+    const auto T_world_submap = T_world_dpgo_.compose(T_dpgo_submap);
     const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
     submap->setPoseInWorldFrame(T_world_submap);
   }
@@ -250,7 +256,25 @@ void DistributedLoopClosure::processOptimizedPath(const nav_msgs::PathConstPtr& 
             << ").";
 }
 
-void DistributedLoopClosure::savePosesInWorldFrame(const std::string& filename) const {
+void DistributedLoopClosure::computePosesInWorldFrame(
+    gtsam::Values::shared_ptr nodes) const {
+  nodes->clear();
+  // Using the optimized submap poses from dpgo, recover optimized poses for the
+  // original VIO keyframes
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps(); ++submap_id) {
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    const auto T_world_submap = submap->getPoseInWorldFrame();
+    for (const int keyframe_id : submap->getKeyframeIDs()) {
+      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
+      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
+      const auto T_world_keyframe = T_world_submap * T_submap_keyframe;
+      nodes->insert(keyframe_id, T_world_keyframe);
+    }
+  }
+}
+
+void DistributedLoopClosure::savePosesToFile(const std::string& filename,
+                                             const gtsam::Values& nodes) const {
   std::ofstream file;
   file.open(filename);
   if (!file.is_open()) {
@@ -260,28 +284,20 @@ void DistributedLoopClosure::savePosesInWorldFrame(const std::string& filename) 
   file << std::fixed << std::setprecision(8);
   file << "ns,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
 
-  // Using the optimized submap poses from dpgo, recover optimized poses for the
-  // original VIO keyframes, and save the results to a log file
-  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps(); ++submap_id) {
-    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
-    const auto T_world_submap = submap->getPoseInWorldFrame();
-    for (const int keyframe_id : submap->getKeyframeIDs()) {
-      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
-      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
-      const auto T_world_keyframe = T_world_submap * T_submap_keyframe;
-      // Save to log
-      gtsam::Quaternion quat = T_world_keyframe.rotation().toQuaternion();
-      gtsam::Point3 point = T_world_keyframe.translation();
-      file << keyframe->stamp() << ",";
-      file << keyframe->id() << ",";
-      file << quat.x() << ",";
-      file << quat.y() << ",";
-      file << quat.z() << ",";
-      file << quat.w() << ",";
-      file << point.x() << ",";
-      file << point.y() << ",";
-      file << point.z() << "\n";
-    }
+  for (const auto& key_pose : nodes) {
+    gtsam::Quaternion quat =
+        nodes.at<gtsam::Pose3>(key_pose.key).rotation().toQuaternion();
+    gtsam::Point3 point = nodes.at<gtsam::Pose3>(key_pose.key).translation();
+    const auto keyframe = submap_atlas_->getKeyframe(key_pose.key);
+    file << keyframe->stamp() << ",";
+    file << keyframe->id() << ",";
+    file << quat.x() << ",";
+    file << quat.y() << ",";
+    file << quat.z() << ",";
+    file << quat.w() << ",";
+    file << point.x() << ",";
+    file << point.y() << ",";
+    file << point.z() << "\n";
   }
   file.close();
 }

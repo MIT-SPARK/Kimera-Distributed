@@ -56,6 +56,7 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
   std::vector<ros::Subscriber> loop_ack_sub_;
   ros::Subscriber dpgo_sub_;
   ros::Subscriber connectivity_sub_;
+  ros::Subscriber dpgo_frame_corrector_sub_;
 
   // ROS publisher
   ros::Publisher vlc_responses_pub_;
@@ -65,6 +66,9 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
   ros::Publisher bow_response_pub_;
   ros::Publisher loop_pub_;
   ros::Publisher loop_ack_pub_;
+  ros::Publisher optimized_nodes_pub_;
+  ros::Publisher optimized_path_pub_;
+  ros::Publisher dpgo_frame_corrector_pub_;
 
   // ROS service
   ros::ServiceServer pose_graph_request_server_;
@@ -150,9 +154,26 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
   void dpgoCallback(const nav_msgs::PathConstPtr& msg);
 
   /**
+   * @brief Publish optimized nodes
+   * @param msg
+   */
+  void publishOptimizedNodesAndPath(const gtsam::Values& nodes);
+
+  /**
+   * @brief Subscribe to T_world_dpgo (default to identity)
+   * @param msg
+   */
+  void dpgoFrameCorrectionCallback(const geometry_msgs::Pose::ConstPtr& msg);
+
+  /**
    * @brief Callback to timer used for periodically logging
    */
   void logTimerCallback(const ros::TimerEvent& event);
+
+  /**
+   * @brief Publish world to dpgo frame based on first robot
+   */
+  void publishWorldToDpgoCorrection();
 
   /**
    * @brief Callback to timer used for periodically publishing TF

@@ -118,8 +118,6 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
   ros::param::get("~max_submap_size", config.submap_params_.max_submap_size);
   ros::param::get("~max_submap_distance", config.submap_params_.max_submap_distance);
 
-  initialize(config);
-
   // Subscriber
   std::string topic = "/" + config_.robot_names_[config_.my_id_] +
                       "/kimera_vio_ros/pose_graph_incremental";
@@ -258,6 +256,8 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
   tf_timer_ = nh_.createTimer(
       ros::Duration(1.0), &DistributedLoopClosureRos::tfTimerCallback, this);
 
+  initialize(config);
+
   ROS_INFO_STREAM(
       "Distributed Kimera node initialized (ID = "
       << config_.my_id_ << "). \n"
@@ -334,6 +334,9 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
 }
 
 DistributedLoopClosureRos::~DistributedLoopClosureRos() {
+  if (config_.log_output_) {
+    save();
+  }
   ROS_INFO("Shutting down DistributedLoopClosureRos process on robot %zu...",
            config_.my_id_);
 }
@@ -1053,4 +1056,8 @@ void DistributedLoopClosureRos::publishSubmapOfflineInfo() {
   }
 }
 
+void DistributedLoopClosureRos::save() {
+  saveBowVectors(config_.log_output_dir_);
+  saveVLCFrames(config_.log_output_dir_);
+}
 }  // namespace kimera_distributed

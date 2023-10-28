@@ -73,6 +73,14 @@ void DistributedLoopClosure::initialize(const DistributedLoopClosureConfig& conf
   submap_atlas_.reset(new SubmapAtlas(config_.submap_params_));
 
   if (config_.run_offline_) {
+    for (size_t id = config.my_id_; id < config.num_robots_; ++id) {
+      loadBowVectors(
+          id,
+          config.offline_dir_ + "robot_" + std::to_string(id) + "_bow_vectors.json");
+      loadVLCFrames(
+          id, config.offline_dir_ + "robot_" + std::to_string(id) + "_vlc_frames.json");
+    }
+
     // Load odometry
     loadOdometryFromFile(config_.offline_dir_ + "odometry_poses.csv");
     // Load original loop closures between keyframes
@@ -949,9 +957,13 @@ void DistributedLoopClosure::loadBowVectors(size_t robot_id,
   std::map<lcd::PoseId, DBoW2::BowVector> bow_vectors;
   lcd::loadBowVectors(bow_json, bow_vectors);
   ROS_INFO_STREAM("Loaded " << bow_vectors.size() << " BoW vectors.");
+  bow_latest_[robot_id] = 0;
+  bow_received_[robot_id] = std::unordered_set<lcd::PoseId>();
   for (const auto& id_bow : bow_vectors) {
     lcd::RobotPoseId id(robot_id, id_bow.first);
     lcd_->addBowVector(id, id_bow.second);
+    bow_latest_[robot_id] = id_bow.first;
+    bow_received_[robot_id].insert(id_bow.first);
   }
 }
 

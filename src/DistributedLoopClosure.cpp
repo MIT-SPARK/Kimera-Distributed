@@ -9,6 +9,7 @@
 #include <DBoW2/DBoW2.h>
 #include <glog/logging.h>
 #include <gtsam/geometry/Pose3.h>
+#include <kimera_multi_lcd/io.h>
 #include <kimera_multi_lcd/utils.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <pose_graph_tools/VLCFrameQuery.h>
@@ -892,12 +893,12 @@ gtsam::Pose3 DistributedLoopClosure::getOdomInWorldFrame() const {
   if (keyframe) {
     const auto submap = keyframe->getSubmap();
     CHECK_NOTNULL(submap);
-    const gtsam::Pose3 T_odom_kf = keyframe->getPoseInOdomFrame();  
+    const gtsam::Pose3 T_odom_kf = keyframe->getPoseInOdomFrame();
     const gtsam::Pose3 T_submap_kf = keyframe->getPoseInSubmapFrame();
     const gtsam::Pose3 T_world_submap = submap->getPoseInWorldFrame();
     const gtsam::Pose3 T_world_kf = T_world_submap * T_submap_kf;
     T_world_odom = T_world_kf * (T_odom_kf.inverse());
-  } 
+  }
   return T_world_odom;
 }
 
@@ -918,9 +919,53 @@ gtsam::Pose3 DistributedLoopClosure::getLatestKFInOdomFrame() const {
   gtsam::Pose3 T_odom_kf = gtsam::Pose3();
   const auto keyframe = submap_atlas_->getLatestKeyframe();
   if (keyframe) {
-    T_odom_kf = keyframe->getPoseInOdomFrame();  
+    T_odom_kf = keyframe->getPoseInOdomFrame();
   }
   return T_odom_kf;
+}
+
+void DistributedLoopClosure::saveBowVectors(const std::string& filepath) const {
+  for (const auto& robot_pose_id : bow_latest_) {
+    std::string bow_vector_save = filepath + "/robot_" +
+                                  std::to_string(robot_pose_id.first) +
+                                  "_bow_vectors.json";
+    LOG(INFO) << "Saving loop closure BoWs to " << bow_vector_save;
+    lcd::saveBowVectors(lcd_->getBoWVectors(robot_pose_id.first), bow_vector_save);
+  }
+}
+
+void DistributedLoopClosure::saveVLCFrames(const std::string& filepath) const {
+  for (const auto& robot_pose_id : bow_latest_) {
+    std::string vlc_frames_save =
+        filepath + "/robot_" + std::to_string(robot_pose_id.first) + "_vlc_frames.json";
+    LOG(INFO) << "Saving loop closure Frames to " << vlc_frames_save;
+    lcd::saveVLCFrames(lcd_->getVLCFrames(robot_pose_id.first), vlc_frames_save);
+  }
+}
+
+void DistributedLoopClosure::loadBowVectors(size_t robot_id,
+                                            const std::string& bow_json) {
+  ROS_INFO_STREAM("Loading BoW vectors from " << bow_json);
+  std::map<lcd::PoseId, DBoW2::BowVector> bow_vectors;
+  lcd::loadBowVectors(bow_json, bow_vectors);
+  ROS_INFO_STREAM("Loaded " << bow_vectors.size() << " BoW vectors.");
+  for (const auto& id_bow : bow_vectors) {
+    lcd::RobotPoseId id(robot_id, id_bow.first);
+    lcd_->addBowVector(id, id_bow.second);
+  }
+}
+
+void DistributedLoopClosure::loadVLCFrames(size_t robot_id,
+                                           const std::string& vlc_json) {
+  ROS_INFO_STREAM("Loading VLC frames from " << vlc_json);
+  std::map<lcd::PoseId, lcd::VLCFrame> vlc_frames;
+  lcd::loadVLCFrames(vlc_json, vlc_frames);
+  ROS_INFO_STREAM("Loaded " << vlc_frames.size() << " VLC frames.");
+
+  for (const auto& id_vlc : vlc_frames) {
+    lcd::RobotPoseId id(robot_id, id_vlc.first);
+    lcd_->addVLCFrame(id, id_vlc.second);
+  }
 }
 
 void DistributedLoopClosure::createLogFiles() {

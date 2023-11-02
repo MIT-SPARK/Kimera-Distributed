@@ -86,8 +86,7 @@ void DistributedLoopClosure::initialize(const DistributedLoopClosureConfig& conf
     // Load original loop closures between keyframes
     loadLoopClosuresFromFile(config_.offline_dir_ + "loop_closures.csv");
   } else {
-    // Run online. In this case initialize log files to record keyframe poses and loop
-    // closures.
+    // Initialize log files to record keyframe poses and loop closures.
     if (config_.log_output_) {
       createLogFiles();
     }

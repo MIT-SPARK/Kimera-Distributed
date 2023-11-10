@@ -334,6 +334,9 @@ DistributedLoopClosureRos::DistributedLoopClosureRos(const ros::NodeHandle& n)
 }
 
 DistributedLoopClosureRos::~DistributedLoopClosureRos() {
+  if (config_.log_output_) {
+    save();
+  }
   ROS_INFO("Shutting down DistributedLoopClosureRos process on robot %zu...",
            config_.my_id_);
 }
@@ -1053,4 +1056,8 @@ void DistributedLoopClosureRos::publishSubmapOfflineInfo() {
   }
 }
 
+void DistributedLoopClosureRos::save() {
+  saveBowVectors(config_.log_output_dir_);
+  saveVLCFrames(config_.log_output_dir_);
+}
 }  // namespace kimera_distributed

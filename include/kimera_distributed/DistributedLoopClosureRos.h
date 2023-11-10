@@ -267,6 +267,11 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
    * @brief Publish TF between odom and latest keyframe
    */
   void publishLatestKFToOdom();
+
+  /**
+   * @brief Save VLC frames and BoW vectors
+   */
+  void save();
 };
 
 }  // namespace kimera_distributed

@@ -6,9 +6,15 @@
 
 #pragma once
 
-#include "kimera_distributed/SubmapAtlas.h"
-#include "kimera_distributed/configs.h"
-#include "kimera_distributed/utils.h"
+#include <kimera_multi_lcd/loop_closure_detector.h>
+#include <pose_graph_tools/BowQueries.h>
+#include <pose_graph_tools/BowRequests.h>
+#include <pose_graph_tools/LoopClosures.h>
+#include <pose_graph_tools/LoopClosuresAck.h>
+#include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools/PoseGraphQuery.h>
+#include <pose_graph_tools/VLCFrames.h>
+#include <pose_graph_tools/VLCRequests.h>
 
 #include <iostream>
 #include <map>
@@ -18,15 +24,9 @@
 #include <thread>
 #include <vector>
 
-#include <kimera_multi_lcd/LoopClosureDetector.h>
-#include <pose_graph_tools/BowQueries.h>
-#include <pose_graph_tools/BowRequests.h>
-#include <pose_graph_tools/LoopClosures.h>
-#include <pose_graph_tools/LoopClosuresAck.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/PoseGraphQuery.h>
-#include <pose_graph_tools/VLCFrames.h>
-#include <pose_graph_tools/VLCRequests.h>
+#include "kimera_distributed/SubmapAtlas.h"
+#include "kimera_distributed/configs.h"
+#include "kimera_distributed/utils.h"
 
 namespace lcd = kimera_multi_lcd;
 
@@ -212,6 +212,27 @@ class DistributedLoopClosure {
    * Update the candidate list and verification queue
    */
   size_t updateCandidateList();
+
+  /**
+   * Save the Bow vectors from this session
+   */
+  void saveBowVectors(const std::string& filepath) const;
+
+  /**
+   * Save the VLC frames from this session
+   */
+  void saveVLCFrames(const std::string& filepath) const;
+
+  /**
+   * Load Bow vectors into this session (! caution !)
+   */
+  void loadBowVectors(size_t robot_id, const std::string& bow_json);
+
+  /**
+   * Load VLC frames into this session (! caution !)
+   */
+  void loadVLCFrames(size_t robot_id, const std::string& vlc_json);
+
   /**
    * @brief Create log files
    */

@@ -11,9 +11,9 @@
 #include <gtsam/geometry/Pose3.h>
 #include <kimera_multi_lcd/io.h>
 #include <kimera_multi_lcd/utils.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/VLCFrameQuery.h>
-#include <pose_graph_tools/utils.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_msgs/VLCFrameQuery.h>
+#include <pose_graph_tools_ros/utils.h>
 
 #include <cassert>
 #include <fstream>
@@ -99,7 +99,7 @@ void DistributedLoopClosure::initialize(const DistributedLoopClosureConfig& conf
 }
 
 void DistributedLoopClosure::processBow(
-    const pose_graph_tools::BowQueriesConstPtr& query_msg) {
+    const pose_graph_tools_msgs::BowQueriesConstPtr& query_msg) {
   for (const auto& msg : query_msg->queries) {
     lcd::RobotId robot_id = msg.robot_id;
     lcd::PoseId pose_id = msg.pose_id;
@@ -121,9 +121,9 @@ void DistributedLoopClosure::processBow(
 }
 
 bool DistributedLoopClosure::processLocalPoseGraph(
-    const pose_graph_tools::PoseGraph::ConstPtr& msg) {
+    const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg) {
   // Parse odometry edges and create new keyframes in the submap atlas
-  std::vector<pose_graph_tools::PoseGraphEdge> local_loop_closures;
+  std::vector<pose_graph_tools_msgs::PoseGraphEdge> local_loop_closures;
   const uint64_t ts = msg->header.stamp.toNSec();
 
   bool incremental_pub = true;
@@ -160,7 +160,7 @@ bool DistributedLoopClosure::processLocalPoseGraph(
 
   for (const auto& pg_edge : msg->edges) {
     if (pg_edge.robot_from == config_.my_id_ && pg_edge.robot_to == config_.my_id_ &&
-        pg_edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
+        pg_edge.type == pose_graph_tools_msgs::PoseGraphEdge::ODOM) {
       int frame_src = (int)pg_edge.key_from;
       int frame_dst = (int)pg_edge.key_to;
       CHECK_EQ(frame_src + 1, frame_dst);
@@ -193,7 +193,7 @@ bool DistributedLoopClosure::processLocalPoseGraph(
       }
     } else if (pg_edge.robot_from == config_.my_id_ &&
                pg_edge.robot_to == config_.my_id_ &&
-               pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
+               pg_edge.type == pose_graph_tools_msgs::PoseGraphEdge::LOOPCLOSE) {
       local_loop_closures.push_back(pg_edge);
     }
   }
@@ -567,7 +567,7 @@ void DistributedLoopClosure::detectLoopSpin() {
     if (it == bow_msgs_.end()) {
       break;
     }
-    const pose_graph_tools::BowQuery msg = *it;
+    const pose_graph_tools_msgs::BowQuery msg = *it;
     lcd::RobotId query_robot = msg.robot_id;
     lcd::PoseId query_pose = msg.pose_id;
     lcd::RobotPoseId query_vertex(query_robot, query_pose);
@@ -766,12 +766,12 @@ void DistributedLoopClosure::verifyLoopSpin() {
   }
 }
 
-pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
+pose_graph_tools_msgs::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
     bool incremental) {
   // Start submap critical section
   // std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
   // Fill in submap-level loop closures
-  pose_graph_tools::PoseGraph out_graph;
+  pose_graph_tools_msgs::PoseGraph out_graph;
 
   if (submap_atlas_->numSubmaps() == 0) {
     return out_graph;
@@ -791,7 +791,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
   size_t start_idx = incremental ? last_get_submap_idx_ : 0;
   size_t end_idx = submap_atlas_->numSubmaps() - 1;
   for (int submap_id = start_idx; submap_id < end_idx; ++submap_id) {
-    pose_graph_tools::PoseGraphEdge edge;
+    pose_graph_tools_msgs::PoseGraphEdge edge;
     const auto submap_src = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
     const auto submap_dst = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id + 1));
     const auto T_odom_src = submap_src->getPoseInOdomFrame();
@@ -801,7 +801,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
     edge.robot_to = config_.my_id_;
     edge.key_from = submap_src->id();
     edge.key_to = submap_dst->id();
-    edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+    edge.type = pose_graph_tools_msgs::PoseGraphEdge::ODOM;
     edge.pose = GtsamPoseToRos(T_src_dst);
     edge.header.stamp.fromNSec(submap_dst->stamp());
     // TODO(yun) add frame id param
@@ -812,7 +812,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
   // Fill in submap nodes
   start_idx = (incremental) ? start_idx + 1 : start_idx;
   for (int submap_id = start_idx; submap_id < end_idx + 1; ++submap_id) {
-    pose_graph_tools::PoseGraphNode node;
+    pose_graph_tools_msgs::PoseGraphNode node;
     const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
     node.robot_id = config_.my_id_;
     node.key = submap->id();
@@ -832,7 +832,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
 }
 
 void DistributedLoopClosure::processInternalVLC(
-    const pose_graph_tools::VLCFramesConstPtr& msg) {
+    const pose_graph_tools_msgs::VLCFramesConstPtr& msg) {
   for (const auto& frame_msg : msg->frames) {
     lcd::VLCFrame frame;
     kimera_multi_lcd::VLCFrameFromMsg(frame_msg, &frame);

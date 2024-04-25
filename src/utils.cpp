@@ -53,10 +53,10 @@ void GtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf) {
 }
 
 // Convert gtsam posegaph to PoseGraph msg
-pose_graph_tools::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& factors,
+pose_graph_tools_msgs::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& factors,
                                             const gtsam::Values& values,
                                             const gtsam::Vector& gnc_weights) {
-  std::vector<pose_graph_tools::PoseGraphEdge> edges;
+  std::vector<pose_graph_tools_msgs::PoseGraphEdge> edges;
   size_t single_robot_lcs = 0;
   size_t inter_robot_lcs = 0;
   size_t single_robot_inliers = 0;
@@ -69,7 +69,7 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& f
       const gtsam::BetweenFactor<gtsam::Pose3>& factor =
           *boost::dynamic_pointer_cast<gtsam::BetweenFactor<gtsam::Pose3>>(factors[i]);
       // convert between factor to PoseGraphEdge type
-      pose_graph_tools::PoseGraphEdge edge;
+      pose_graph_tools_msgs::PoseGraphEdge edge;
       gtsam::Symbol front(factor.front());
       gtsam::Symbol back(factor.back());
       edge.key_from = front.index();
@@ -79,17 +79,17 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& f
 
       if (edge.key_to == edge.key_from + 1 &&
           edge.robot_from == edge.robot_to) {  // check if odom
-        edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+        edge.type = pose_graph_tools_msgs::PoseGraphEdge::ODOM;
 
       } else {
-        edge.type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+        edge.type = pose_graph_tools_msgs::PoseGraphEdge::LOOPCLOSE;
         if (edge.robot_from == edge.robot_to) {
           single_robot_lcs++;
         } else {
           inter_robot_lcs++;
         }
         if (gnc_weights.size() == factors.size() && gnc_weights(i) < 0.5) {
-          edge.type = pose_graph_tools::PoseGraphEdge::REJECTED_LOOPCLOSE;
+          edge.type = pose_graph_tools_msgs::PoseGraphEdge::REJECTED_LOOPCLOSE;
         } else {
           if (edge.robot_from == edge.robot_to) {
             single_robot_inliers++;
@@ -114,7 +114,7 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& f
     }
   }
 
-  std::vector<pose_graph_tools::PoseGraphNode> nodes;
+  std::vector<pose_graph_tools_msgs::PoseGraphNode> nodes;
   // Then store the values as nodes
   gtsam::KeyVector key_list = values.keys();
   for (size_t i = 0; i < key_list.size(); i++) {
@@ -122,7 +122,7 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& f
     try {
       size_t robot_id = robot_prefix_to_id.at(node_symb.chr());
 
-      pose_graph_tools::PoseGraphNode node;
+      pose_graph_tools_msgs::PoseGraphNode node;
       node.key = node_symb.index();
       node.robot_id = robot_id;
       const gtsam::Pose3& value = values.at<gtsam::Pose3>(key_list[i]);
@@ -136,7 +136,7 @@ pose_graph_tools::PoseGraph GtsamGraphToRos(const gtsam::NonlinearFactorGraph& f
     }
   }
 
-  pose_graph_tools::PoseGraph posegraph;
+  pose_graph_tools_msgs::PoseGraph posegraph;
   posegraph.nodes = nodes;
   posegraph.edges = edges;
   // ROS_INFO(

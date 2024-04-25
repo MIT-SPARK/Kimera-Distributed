@@ -60,7 +60,7 @@
     <rosparam file="$(find kimera_distributed)/params/$(arg robot_names_config).yaml" />
   </node>
 
-  <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
+  <include file="$(find pose_graph_tools_ros)/launch/posegraph_view.launch" >
     <arg name="frame_id"      value="$(arg robot_name)/map" />
     <arg name="graph_topic"   value="pose_graph_incremental" />
     <arg name="ns"            value="kimera_distributed"/>

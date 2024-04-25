@@ -15,7 +15,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Transform.h>
-#include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
 #include <ros/console.h>
 #include <string>
 
@@ -52,7 +52,7 @@ geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform);
 void GtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
 
 // Convert gtsam posegaph to PoseGraph msg
-pose_graph_tools::PoseGraph GtsamGraphToRos(
+pose_graph_tools_msgs::PoseGraph GtsamGraphToRos(
     const gtsam::NonlinearFactorGraph& factors,
     const gtsam::Values& values,
     const gtsam::Vector& gnc_weights = Eigen::VectorXd::Zero(0));

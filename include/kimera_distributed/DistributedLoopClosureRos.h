@@ -20,14 +20,14 @@
 #include "kimera_distributed/DistributedLoopClosure.h"
 #include "kimera_distributed/utils.h"
 
-#include <pose_graph_tools/BowQueries.h>
-#include <pose_graph_tools/BowRequests.h>
-#include <pose_graph_tools/LoopClosures.h>
-#include <pose_graph_tools/LoopClosuresAck.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/PoseGraphQuery.h>
-#include <pose_graph_tools/VLCFrames.h>
-#include <pose_graph_tools/VLCRequests.h>
+#include <pose_graph_tools_msgs/BowQueries.h>
+#include <pose_graph_tools_msgs/BowRequests.h>
+#include <pose_graph_tools_msgs/LoopClosures.h>
+#include <pose_graph_tools_msgs/LoopClosuresAck.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_msgs/PoseGraphQuery.h>
+#include <pose_graph_tools_msgs/VLCFrames.h>
+#include <pose_graph_tools_msgs/VLCRequests.h>
 #include <std_msgs/UInt16MultiArray.h>
 
 #include <tf/transform_broadcaster.h>
@@ -107,45 +107,45 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
   /**
    * Callback to process bag of word vectors received from robots
    */
-  void bowCallback(const pose_graph_tools::BowQueriesConstPtr& query_msg);
+  void bowCallback(const pose_graph_tools_msgs::BowQueriesConstPtr& query_msg);
 
   /**
    * @brief Subscribe to incremental pose graph of this robot published by VIO
    * @param msg
    */
-  void localPoseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+  void localPoseGraphCallback(const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg);
 
   /**
    * Callback to process the VLC responses to our requests
    */
-  void vlcResponsesCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
+  void vlcResponsesCallback(const pose_graph_tools_msgs::VLCFramesConstPtr& msg);
 
   /**
    * Callback to process internal VLC frames
    */
-  void internalVLCCallback(const pose_graph_tools::VLCFramesConstPtr& msg);
+  void internalVLCCallback(const pose_graph_tools_msgs::VLCFramesConstPtr& msg);
 
   /**
    * @brief Callback to process the BoW requests from other robots
    * @param msg
    */
-  void bowRequestsCallback(const pose_graph_tools::BowRequestsConstPtr& msg);
+  void bowRequestsCallback(const pose_graph_tools_msgs::BowRequestsConstPtr& msg);
 
   /**
    * Callback to process the VLC requests from other robots
    */
-  void vlcRequestsCallback(const pose_graph_tools::VLCRequestsConstPtr& msg);
+  void vlcRequestsCallback(const pose_graph_tools_msgs::VLCRequestsConstPtr& msg);
 
   /**
    * Callback to process new inter-robot loop closures
    */
-  void loopClosureCallback(const pose_graph_tools::LoopClosuresConstPtr& msg);
+  void loopClosureCallback(const pose_graph_tools_msgs::LoopClosuresConstPtr& msg);
 
   /**
    * Callback to process new inter-robot loop closures
    */
   void loopAcknowledgementCallback(
-      const pose_graph_tools::LoopClosuresAckConstPtr& msg);
+      const pose_graph_tools_msgs::LoopClosuresAckConstPtr& msg);
 
   /**
    * @brief Callback to receive optimized submap poses from dpgo
@@ -191,8 +191,8 @@ class DistributedLoopClosureRos : DistributedLoopClosure {
    * @param response
    * @return
    */
-  bool requestPoseGraphCallback(pose_graph_tools::PoseGraphQuery::Request& request,
-                                pose_graph_tools::PoseGraphQuery::Response& response);
+  bool requestPoseGraphCallback(pose_graph_tools_msgs::PoseGraphQuery::Request& request,
+                                pose_graph_tools_msgs::PoseGraphQuery::Response& response);
 
   /**
    * Initialize loop closures

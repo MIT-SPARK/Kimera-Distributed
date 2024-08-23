@@ -65,6 +65,14 @@ class SubmapAtlas {
    */
   std::shared_ptr<Keyframe> getKeyframe(int keyframe_id);
   /**
+   * @brief Get keyframe based on the query timestamp
+   * @param timestamp desired timestamp in ns
+   * @param tolerance in ns (default to 1 sec)
+   * @return keyframe or nullptr if not found
+   */
+  std::shared_ptr<Keyframe> getKeyframeFromStamp(const uint64_t& timestamp,
+                                                 const uint64_t& tolNs = 1000000000);
+  /**
    * @brief Get latest keyframe (nullptr) if submap atlas is empty
    * @return
    */

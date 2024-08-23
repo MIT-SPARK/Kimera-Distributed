@@ -1,9 +1,10 @@
 # Hosts (each specified by hostname and enet port) that have persistent communication across disconnections 
-- robot0: {hostname: "192.168.10.103", port: 11411}
-- robot1: {hostname: "192.168.10.113", port: 11412}
-- robot2: {hostname: "192.168.10.123", port: 11413}
+- robot0: {hostname: "10.31.128.97", port: 11411}
+- robot1: {hostname: "10.29.255.104", port: 11412}
+- robot2: {hostname: "10.29.245.232", port: 11413}
 - robot3: {hostname: "192.168.10.133", port: 11414}
 - robot4: {hostname: "192.168.10.143", port: 11415}
 - robot5: {hostname: "192.168.10.153", port: 11416}
 - robot6: {hostname: "192.168.10.163", port: 11417}
 - robot7: {hostname: "192.168.10.173", port: 11418}
+- robot8: {hostname: "10.29.175.68",  port: 11419}

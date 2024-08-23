@@ -1,2 +1,2 @@
-pose_graph_tools/PoseGraphEdge loop_closure
+pose_graph_tools_msgs/PoseGraphEdge loop_closure
 ---

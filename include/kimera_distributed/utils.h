@@ -14,7 +14,8 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <nav_msgs/Path.h>
-#include <pose_graph_tools/PoseGraph.h>
+#include <geometry_msgs/Transform.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
 #include <ros/console.h>
 #include <string>
 
@@ -29,6 +30,8 @@ const std::map<uint32_t, char> robot_id_to_prefix = {
     {5, 'f'},
     {6, 'g'},
     {7, 'h'},
+    {8, 'i'},
+    {9, 'j'}
 };
 
 const std::map<char, uint32_t> robot_prefix_to_id = {
@@ -40,13 +43,16 @@ const std::map<char, uint32_t> robot_prefix_to_id = {
     {'f', 5},
     {'g', 6},
     {'h', 7},
+    {'i', 8},
+    {'j', 9}
 };
 
 gtsam::Pose3 RosPoseToGtsam(const geometry_msgs::Pose& transform);
 geometry_msgs::Pose GtsamPoseToRos(const gtsam::Pose3& transform);
+void GtsamPoseToRosTf(const gtsam::Pose3& pose, geometry_msgs::Transform* tf);
 
 // Convert gtsam posegaph to PoseGraph msg
-pose_graph_tools::PoseGraph GtsamGraphToRos(
+pose_graph_tools_msgs::PoseGraph GtsamGraphToRos(
     const gtsam::NonlinearFactorGraph& factors,
     const gtsam::Values& values,
     const gtsam::Vector& gnc_weights = Eigen::VectorXd::Zero(0));

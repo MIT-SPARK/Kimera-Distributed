@@ -6,9 +6,15 @@
 
 #pragma once
 
-#include "kimera_distributed/SubmapAtlas.h"
-#include "kimera_distributed/configs.h"
-#include "kimera_distributed/utils.h"
+#include <kimera_multi_lcd/loop_closure_detector.h>
+#include <pose_graph_tools_msgs/BowQueries.h>
+#include <pose_graph_tools_msgs/BowRequests.h>
+#include <pose_graph_tools_msgs/LoopClosures.h>
+#include <pose_graph_tools_msgs/LoopClosuresAck.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_msgs/PoseGraphQuery.h>
+#include <pose_graph_tools_msgs/VLCFrames.h>
+#include <pose_graph_tools_msgs/VLCRequests.h>
 
 #include <iostream>
 #include <map>
@@ -18,15 +24,9 @@
 #include <thread>
 #include <vector>
 
-#include <kimera_multi_lcd/LoopClosureDetector.h>
-#include <pose_graph_tools/BowQueries.h>
-#include <pose_graph_tools/BowRequests.h>
-#include <pose_graph_tools/LoopClosures.h>
-#include <pose_graph_tools/LoopClosuresAck.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/PoseGraphQuery.h>
-#include <pose_graph_tools/VLCFrames.h>
-#include <pose_graph_tools/VLCRequests.h>
+#include "kimera_distributed/SubmapAtlas.h"
+#include "kimera_distributed/configs.h"
+#include "kimera_distributed/utils.h"
 
 namespace lcd = kimera_multi_lcd;
 
@@ -55,7 +55,7 @@ class DistributedLoopClosure {
   std::unordered_map<lcd::RobotId, lcd::PoseId>
       bow_latest_;  // Latest BoW received from each robot
   std::unordered_map<lcd::RobotId, std::unordered_set<lcd::PoseId>> bow_received_;
-  std::vector<pose_graph_tools::BowQuery>
+  std::vector<pose_graph_tools_msgs::BowQuery>
       bow_msgs_;  // New BoW messages that need to be processed
   std::mutex bow_msgs_mutex_;
 
@@ -75,7 +75,7 @@ class DistributedLoopClosure {
 
   // Data structures for offline mode
   gtsam::NonlinearFactorGraph offline_keyframe_loop_closures_;
-  std::map<lcd::RobotPoseId, pose_graph_tools::VLCFrameMsg> offline_robot_pose_msg_;
+  std::map<lcd::RobotPoseId, pose_graph_tools_msgs::VLCFrameMsg> offline_robot_pose_msg_;
 
   // List of potential loop closures
   // that require to request VLC frames
@@ -101,6 +101,9 @@ class DistributedLoopClosure {
   // Number of updates received from back-end
   int backend_update_count_;
 
+  // Pose corrector
+  gtsam::Pose3 T_world_dpgo_;
+
   // For incremental publishing
   size_t last_get_submap_idx_;
   size_t last_get_lc_idx_;
@@ -120,20 +123,36 @@ class DistributedLoopClosure {
 
  protected:
   /**
+   * @brief Compute the transformation T_world_odom
+   */
+  gtsam::Pose3 getOdomInWorldFrame() const;
+  /**
+   * @brief Compute the transformation T_world_KF
+   * KF denotes the coordinate of the latest keyframe in the submap atlas
+   * This function is currently only used for debugging
+   */
+  gtsam::Pose3 getLatestKFInWorldFrame() const;
+  /**
+   * @brief Compute the transformation T_odom_KF
+   * KF denotes the coordinate of the latest keyframe in the submap atlas
+   * This function is currently only used for debugging
+   */
+  gtsam::Pose3 getLatestKFInOdomFrame() const;
+  /**
    * Callback to process bag of word vectors received from robots
    */
-  void processBow(const pose_graph_tools::BowQueriesConstPtr& query_msg);
+  void processBow(const pose_graph_tools_msgs::BowQueriesConstPtr& query_msg);
 
   /**
    * @brief Subscribe to incremental pose graph of this robot published by VIO
    * @param msg
    */
-  bool processLocalPoseGraph(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+  bool processLocalPoseGraph(const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg);
 
   /**
    * Callback to process internal VLC frames
    */
-  void processInternalVLC(const pose_graph_tools::VLCFramesConstPtr& msg);
+  void processInternalVLC(const pose_graph_tools_msgs::VLCFramesConstPtr& msg);
 
   /**
    * @brief Callback to receive optimized submap poses from dpgo
@@ -187,12 +206,33 @@ class DistributedLoopClosure {
   /**
    * Get sparse pose graph
    */
-  pose_graph_tools::PoseGraph getSubmapPoseGraph(bool incremental = false);
+  pose_graph_tools_msgs::PoseGraph getSubmapPoseGraph(bool incremental = false);
 
   /**
    * Update the candidate list and verification queue
    */
   size_t updateCandidateList();
+
+  /**
+   * Save the Bow vectors from this session
+   */
+  void saveBowVectors(const std::string& filepath) const;
+
+  /**
+   * Save the VLC frames from this session
+   */
+  void saveVLCFrames(const std::string& filepath) const;
+
+  /**
+   * Load Bow vectors into this session (! caution !)
+   */
+  void loadBowVectors(size_t robot_id, const std::string& bow_json);
+
+  /**
+   * Load VLC frames into this session (! caution !)
+   */
+  void loadVLCFrames(size_t robot_id, const std::string& vlc_json);
+
   /**
    * @brief Create log files
    */
@@ -220,10 +260,15 @@ class DistributedLoopClosure {
    */
   void logLoopClosure(const lcd::VLCEdge& keyframe_edge);
   /**
+   * @brief Compute the latest pose estimates to the world frame
+   * @brief nodes Pointer of Values type to populate
+   */
+  void computePosesInWorldFrame(gtsam::Values::shared_ptr nodes) const;
+  /**
    * @brief Save the latest pose estimates to the world frame
    * @brief filename Output file
    */
-  void savePosesInWorldFrame(const std::string& filename) const;
+  void savePosesToFile(const std::string& filename, const gtsam::Values& nodes) const;
   /**
    * @brief Save the current submap atlas to file.
    * This function saves two file:

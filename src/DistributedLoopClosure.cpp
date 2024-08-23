@@ -9,10 +9,11 @@
 #include <DBoW2/DBoW2.h>
 #include <glog/logging.h>
 #include <gtsam/geometry/Pose3.h>
+#include <kimera_multi_lcd/io.h>
 #include <kimera_multi_lcd/utils.h>
-#include <pose_graph_tools/PoseGraph.h>
-#include <pose_graph_tools/VLCFrameQuery.h>
-#include <pose_graph_tools/utils.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_msgs/VLCFrameQuery.h>
+#include <pose_graph_tools_ros/utils.h>
 
 #include <cassert>
 #include <fstream>
@@ -72,13 +73,20 @@ void DistributedLoopClosure::initialize(const DistributedLoopClosureConfig& conf
   submap_atlas_.reset(new SubmapAtlas(config_.submap_params_));
 
   if (config_.run_offline_) {
+    for (size_t id = config.my_id_; id < config.num_robots_; ++id) {
+      loadBowVectors(
+          id,
+          config.offline_dir_ + "robot_" + std::to_string(id) + "_bow_vectors.json");
+      loadVLCFrames(
+          id, config.offline_dir_ + "robot_" + std::to_string(id) + "_vlc_frames.json");
+    }
+
     // Load odometry
     loadOdometryFromFile(config_.offline_dir_ + "odometry_poses.csv");
     // Load original loop closures between keyframes
     loadLoopClosuresFromFile(config_.offline_dir_ + "loop_closures.csv");
   } else {
-    // Run online. In this case initialize log files to record keyframe poses and loop
-    // closures.
+    // Initialize log files to record keyframe poses and loop closures.
     if (config_.log_output_) {
       createLogFiles();
     }
@@ -91,7 +99,7 @@ void DistributedLoopClosure::initialize(const DistributedLoopClosureConfig& conf
 }
 
 void DistributedLoopClosure::processBow(
-    const pose_graph_tools::BowQueriesConstPtr& query_msg) {
+    const pose_graph_tools_msgs::BowQueriesConstPtr& query_msg) {
   for (const auto& msg : query_msg->queries) {
     lcd::RobotId robot_id = msg.robot_id;
     lcd::PoseId pose_id = msg.pose_id;
@@ -113,9 +121,9 @@ void DistributedLoopClosure::processBow(
 }
 
 bool DistributedLoopClosure::processLocalPoseGraph(
-    const pose_graph_tools::PoseGraph::ConstPtr& msg) {
+    const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg) {
   // Parse odometry edges and create new keyframes in the submap atlas
-  std::vector<pose_graph_tools::PoseGraphEdge> local_loop_closures;
+  std::vector<pose_graph_tools_msgs::PoseGraphEdge> local_loop_closures;
   const uint64_t ts = msg->header.stamp.toNSec();
 
   bool incremental_pub = true;
@@ -133,6 +141,11 @@ bool DistributedLoopClosure::processLocalPoseGraph(
                                 msg->nodes[0].pose.position.z);
     gtsam::Pose3 init_pose(init_rotation, init_position);
 
+    if (config_.my_id_ == 0) {
+      // Implicit assumption: first pose of the first robot in DPGO is set to identity
+      T_world_dpgo_ = init_pose;
+    }
+
     submap_atlas_->createKeyframe(0, init_pose, ts);
     logOdometryPose(
         gtsam::Symbol(robot_id_to_prefix.at(config_.my_id_), 0), init_pose, ts);
@@ -147,7 +160,7 @@ bool DistributedLoopClosure::processLocalPoseGraph(
 
   for (const auto& pg_edge : msg->edges) {
     if (pg_edge.robot_from == config_.my_id_ && pg_edge.robot_to == config_.my_id_ &&
-        pg_edge.type == pose_graph_tools::PoseGraphEdge::ODOM) {
+        pg_edge.type == pose_graph_tools_msgs::PoseGraphEdge::ODOM) {
       int frame_src = (int)pg_edge.key_from;
       int frame_dst = (int)pg_edge.key_to;
       CHECK_EQ(frame_src + 1, frame_dst);
@@ -180,7 +193,7 @@ bool DistributedLoopClosure::processLocalPoseGraph(
       }
     } else if (pg_edge.robot_from == config_.my_id_ &&
                pg_edge.robot_to == config_.my_id_ &&
-               pg_edge.type == pose_graph_tools::PoseGraphEdge::LOOPCLOSE) {
+               pg_edge.type == pose_graph_tools_msgs::PoseGraphEdge::LOOPCLOSE) {
       local_loop_closures.push_back(pg_edge);
     }
   }
@@ -230,7 +243,8 @@ void DistributedLoopClosure::processOptimizedPath(const nav_msgs::PathConstPtr& 
   }
   // Store the optimized poses from dpgo in the submap atlas
   for (int submap_id = 0; submap_id < msg->poses.size(); ++submap_id) {
-    const auto T_world_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+    const auto T_dpgo_submap = RosPoseToGtsam(msg->poses[submap_id].pose);
+    const auto T_world_submap = T_world_dpgo_.compose(T_dpgo_submap);
     const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
     submap->setPoseInWorldFrame(T_world_submap);
   }
@@ -250,7 +264,25 @@ void DistributedLoopClosure::processOptimizedPath(const nav_msgs::PathConstPtr& 
             << ").";
 }
 
-void DistributedLoopClosure::savePosesInWorldFrame(const std::string& filename) const {
+void DistributedLoopClosure::computePosesInWorldFrame(
+    gtsam::Values::shared_ptr nodes) const {
+  nodes->clear();
+  // Using the optimized submap poses from dpgo, recover optimized poses for the
+  // original VIO keyframes
+  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps(); ++submap_id) {
+    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
+    const auto T_world_submap = submap->getPoseInWorldFrame();
+    for (const int keyframe_id : submap->getKeyframeIDs()) {
+      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
+      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
+      const auto T_world_keyframe = T_world_submap * T_submap_keyframe;
+      nodes->insert(keyframe_id, T_world_keyframe);
+    }
+  }
+}
+
+void DistributedLoopClosure::savePosesToFile(const std::string& filename,
+                                             const gtsam::Values& nodes) const {
   std::ofstream file;
   file.open(filename);
   if (!file.is_open()) {
@@ -260,28 +292,20 @@ void DistributedLoopClosure::savePosesInWorldFrame(const std::string& filename) 
   file << std::fixed << std::setprecision(8);
   file << "ns,pose_index,qx,qy,qz,qw,tx,ty,tz\n";
 
-  // Using the optimized submap poses from dpgo, recover optimized poses for the
-  // original VIO keyframes, and save the results to a log file
-  for (int submap_id = 0; submap_id < submap_atlas_->numSubmaps(); ++submap_id) {
-    const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
-    const auto T_world_submap = submap->getPoseInWorldFrame();
-    for (const int keyframe_id : submap->getKeyframeIDs()) {
-      const auto keyframe = CHECK_NOTNULL(submap->getKeyframe(keyframe_id));
-      const auto T_submap_keyframe = keyframe->getPoseInSubmapFrame();
-      const auto T_world_keyframe = T_world_submap * T_submap_keyframe;
-      // Save to log
-      gtsam::Quaternion quat = T_world_keyframe.rotation().toQuaternion();
-      gtsam::Point3 point = T_world_keyframe.translation();
-      file << keyframe->stamp() << ",";
-      file << keyframe->id() << ",";
-      file << quat.x() << ",";
-      file << quat.y() << ",";
-      file << quat.z() << ",";
-      file << quat.w() << ",";
-      file << point.x() << ",";
-      file << point.y() << ",";
-      file << point.z() << "\n";
-    }
+  for (const auto& key_pose : nodes) {
+    gtsam::Quaternion quat =
+        nodes.at<gtsam::Pose3>(key_pose.key).rotation().toQuaternion();
+    gtsam::Point3 point = nodes.at<gtsam::Pose3>(key_pose.key).translation();
+    const auto keyframe = submap_atlas_->getKeyframe(key_pose.key);
+    file << keyframe->stamp() << ",";
+    file << keyframe->id() << ",";
+    file << quat.x() << ",";
+    file << quat.y() << ",";
+    file << quat.z() << ",";
+    file << quat.w() << ",";
+    file << point.x() << ",";
+    file << point.y() << ",";
+    file << point.z() << "\n";
   }
   file.close();
 }
@@ -543,7 +567,7 @@ void DistributedLoopClosure::detectLoopSpin() {
     if (it == bow_msgs_.end()) {
       break;
     }
-    const pose_graph_tools::BowQuery msg = *it;
+    const pose_graph_tools_msgs::BowQuery msg = *it;
     lcd::RobotId query_robot = msg.robot_id;
     lcd::PoseId query_pose = msg.pose_id;
     lcd::RobotPoseId query_vertex(query_robot, query_pose);
@@ -742,12 +766,12 @@ void DistributedLoopClosure::verifyLoopSpin() {
   }
 }
 
-pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
+pose_graph_tools_msgs::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
     bool incremental) {
   // Start submap critical section
   // std::unique_lock<std::mutex> submap_lock(submap_atlas_mutex_);
   // Fill in submap-level loop closures
-  pose_graph_tools::PoseGraph out_graph;
+  pose_graph_tools_msgs::PoseGraph out_graph;
 
   if (submap_atlas_->numSubmaps() == 0) {
     return out_graph;
@@ -767,7 +791,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
   size_t start_idx = incremental ? last_get_submap_idx_ : 0;
   size_t end_idx = submap_atlas_->numSubmaps() - 1;
   for (int submap_id = start_idx; submap_id < end_idx; ++submap_id) {
-    pose_graph_tools::PoseGraphEdge edge;
+    pose_graph_tools_msgs::PoseGraphEdge edge;
     const auto submap_src = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
     const auto submap_dst = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id + 1));
     const auto T_odom_src = submap_src->getPoseInOdomFrame();
@@ -777,7 +801,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
     edge.robot_to = config_.my_id_;
     edge.key_from = submap_src->id();
     edge.key_to = submap_dst->id();
-    edge.type = pose_graph_tools::PoseGraphEdge::ODOM;
+    edge.type = pose_graph_tools_msgs::PoseGraphEdge::ODOM;
     edge.pose = GtsamPoseToRos(T_src_dst);
     edge.header.stamp.fromNSec(submap_dst->stamp());
     // TODO(yun) add frame id param
@@ -788,7 +812,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
   // Fill in submap nodes
   start_idx = (incremental) ? start_idx + 1 : start_idx;
   for (int submap_id = start_idx; submap_id < end_idx + 1; ++submap_id) {
-    pose_graph_tools::PoseGraphNode node;
+    pose_graph_tools_msgs::PoseGraphNode node;
     const auto submap = CHECK_NOTNULL(submap_atlas_->getSubmap(submap_id));
     node.robot_id = config_.my_id_;
     node.key = submap->id();
@@ -808,7 +832,7 @@ pose_graph_tools::PoseGraph DistributedLoopClosure::getSubmapPoseGraph(
 }
 
 void DistributedLoopClosure::processInternalVLC(
-    const pose_graph_tools::VLCFramesConstPtr& msg) {
+    const pose_graph_tools_msgs::VLCFramesConstPtr& msg) {
   for (const auto& frame_msg : msg->frames) {
     lcd::VLCFrame frame;
     kimera_multi_lcd::VLCFrameFromMsg(frame_msg, &frame);
@@ -868,6 +892,91 @@ size_t DistributedLoopClosure::updateCandidateList() {
   LOG(INFO) << "Loop closure candidates ready for verification: " << ready_candidates
             << ", waiting for frames: " << total_candidates;
   return total_candidates;
+}
+
+gtsam::Pose3 DistributedLoopClosure::getOdomInWorldFrame() const {
+  gtsam::Pose3 T_world_odom = gtsam::Pose3();
+  const auto keyframe = submap_atlas_->getLatestKeyframe();
+  if (keyframe) {
+    const auto submap = keyframe->getSubmap();
+    CHECK_NOTNULL(submap);
+    const gtsam::Pose3 T_odom_kf = keyframe->getPoseInOdomFrame();
+    const gtsam::Pose3 T_submap_kf = keyframe->getPoseInSubmapFrame();
+    const gtsam::Pose3 T_world_submap = submap->getPoseInWorldFrame();
+    const gtsam::Pose3 T_world_kf = T_world_submap * T_submap_kf;
+    T_world_odom = T_world_kf * (T_odom_kf.inverse());
+  }
+  return T_world_odom;
+}
+
+gtsam::Pose3 DistributedLoopClosure::getLatestKFInWorldFrame() const {
+  gtsam::Pose3 T_world_kf = gtsam::Pose3();
+  const auto keyframe = submap_atlas_->getLatestKeyframe();
+  if (keyframe) {
+    const auto submap = keyframe->getSubmap();
+    CHECK_NOTNULL(submap);
+    const gtsam::Pose3 T_submap_kf = keyframe->getPoseInSubmapFrame();
+    const gtsam::Pose3 T_world_submap = submap->getPoseInWorldFrame();
+    T_world_kf = T_world_submap * T_submap_kf;
+  }
+  return T_world_kf;
+}
+
+gtsam::Pose3 DistributedLoopClosure::getLatestKFInOdomFrame() const {
+  gtsam::Pose3 T_odom_kf = gtsam::Pose3();
+  const auto keyframe = submap_atlas_->getLatestKeyframe();
+  if (keyframe) {
+    T_odom_kf = keyframe->getPoseInOdomFrame();
+  }
+  return T_odom_kf;
+}
+
+void DistributedLoopClosure::saveBowVectors(const std::string& filepath) const {
+  for (const auto& robot_pose_id : bow_latest_) {
+    std::string bow_vector_save = filepath + "/robot_" +
+                                  std::to_string(robot_pose_id.first) +
+                                  "_bow_vectors.json";
+    LOG(INFO) << "Saving loop closure BoWs to " << bow_vector_save;
+    lcd::saveBowVectors(lcd_->getBoWVectors(robot_pose_id.first), bow_vector_save);
+  }
+}
+
+void DistributedLoopClosure::saveVLCFrames(const std::string& filepath) const {
+  for (const auto& robot_pose_id : bow_latest_) {
+    std::string vlc_frames_save =
+        filepath + "/robot_" + std::to_string(robot_pose_id.first) + "_vlc_frames.json";
+    LOG(INFO) << "Saving loop closure Frames to " << vlc_frames_save;
+    lcd::saveVLCFrames(lcd_->getVLCFrames(robot_pose_id.first), vlc_frames_save);
+  }
+}
+
+void DistributedLoopClosure::loadBowVectors(size_t robot_id,
+                                            const std::string& bow_json) {
+  ROS_INFO_STREAM("Loading BoW vectors from " << bow_json);
+  std::map<lcd::PoseId, DBoW2::BowVector> bow_vectors;
+  lcd::loadBowVectors(bow_json, bow_vectors);
+  ROS_INFO_STREAM("Loaded " << bow_vectors.size() << " BoW vectors.");
+  bow_latest_[robot_id] = 0;
+  bow_received_[robot_id] = std::unordered_set<lcd::PoseId>();
+  for (const auto& id_bow : bow_vectors) {
+    lcd::RobotPoseId id(robot_id, id_bow.first);
+    lcd_->addBowVector(id, id_bow.second);
+    bow_latest_[robot_id] = id_bow.first;
+    bow_received_[robot_id].insert(id_bow.first);
+  }
+}
+
+void DistributedLoopClosure::loadVLCFrames(size_t robot_id,
+                                           const std::string& vlc_json) {
+  ROS_INFO_STREAM("Loading VLC frames from " << vlc_json);
+  std::map<lcd::PoseId, lcd::VLCFrame> vlc_frames;
+  lcd::loadVLCFrames(vlc_json, vlc_frames);
+  ROS_INFO_STREAM("Loaded " << vlc_frames.size() << " VLC frames.");
+
+  for (const auto& id_vlc : vlc_frames) {
+    lcd::RobotPoseId id(robot_id, id_vlc.first);
+    lcd_->addVLCFrame(id, id_vlc.second);
+  }
 }
 
 void DistributedLoopClosure::createLogFiles() {

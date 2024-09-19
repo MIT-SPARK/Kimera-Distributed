@@ -33,7 +33,7 @@
   <!-- Set log_output to true and SparkVio will log output of all modules to
        the log_output_path location. -->
   <arg name="log_output" default="true" />
-  <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" />
+  <arg name="log_output_path" default="$(find kimera_distributed)/logs/kimera$(arg robot_id)/" if="$(arg log_output)"/>
 
   <!-- Launch robot in its unique namespace -->
   <group ns="$(arg robot_name)">

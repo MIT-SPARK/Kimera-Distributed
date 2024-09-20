@@ -382,7 +382,10 @@ void DistributedLoopClosureRos::dpgoCallback(const nav_msgs::PathConstPtr& msg) 
     int elapsed_sec = int(elapsed_time.toSec());
     std::string file_path = config_.log_output_dir_ + "kimera_distributed_poses_" +
                             std::to_string(elapsed_sec) + ".csv";
-    savePosesToFile(file_path, *nodes_ptr);
+    std::string file_path_tum = config_.log_output_dir_ + "kimera_distributed_poses_tum_" +
+                            std::to_string(elapsed_sec) + ".csv";
+    // savePosesToFile(file_path, *nodes_ptr);
+    saveSortedPosesToFile(file_path_tum, *nodes_ptr);
   }
   publishOptimizedNodesAndPath(*nodes_ptr);
 }
@@ -429,9 +432,12 @@ void DistributedLoopClosureRos::logTimerCallback(const ros::TimerEvent& event) {
     int elapsed_sec = int(elapsed_time.toSec());
     std::string file_path = config_.log_output_dir_ + "kimera_distributed_poses_" +
                             std::to_string(elapsed_sec) + ".csv";
+    std::string file_path_tum = config_.log_output_dir_ + "kimera_distributed_poses_tum_" +
+                            std::to_string(elapsed_sec) + ".tum";
     gtsam::Values::shared_ptr nodes_ptr(new gtsam::Values);
     computePosesInWorldFrame(nodes_ptr);
-    savePosesToFile(file_path, *nodes_ptr);
+    // savePosesToFile(file_path, *nodes_ptr);
+    saveSortedPosesToFile(file_path_tum, *nodes_ptr);
   }
 }
 

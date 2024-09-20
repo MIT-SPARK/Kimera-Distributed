@@ -265,6 +265,11 @@ class DistributedLoopClosure {
    */
   void computePosesInWorldFrame(gtsam::Values::shared_ptr nodes) const;
   /**
+   * @brief Save the latest pose estimates to the world frame, sorted by keyframe ID
+   * @brief filename Output file
+   */
+  void saveSortedPosesToFile(const std::string& filename, const gtsam::Values& nodes) const;
+  /**
    * @brief Save the latest pose estimates to the world frame
    * @brief filename Output file
    */

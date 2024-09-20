@@ -310,6 +310,42 @@ void DistributedLoopClosure::savePosesToFile(const std::string& filename,
   file.close();
 }
 
+void DistributedLoopClosure::saveSortedPosesToFile(const std::string& filename,
+                                             const gtsam::Values& nodes) const {
+  std::ofstream file;
+  file.open(filename);
+  if (!file.is_open()) {
+    LOG(ERROR) << "Error opening log file: " << filename;
+    return;
+  }
+  file << std::fixed << std::setprecision(8);
+  // file << "ns,tx,ty,tz,qx,qy,qz,qw";
+
+  // Sorted by keyframe->id
+  std::map<int, float> sorted_nodes;
+  for (const auto& key_pose : nodes) {
+    const auto keyframe = submap_atlas_->getKeyframe(key_pose.key);
+    sorted_nodes[keyframe->id()] = key_pose.key;
+  }
+
+  for (const auto& id_key : sorted_nodes) {
+    gtsam::Quaternion quat =
+        nodes.at<gtsam::Pose3>(id_key.second).rotation().toQuaternion();
+    gtsam::Point3 point = nodes.at<gtsam::Pose3>(id_key.second).translation();
+    const auto keyframe = submap_atlas_->getKeyframe(id_key.second);
+    // file << "\n";
+    file << static_cast<double>(keyframe->stamp()) / 1e9 << " ";
+    file << point.x() << " ";
+    file << point.y() << " ";
+    file << point.z() << " ";
+    file << quat.x() << " ";
+    file << quat.y() << " ";
+    file << quat.z() << " ";
+    file << quat.w() << "\n";    
+  }
+  file.close();
+}
+
 void DistributedLoopClosure::saveSubmapAtlas(const std::string& directory) const {
   // Store keyframes in their respective submap frames
   std::string keyframe_path = directory + "kimera_distributed_keyframes.csv";

@@ -246,7 +246,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /robot0/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Image Topic: /acl_jackal/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -258,7 +258,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /robot1/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Image Topic: /acl_jackal2/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -270,7 +270,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /robot2/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Image Topic: /sparkal1/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -282,11 +282,59 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /robot3/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Image Topic: /sparkal2/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
       Max Value: 1
       Median window: 5
       Min Value: 0
       Name: Image3
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: compressed
+      Unreliable: false
+      Value: false
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /hathor/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image4
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: compressed
+      Unreliable: false
+      Value: false
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /thoth/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image5
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: compressed
+      Unreliable: false
+      Value: false
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /apis/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image6
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: compressed
+      Unreliable: false
+      Value: false
+    - Class: rviz/Image
+      Enabled: false
+      Image Topic: /sobek/kimera_vio_ros/kimera_vio_ros_node/feature_tracks
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image7
       Normalize Range: true
       Queue Size: 2
       Transport Hint: compressed
@@ -447,25 +495,43 @@ Visualization Manager:
     - Class: voxblox_rviz_plugin/VoxbloxMesh
       Enabled: false
       Name: VoxbloxMesh0
-      Topic: /robot0/kimera_semantics_node/mesh
+      Topic: /acl_jackal/kimera_semantics_node/mesh
       Unreliable: false
       Value: false
     - Class: voxblox_rviz_plugin/VoxbloxMesh
       Enabled: false
       Name: VoxbloxMesh1
-      Topic: /robot1/kimera_semantics_node/mesh
+      Topic: /acl_jackal2/kimera_semantics_node/mesh
       Unreliable: false
       Value: false
     - Class: voxblox_rviz_plugin/VoxbloxMesh
       Enabled: false
       Name: VoxbloxMesh2
-      Topic: /robot2/kimera_semantics_node/mesh
+      Topic: /sparkal1/kimera_semantics_node/mesh
       Unreliable: false
       Value: false
     - Class: voxblox_rviz_plugin/VoxbloxMesh
       Enabled: false
       Name: VoxbloxMesh3
-      Topic: /robot3/kimera_semantics_node/mesh
+      Topic: /sparkal2/kimera_semantics_node/mesh
+      Unreliable: false
+      Value: false
+    - Class: voxblox_rviz_plugin/VoxbloxMesh
+      Enabled: false
+      Name: VoxbloxMesh5
+      Topic: /thoth/kimera_semantics_node/mesh
+      Unreliable: false
+      Value: false
+    - Class: voxblox_rviz_plugin/VoxbloxMesh
+      Enabled: false
+      Name: VoxbloxMesh6
+      Topic: /apis/kimera_semantics_node/mesh
+      Unreliable: false
+      Value: false
+    - Class: voxblox_rviz_plugin/VoxbloxMesh
+      Enabled: false
+      Name: VoxbloxMesh7
+      Topic: /sobek/kimera_semantics_node/mesh
       Unreliable: false
       Value: false
   Enabled: true
